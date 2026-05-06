@@ -1,0 +1,10 @@
+{
+  "name": "groundwork",
+  "description": "SDLC discipline workflows for Claude Code — requirements, planning, and structured development practices",
+  "version": "0.1.0",
+  "author": {
+    "name": "Mark D'Adamo",
+    "email": "mark.dadamo@gmail.com"
+  },
+  "license": "MIT"
+}

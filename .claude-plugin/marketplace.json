@@ -1,0 +1,16 @@
+{
+  "name": "groundwork-dev",
+  "description": "Local development marketplace for the groundwork plugin",
+  "owner": {
+    "name": "Mark D'Adamo",
+    "email": "mark.dadamo@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "groundwork",
+      "description": "SDLC discipline workflows for Claude Code",
+      "version": "0.1.0",
+      "source": "./"
+    }
+  ]
+}
