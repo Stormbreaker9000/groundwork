@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+context="[groundwork] SDLC discipline plugin is active. Run /groundwork to see available workflows."
+
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$context"
+else
+  printf '{\n  "additionalContext": "%s"\n}\n' "$context"
+fi
+
+exit 0
