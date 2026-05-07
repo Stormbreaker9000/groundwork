@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
 context="[groundwork] SDLC discipline plugin is active. Run /groundwork to see available workflows."
+context_escaped=$(escape_for_json "$context")
 
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$context"
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$context_escaped"
 else
-  printf '{\n  "additionalContext": "%s"\n}\n' "$context"
+  printf '{\n  "additionalContext": "%s"\n}\n' "$context_escaped"
 fi
 
 exit 0
