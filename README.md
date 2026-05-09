@@ -1,32 +1,75 @@
 # groundwork
 
-A Claude Code plugin for disciplined software development workflows.
+A Claude Code plugin that brings structure to software development — requirements gathering, planning, and SDLC discipline before you write a line of code.
 
-Groundwork guides you through structured SDLC practices — requirements gathering, architecture decisions, and release discipline — before you write code.
+> Built as an alternative to "vibe coding": lay the groundwork first.
+
+## What it does
+
+Groundwork intercepts vague implementation requests and guides you through a lightweight requirements process before anything gets built. Instead of jumping straight to code, you get a structured brief with acceptance criteria that both you and Claude agree on.
 
 ## Installation
 
-Register the local directory as a marketplace source in Claude Code:
+**From Claude Code:**
 
-1. Open Claude Code settings
-2. Add this repo's path as a marketplace source
-3. Install the `groundwork` plugin
+```
+/plugin marketplace add https://github.com/Stormbreaker9000/groundwork
+```
+
+Then install the plugin:
+
+```
+/plugin install groundwork@groundwork-dev
+```
 
 ## Usage
 
 Run `/groundwork` in any Claude Code session to see available workflows.
 
+When you make a vague request like *"build me a login form"* or *"add dark mode"*, the `requirements` skill will pause and ask clarifying questions before touching code.
+
 ## Workflows
 
 | Workflow | Trigger | Description |
 |---|---|---|
-| Requirements | Say "build X" or "add Y" | Turns vague requests into structured briefs before any code is written |
+| `requirements` | "build X", "add Y", "make it do Z" | Turns vague requests into a structured brief with acceptance criteria before any code is written |
 
-## Development
+### Requirements Brief format
 
-The plugin uses the standard Claude Code plugin structure:
-- `skills/` — markdown instruction sets
-- `commands/` — slash commands
-- `hooks/` — event-driven scripts
-- `agents/` — dispatched subagents
-- `.claude-plugin/` — manifests
+```
+## Requirements Brief
+
+**Problem:** [One sentence: what breaks or is missing and for whom]
+
+**Acceptance Criteria:**
+- [ ] [Specific, testable condition]
+
+**Constraints:** [What this must not do or must stay within]
+
+**Out of Scope:** [What will not be addressed in this change]
+```
+
+Claude will not write code until you sign off on the brief.
+
+## Roadmap
+
+- [ ] Architecture design workflow
+- [ ] Test planning workflow
+- [ ] Release checklist workflow
+- [ ] `PreToolUse` hooks to enforce requirements brief before implementation
+- [ ] `requirements-analyst` agent for fully autonomous requirements gathering
+
+## Plugin structure
+
+```
+groundwork/
+├── .claude-plugin/       # Plugin manifests
+├── skills/               # Markdown instruction sets (skill triggers)
+├── commands/             # Slash commands (/groundwork)
+├── hooks/                # Event-driven scripts (SessionStart)
+└── agents/               # Dispatched subagents
+```
+
+## License
+
+MIT
