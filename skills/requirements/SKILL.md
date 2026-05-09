@@ -21,6 +21,8 @@ Do NOT invoke for:
 - Requests to read, explore, or explain existing code
 - When superpowers:brainstorming is already active
 
+Do not write any code at any point during this skill. This skill produces a requirements artifact only.
+
 ## Phase 1: Detect Project Context
 
 Before asking anything, determine whether this is a greenfield project or an existing codebase.
@@ -125,7 +127,14 @@ Do NOT save the artifact until the user confirms.
 
 **Step 3 — Save artifact:**
 
-Create `docs/requirements/YYYY-MM-DD-<kebab-case-feature-name>.md` with this exact structure:
+First, get the current date and ensure the directory exists:
+
+```bash
+TODAY=$(date +%Y-%m-%d)
+mkdir -p docs/requirements
+```
+
+Create `docs/requirements/$TODAY-<kebab-case-feature-name>.md` with this exact structure:
 
 ```markdown
 # Requirements: <Feature Name>
@@ -179,6 +188,6 @@ Architecture & design
 **Step 4 — Commit:**
 
 ```bash
-git add docs/requirements/YYYY-MM-DD-<name>.md
+git add docs/requirements/$TODAY-<name>.md
 git commit -m "docs: add requirements for <feature-name>"
 ```
