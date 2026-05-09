@@ -188,6 +188,7 @@ Architecture & design
 **Step 4 — Commit:**
 
 ```bash
+TODAY=$(date +%Y-%m-%d)
 git add docs/requirements/$TODAY-<name>.md
 git commit -m "docs: add requirements for <feature-name>"
 ```
