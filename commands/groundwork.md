@@ -17,11 +17,11 @@ The groundwork plugin provides structured SDLC workflows. Each workflow is a ski
 
 ### requirements
 
-**Trigger:** Make any vague implementation request ("build X", "add Y", "make it do Z")
+**Trigger:** Describe something you want to build or add ("I want to build X", "add Y to my app", "I need a feature that...")
 
-**Purpose:** Stops implementation before it starts. Asks four clarifying questions one at a time, then produces a requirements brief with acceptance criteria. You sign off on the brief before any code is written.
+**Purpose:** Explores what you want through hypothesis-led conversation — Claude reads your codebase if one exists, proposes what it thinks you need, then refines through targeted questions. Produces a structured requirements artifact (functional, non-functional, and domain requirements) saved to `docs/requirements/`. Handles decomposition of large requests into focused units. No code is written until you sign off on the artifact.
 
-**Why it matters:** Vague requests lead to code that solves the wrong problem. Five minutes of requirements gathering saves hours of rework.
+**Why it matters:** Starting with a shared, written understanding of what's being built prevents wasted implementation work and creates a paper trail that feeds the architecture phase.
 
 ---
 
