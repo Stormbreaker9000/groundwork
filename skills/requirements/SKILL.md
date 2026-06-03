@@ -131,10 +131,10 @@ First, get the current date and ensure the directory exists:
 
 ```bash
 TODAY=$(date +%Y-%m-%d)
-mkdir -p docs/requirements
+mkdir -p .sdlc/requirements
 ```
 
-Create `docs/requirements/$TODAY-<kebab-case-feature-name>.md` with this exact structure:
+Create `.sdlc/requirements/$TODAY-<kebab-case-feature-name>.md` with this exact structure:
 
 ```markdown
 # Requirements: <Feature Name>
@@ -189,6 +189,6 @@ Architecture & design
 
 ```bash
 TODAY=$(date +%Y-%m-%d)
-git add docs/requirements/$TODAY-<name>.md
+git add .sdlc/requirements/$TODAY-<name>.md
 git commit -m "docs: add requirements for <feature-name>"
 ```
