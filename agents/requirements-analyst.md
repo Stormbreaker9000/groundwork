@@ -70,12 +70,12 @@ Ask: *"Does this capture it accurately, or should we adjust anything before savi
 
 Do NOT save until the user confirms.
 
-On confirmation, save to `docs/requirements/$TODAY-<kebab-case-name>.md`:
+On confirmation, save to `.sdlc/requirements/$TODAY-<kebab-case-name>.md`:
 
 ```bash
 TODAY=$(date +%Y-%m-%d)
-mkdir -p docs/requirements
-git add docs/requirements/$TODAY-<name>.md
+mkdir -p .sdlc/requirements
+git add .sdlc/requirements/$TODAY-<name>.md
 git commit -m "docs: add requirements for <feature-name>"
 ```
 
