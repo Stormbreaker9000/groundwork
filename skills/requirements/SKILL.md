@@ -71,22 +71,47 @@ This is ONE question. Do not ask multiple questions here.
 
 ## Phase 4: Converse
 
-Work through four coverage areas. Do NOT go through them in a fixed order — follow where the conversation leads. Lead with your current assumption on each uncovered area and ask one targeted question to validate or correct it.
+Work through six coverage areas. Do NOT go through them in a fixed order — follow where the conversation leads. Lead with your current assumption on each uncovered area and ask one targeted question to validate or correct it.
 
 **Coverage areas:**
 1. **Core functionality** — what the thing does (often partially established by the hypotheses)
-2. **Success criteria** — what done looks like; how you'd know it's working
-3. **Constraints** — tech, time, scope, or design limits
-4. **Out of scope** — what's explicitly not being built in this iteration
+2. **Stakeholders & user roles** — who uses the system, who is affected beyond the primary user (admin, operator, support, auditor, regulator, third-party integrations)
+3. **Success criteria** — what done looks like; how you'd know it's working
+4. **Non-functional concerns** — probe at minimum: performance expectations, security requirements, reliability/uptime needs, and accessibility or platform constraints. Infer from context where obvious; only ask if the domain makes NFRs non-obvious or high-stakes.
+5. **Constraints** — tech, time, scope, regulatory, or design limits
+6. **Out of scope** — what's explicitly not being built in this iteration
 
 **Per-exchange shape:**
 - Briefly state what you've confirmed so far
 - Surface your working assumption on the next uncovered area
 - Ask one targeted question to validate or correct it
 
-Infer as much as possible from context. Only ask when you genuinely cannot determine something. A well-described request typically needs 2–3 exchanges. A vague one may need more.
+Infer as much as possible from context. Only ask when you genuinely cannot determine something. A well-described request typically needs 2–4 exchanges. A vague one may need more.
 
-When all four areas are confirmed, transition: *"I think I have everything I need. Let me summarize before we save it."*
+When all six areas are confirmed, proceed to Phase 4.5.
+
+## Phase 4.5: Context Synthesis
+
+Before generating the artifact, synthesize the elicited information into a structured context object. This confirms shared understanding and serves as the direct input to the artifact generator.
+
+Render in-conversation:
+
+```
+**Elicitation context:**
+
+**Problem domain:** [what's being built + the underlying business/user goal]
+**Stakeholders & users:** [primary user + any secondary roles identified]
+**Core functionality:** [primary capabilities in plain terms]
+**Success criteria:** [how you know it's working — measurable outcomes]
+**Non-functional concerns:** [performance, security, reliability, accessibility — or "None identified"]
+**Constraints:** [hard limits — or "None identified"]
+**Out of scope:** [explicit exclusions — or "None identified"]
+**Open questions:** [anything still uncertain — or "None"]
+```
+
+Ask: *"Does this capture the context correctly, or should I adjust anything before generating the requirements?"*
+
+Do NOT proceed to Phase 5 until the user confirms. If corrections are needed, update the context object and re-confirm.
 
 ## Phase 5: Artifact
 
