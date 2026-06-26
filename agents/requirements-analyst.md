@@ -28,13 +28,36 @@ This is ONE question.
 
 ### Step 3: Converse
 
-Work through four areas — lead with your assumption, ask one question to validate:
+Work through six areas — lead with your assumption, ask one question to validate:
 1. Core functionality
-2. Success criteria
-3. Constraints
-4. Out of scope
+2. Stakeholders & user roles — primary user plus any secondary actors (admin, operator, support, auditor, third-party)
+3. Success criteria
+4. Non-functional concerns — probe at minimum: performance, security, reliability, accessibility
+5. Constraints
+6. Out of scope
 
-When all four are confirmed, say: *"I think I have everything I need. Let me summarize before we save it."*
+When all six are confirmed, proceed to Step 3.5.
+
+### Step 3.5: Context Synthesis
+
+Synthesize the elicited information into a structured context object and show it to the user:
+
+```
+**Elicitation context:**
+
+**Problem domain:** [what's being built + the underlying business/user goal]
+**Stakeholders & users:** [primary user + any secondary roles identified]
+**Core functionality:** [primary capabilities]
+**Success criteria:** [measurable outcomes / definition of "working"]
+**Non-functional concerns:** [performance, security, reliability, accessibility — or "None identified"]
+**Constraints:** [hard limits — or "None identified"]
+**Out of scope:** [explicit exclusions — or "None identified"]
+**Open questions:** [anything still uncertain — or "None"]
+```
+
+Ask: *"Does this capture the context correctly, or should I adjust anything before generating the requirements?"*
+
+Do NOT proceed until the user confirms.
 
 ### Step 4: Produce the artifact
 
