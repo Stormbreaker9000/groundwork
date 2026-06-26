@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://groundwork.dev/schemas/requirement.schema.json",
+  "title": "Groundwork Atomic Requirement",
+  "description": "Schema for a single atomic requirement file's YAML frontmatter. One requirement per Markdown file under .sdlc/requirements/<type>/<ID>-<kebab-title>.md. Encodes the BABOK 4-tier hierarchy, EARS notation (functional), ISO/IEC 25010:2023 NFR coverage, and the Volere snowcard (mandatory rationale + fit_criterion).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "tier",
+    "title",
+    "description",
+    "rationale",
+    "fit_criterion",
+    "priority",
+    "confidence",
+    "verification_method",
+    "status",
+    "created_at",
+    "traces_from",
+    "traces_to"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: FR->functional, NFR->non_functional, CON->constraint, BR->business_rule, UC->use_case. An optional uppercase category infix is allowed (e.g. FR-ORDER-014).",
+      "pattern": "^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Requirement category.",
+      "enum": [
+        "functional",
+        "non_functional",
+        "constraint",
+        "business_rule",
+        "use_case"
+      ]
+    },
+    "tier": {
+      "type": "string",
+      "description": "BABOK v3 four-tier hierarchy level.",
+      "enum": [
+        "business",
+        "stakeholder",
+        "solution",
+        "transition"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Short human-readable title (matches the kebab-case used in the filename).",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "For functional requirements: an EARS-phrased statement. For NFRs/constraints/etc.: a clear single statement of the requirement.",
+      "minLength": 1
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Volere mandatory rationale: the WHY behind this requirement.",
+      "minLength": 1
+    },
+    "fit_criterion": {
+      "type": "string",
+      "description": "Volere mandatory fit criterion: a measurable test oracle for the requirement.",
+      "minLength": 1
+    },
+    "priority": {
+      "type": "string",
+      "description": "MoSCoW priority.",
+      "enum": [
+        "must",
+        "should",
+        "could",
+        "wont"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "description": "Confidence level for human-in-the-loop triage.",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "verification_method": {
+      "type": "string",
+      "description": "How the requirement is verified.",
+      "enum": [
+        "test",
+        "inspection",
+        "analysis",
+        "demonstration"
+      ]
+    },
+    "ears_pattern": {
+      "type": "string",
+      "description": "EARS sentence pattern. Required for functional requirements only; omitted for other types.",
+      "enum": [
+        "ubiquitous",
+        "event",
+        "state",
+        "unwanted",
+        "optional",
+        "complex"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle status. IDs are never re-used; set status to obsolete instead of deleting.",
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved",
+        "implemented",
+        "verified",
+        "obsolete"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Creation date in YYYY-MM-DD format.",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "traces_from": {
+      "type": "array",
+      "description": "Upstream traceability: IDs of higher-tier requirements this one derives from. May be empty for top-tier (business) requirements.",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "traces_to": {
+      "type": "object",
+      "description": "Downstream traceability mapping to design, tests, and code artifacts. Any of the three keys may be omitted or empty.",
+      "additionalProperties": false,
+      "properties": {
+        "design": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "code": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "scope": {
+      "type": "string",
+      "description": "RESERVED (STO-98/agile). Agile planning scope. Present-but-optional.",
+      "enum": [
+        "project",
+        "epic",
+        "story"
+      ]
+    },
+    "parent_scope": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional."
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "ears_pattern is required for functional requirements only.",
+      "if": {
+        "properties": {
+          "type": {
+            "const": "functional"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "ears_pattern"
+        ]
+      }
+    }
+  ]
+}
