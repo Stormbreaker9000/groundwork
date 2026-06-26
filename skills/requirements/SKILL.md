@@ -113,107 +113,86 @@ Ask: *"Does this capture the context correctly, or should I adjust anything befo
 
 Do NOT proceed to Phase 5 until the user confirms. If corrections are needed, update the context object and re-confirm.
 
-## Phase 5: Artifact
+## Phase 5: Generate the Requirements Artifact Set
 
-**Step 1 — Render in-conversation summary:**
+Phases 1–4.5 produce the **clarification context** (the Phase 4.5 "Elicitation context" block). Phase 5 hands that context to the multi-agent generation pipeline, which produces **atomic Markdown+YAML requirement files** — one requirement per file, with categorical IDs, EARS notation, ISO 25010 NFR scenarios, and traceability — not a single flat document.
+
+The Phase 4.5 block serializes 1:1 to the `clarification_context` the orchestrator consumes:
+
+```yaml
+clarification_context:
+  problem_domain: ...
+  stakeholders_and_users: ...
+  core_functionality: ...
+  success_criteria: ...
+  non_functional_concerns: ...   # or "None identified"
+  constraints: ...               # or "None identified"
+  out_of_scope: ...              # or "None identified"
+  open_questions: ...            # or "None"
+```
+
+**Step 1 — Generate (multi-agent pipeline):**
+
+Drive the pipeline through the agents under `agents/`, in this fixed order:
+
+1. **requirements-orchestrator** — classifies needs into BABOK tiers (business → stakeholder → solution → transition), allocates categorical zero-padded IDs (FR/NFR/CON/BR/UC), and dispatches a brief to each specialist.
+2. **fr-specialist** — functional requirements in EARS notation, each with rationale, fit criterion, and Gherkin acceptance criteria.
+3. **nfr-specialist** — walks all nine ISO 25010:2023 quality characteristics (plus observability, deployability, compliance, cost) and emits each applicable NFR as a six-part quality attribute scenario.
+4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
+5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
+6. **requirements-formatter** — writes the atomic files (runs only after the critic returns `gate: pass`).
+
+Do not advance to the formatter until the critic reports a passing gate.
+
+**Step 2 — Render in-conversation summary:**
+
+Before writing any files, summarize the generated set for review:
 
 ```
 ## Requirements Summary: <Feature Name>
 
 **Overview:** [2-3 sentences: what's being built, why, for whom]
 
-**Context:** [For existing codebases: tech stack, affected modules, relevant patterns. Omit for greenfield.]
+**Context:** [Existing codebases: tech stack, affected modules. Omit for greenfield.]
 
-**Functional Requirements:**
-- [What the system does]
+**Functional (EARS):**
+- FR-001 <title> — <one-line behavior>
 
-**Non-Functional Requirements:**
-- [Performance, reliability, accessibility, etc. — omit section if none identified]
+**Non-Functional (ISO 25010 QAS):**
+- NFR-001 <title> — <response measure>
 
-**Domain Requirements:**
-- [Rules and concepts inherent to the problem space — omit section if none identified]
+**Constraints & Business Rules:**
+- CON-001 / BR-001 <title>
 
-**Acceptance Criteria:**
-- [ ] [Specific, testable condition]
-- [ ] [Specific, testable condition]
-
-**Constraints:** [Tech, scope, or design limits]
-
-**Out of Scope:** [What's explicitly not being built now]
+**Flagged for review:** [low-confidence items + open questions — or "None"]
 
 **Next Step:** Architecture & design
 ```
 
-**Step 2 — Sign-off gate:**
+**Step 3 — Sign-off gate:**
 
-Ask: *"Does this capture it accurately, or should we adjust anything before saving?"*
+Ask: *"Does this capture it accurately, or should we adjust anything before I write the files?"*
 
-Do NOT save the artifact until the user confirms.
+Do NOT write the artifact files until the user confirms. If corrections are needed, re-dispatch the affected items to the owning specialist via the orchestrator, then re-summarize.
 
-**Step 3 — Save artifact:**
+**Step 4 — Write atomic files, then validate (hard gate):**
 
-First, get the current date and ensure the directory exists:
-
-```bash
-TODAY=$(date +%Y-%m-%d)
-mkdir -p .sdlc/requirements
-```
-
-Create `.sdlc/requirements/$TODAY-<kebab-case-feature-name>.md` with this exact structure:
-
-```markdown
-# Requirements: <Feature Name>
-
-**Date:** YYYY-MM-DD
-**Status:** Approved
-
-## Overview
-
-[2-3 sentences describing what's being built, why, and for whom]
-
-## Context
-
-[For existing codebases: tech stack, affected modules, relevant patterns.
-For greenfield: "New project — no existing codebase."]
-
-## Functional Requirements
-
-- [What the system does]
-
-## Non-Functional Requirements
-
-- [Performance, reliability, accessibility, etc.]
-
-*(Omit this section if none identified)*
-
-## Domain Requirements
-
-- [Rules and concepts inherent to the problem space]
-
-*(Omit this section if none identified)*
-
-## Acceptance Criteria
-
-- [ ] [Specific, testable condition]
-- [ ] [Specific, testable condition]
-
-## Constraints
-
-[What this must not do, or boundaries it must stay within]
-
-## Out of Scope
-
-[What will not be addressed in this change]
-
-## Next Step
-
-Architecture & design
-```
-
-**Step 4 — Commit:**
+On confirmation, run the formatter to write the files, then run the structural validator:
 
 ```bash
-TODAY=$(date +%Y-%m-%d)
-git add .sdlc/requirements/$TODAY-<name>.md
-git commit -m "docs: add requirements for <feature-name>"
+mkdir -p .sdlc/requirements/{functional,non-functional,constraints,business-rules,use-cases}
+python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
+```
+
+The validator MUST exit 0. If it exits non-zero, fix the flagged files (re-dispatch to the owning specialist) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
+
+**Step 5 — Generate the Definition of Done stub:**
+
+Run **dod-generator** to derive `.sdlc/requirements/definition-of-done.md` from the requirement set (functional acceptance gates, NFR fitness gates, constraint/business-rule compliance, test coverage, docs, deployment readiness). This is an M1 stub that M3 expands.
+
+**Step 6 — Commit:**
+
+```bash
+git add .sdlc/requirements/
+git commit -m "docs: add requirements artifact set for <feature-name>"
 ```

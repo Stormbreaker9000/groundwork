@@ -19,7 +19,7 @@ The groundwork plugin provides structured SDLC workflows. Each workflow is a ski
 
 **Trigger:** Describe something you want to build or add ("I want to build X", "add Y to my app", "I need a feature that...")
 
-**Purpose:** Explores what you want through hypothesis-led conversation — Claude reads your codebase if one exists, proposes what it thinks you need, then refines through targeted questions. Produces a structured requirements artifact (functional, non-functional, and domain requirements) saved to `.sdlc/requirements/`. Handles decomposition of large requests into focused units. No code is written until you sign off on the artifact.
+**Purpose:** Guides a hypothesis-led clarification interview (Claude reads your codebase if one exists, proposes what it thinks you need, then refines through targeted questions), then runs a multi-agent generation pipeline (orchestrator → FR/NFR/constraint specialists → critic → formatter) that emits **atomic Markdown+YAML requirement files** with categorical IDs (FR/NFR/CON/BR) under `.sdlc/requirements/` — functional requirements in EARS notation, non-functional requirements as ISO 25010 quality-attribute scenarios — checked by a structural validator, plus a Definition of Done stub. Handles decomposition of large requests into focused units. No files are written until you sign off.
 
 **Why it matters:** Starting with a shared, written understanding of what's being built prevents wasted implementation work and creates a paper trail that feeds the architecture phase.
 
