@@ -119,3 +119,9 @@ def test_context_artifact_present_passes(tmp_path):
 def test_context_artifact_missing_file_is_flagged(tmp_path):
     errors = vr.check_context_artifact(str(tmp_path))
     assert any("context artifact" in e for e in errors)
+
+
+def test_context_artifact_non_utf8_is_reported_not_raised(tmp_path):
+    (tmp_path / "assumptions.md").write_bytes(b"\xff\xfe## Assumptions\n")
+    errors = vr.check_context_artifact(str(tmp_path))
+    assert errors and any("could not read" in e for e in errors)

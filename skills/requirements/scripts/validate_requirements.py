@@ -419,7 +419,7 @@ def check_context_artifact(reqs_dir: str) -> List[str]:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         return [f"could not read context artifact '{CONTEXT_ARTIFACT}': {exc}"]
 
     errors: List[str] = []
