@@ -44,6 +44,7 @@ def test_skip_files_are_ignored(capsys):
     out = capsys.readouterr().out
     assert "definition-of-done.md" not in out
     assert "index.yaml" not in out
+    assert "assumptions.md" not in out
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +56,8 @@ INVALID_CASES = {
     "duplicate_id": "duplicate id",
     "dangling_trace": "dangling",
     "fr_missing_ears": "ears_pattern",
+    "missing_context_artifact": "context artifact",
+    "context_artifact_missing_heading": "missing required heading",
 }
 
 
@@ -103,3 +106,16 @@ def test_id_prefix_type_mismatch_is_flagged():
     rf.frontmatter = {"id": "FR-001", "type": "non_functional", "ears_pattern": "event"}
     vr.cross_file_checks([rf])
     assert any("implies type" in e for e in rf.errors)
+
+
+def test_context_artifact_present_passes(tmp_path):
+    (tmp_path / "assumptions.md").write_text(
+        "## Assumptions\n- none\n## Dependencies\n- none\n## Open Questions\n- none\n",
+        encoding="utf-8",
+    )
+    assert vr.check_context_artifact(str(tmp_path)) == []
+
+
+def test_context_artifact_missing_file_is_flagged(tmp_path):
+    errors = vr.check_context_artifact(str(tmp_path))
+    assert any("context artifact" in e for e in errors)

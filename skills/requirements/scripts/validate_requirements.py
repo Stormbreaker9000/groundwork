@@ -91,7 +91,7 @@ except ImportError:  # pragma: no cover - exercised only without the dep
 
 
 # Files that live in the requirements dir but are not atomic requirements.
-SKIP_FILENAMES = {"definition-of-done.md", "index.yaml"}
+SKIP_FILENAMES = {"definition-of-done.md", "index.yaml", "assumptions.md"}
 
 # ID prefix -> expected `type`. Mirrors the schema contract.
 PREFIX_TO_TYPE = {
@@ -101,6 +101,10 @@ PREFIX_TO_TYPE = {
     "BR": "business_rule",
     "UC": "use_case",
 }
+
+# Project-level context artifact (STO-134): assumptions/dependencies/open-questions.
+CONTEXT_ARTIFACT = "assumptions.md"
+REQUIRED_CONTEXT_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
 
 # Minimal enum/required knowledge for the stdlib fallback path only. The JSON
 # Schema remains the single source of truth when jsonschema is available.
@@ -399,6 +403,35 @@ def cross_file_checks(files: List[RequirementFile]) -> List[str]:
     return global_errors
 
 
+def check_context_artifact(reqs_dir: str) -> List[str]:
+    """Assumptions/Dependencies/Open-Questions artifact presence + headings (hard gate).
+
+    Returns a list of set-level error strings (empty when the artifact is present
+    and contains all three required H2 headings, even if a section reads
+    'None identified').
+    """
+    path = os.path.join(reqs_dir, CONTEXT_ARTIFACT)
+    if not os.path.isfile(path):
+        return [
+            f"missing required context artifact '{CONTEXT_ARTIFACT}' "
+            f"(Assumptions / Dependencies / Open Questions)"
+        ]
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as exc:
+        return [f"could not read context artifact '{CONTEXT_ARTIFACT}': {exc}"]
+
+    errors: List[str] = []
+    for heading in REQUIRED_CONTEXT_HEADINGS:
+        if not re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE):
+            errors.append(
+                f"context artifact '{CONTEXT_ARTIFACT}' missing required heading "
+                f"'{heading}'"
+            )
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -442,6 +475,7 @@ def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], Li
         files.append(rf)
 
     global_errors = cross_file_checks(files)
+    global_errors.extend(check_context_artifact(reqs_dir))
     return files, global_errors
 
 
