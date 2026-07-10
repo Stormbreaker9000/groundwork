@@ -109,6 +109,30 @@ requirements:
 The index is derived, not authoritative — the per-file frontmatter is the source
 of truth. Regenerate it wholesale rather than patching it.
 
+## Context artifact — `assumptions.md`
+
+When the orchestrator supplies a `context_artifact` (Stage 6.5), write
+`.sdlc/requirements/assumptions.md` with exactly three H2 sections in this order —
+`## Assumptions`, `## Dependencies`, `## Open Questions` — listing each item
+(`A-#` / `D-#` / `Q-#`), or the literal `None identified` when a section is empty:
+
+```markdown
+# Assumptions, Dependencies & Open Questions
+
+## Assumptions
+- A-1: <statement>
+
+## Dependencies
+- D-1: <statement>
+
+## Open Questions
+- Q-1: <statement> (owner: <who>)
+```
+
+This is a project-level file, not an atomic requirement — the validator skips it
+as a requirement but hard-gates its presence and its three headings. All three
+headings MUST be present even when a section is empty.
+
 ## Verify, then report
 
 After writing, the critic's hard gate applies to the real files: run (or ask the
@@ -128,6 +152,7 @@ Return a `formatter_result` (shape in `requirements-orchestrator.md`):
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-002-cancel-pending-order.md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  context_artifact: ".sdlc/requirements/assumptions.md"
   validator_rerun: { exit_code: 0 }
 ```
 

@@ -29,8 +29,12 @@ clarification_context
         ▼  (orchestrator merges all draft_requirements)
 [ requirements-critic ]  INCOSE/29148 gate + ISO 25010 coverage + validator → critique_report
         │
-        ▼  (orchestrator applies fixes / re-dispatches failed items)
-[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml → formatter_result
+        ▼  (orchestrator applies fixes / re-dispatches failed items; on pass,
+        ▼   orchestrator synthesizes assumptions/dependencies/open-questions)
+[ context synthesis ]  → context_artifact
+        │
+        ▼
+[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml + assumptions.md → formatter_result
 ```
 
 Dispatch order is fixed: **FR specialist first, then NFR specialist, then
@@ -158,6 +162,10 @@ draft_requirements:
 Merge the three specialists' `draft_requirements` lists into one set, preserving
 ID order, before handing to the critic.
 
+Each specialist MAY additionally return sibling `assumptions` and `dependencies`
+lists (plain statements) alongside its `draft_requirements`. These are optional
+and feed Stage 6.5; they are NOT written into individual requirement frontmatter.
+
 ## Stage 6 — Critique gate: the `critique_report` hand-off
 
 Pass the merged set to `requirements-critic`. It returns a `critique_report`:
@@ -182,6 +190,37 @@ their owning specialist with the critic findings attached, then re-run the criti
 Do not advance to the formatter until `gate: pass`. Keep the critic's
 comprehension and critique separate (it enforces this) to avoid over-correction.
 
+## Stage 6.5 — Synthesize the context artifact
+
+Before formatting, assemble a `context_artifact` capturing what the requirements
+set assumes, depends on, and leaves open. This forces externalization of what the
+model would otherwise silently bake into requirement prose (research Gap 5).
+
+```yaml
+context_artifact:
+  assumptions:            # statements believed true without proof
+    - id: A-1
+      statement: string
+  dependencies:           # external conditions the project relies on
+    - id: D-1
+      statement: string
+  open_questions:         # unresolved items for human follow-up
+    - id: Q-1
+      statement: string
+      owner: string       # who should resolve it (or "unassigned")
+```
+
+Sources, in order:
+1. `open_questions` — carry every item from `clarification_context.open_questions`
+   (each already implies an affected requirement is `confidence: low`).
+2. `assumptions` / `dependencies` — merge any `assumptions`/`dependencies` a
+   specialist surfaced in its return object (see Stage 5), then add anything the
+   generated set implies that no requirement states outright. De-duplicate.
+
+If a section has no items, emit a single `None identified` entry. Pass the
+`context_artifact` to the formatter; it writes `.sdlc/requirements/assumptions.md`.
+The structural validator hard-gates that file's presence and its three headings.
+
 ## Stage 7 — Format: the `formatter_result` hand-off
 
 On a passing gate, hand the approved set to `requirements-formatter`. It returns:
@@ -190,6 +229,7 @@ On a passing gate, hand the approved set to `requirements-formatter`. It returns
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-001-...md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  context_artifact: ".sdlc/requirements/assumptions.md"
   validator_rerun: { exit_code: 0 }
 ```
 

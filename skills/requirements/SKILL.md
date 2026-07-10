@@ -140,7 +140,9 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 3. **nfr-specialist** — walks all nine ISO 25010:2023 quality characteristics (plus observability, deployability, compliance, cost) and emits each applicable NFR as a six-part quality attribute scenario.
 4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
 5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
-6. **requirements-formatter** — writes the atomic files (runs only after the critic returns `gate: pass`).
+6. **requirements-formatter** — writes the atomic files plus the project-level
+   `assumptions.md` (Assumptions / Dependencies / Open Questions), running only
+   after the critic returns `gate: pass`.
 
 Do not advance to the formatter until the critic reports a passing gate.
 
@@ -164,6 +166,9 @@ Before writing any files, summarize the generated set for review:
 **Constraints & Business Rules:**
 - CON-001 / BR-001 <title>
 
+**Assumptions & Dependencies:** [key A-#/D-# items, or "None identified"]
+**Open Questions:** [Q-# items needing human follow-up, or "None"]
+
 **Flagged for review:** [low-confidence items + open questions — or "None"]
 
 **Next Step:** Architecture & design
@@ -185,6 +190,18 @@ python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
 ```
 
 The validator MUST exit 0. If it exits non-zero, fix the flagged files (re-dispatch to the owning specialist) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
+
+The formatter also writes `.sdlc/requirements/assumptions.md`. The structural
+validator hard-gates its presence and its three headings (`## Assumptions`,
+`## Dependencies`, `## Open Questions`) — a missing file or heading fails the gate.
+
+Then run the advisory content-quality linter and address any `warn`-severity
+findings (the structural validator is the hard gate; the content linter guides
+prose quality):
+
+```bash
+python3 skills/requirements/scripts/lint_requirements_content.py .sdlc/requirements
+```
 
 **Step 5 — Generate the Definition of Done stub:**
 
