@@ -155,3 +155,7 @@ Return a `draft_requirements` list (the shape defined in
 `body_markdown`. Leave `traces_to` lists empty unless a downstream artifact is
 already known. The orchestrator merges your list with the other specialists' and
 forwards everything to the critic.
+
+You MAY also return optional sibling `assumptions` and `dependencies` lists (plain
+statements you relied on but could not confirm). The orchestrator aggregates these
+into the project-level `assumptions.md`; do not embed them in requirement frontmatter.

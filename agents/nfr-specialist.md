@@ -146,3 +146,8 @@ six-part QAS `body_markdown`. Populate `traces_from` with the FR(s) or
 stakeholder need the quality target bounds. Also return your applicability notes
 (characteristics deemed not applicable, with justification) so the critic can run
 its ISO 25010 coverage check.
+
+You MAY also return optional sibling `assumptions` and `dependencies` lists (plain
+statements you relied on but could not confirm — e.g. an assumed load profile or a
+dependency on an external monitoring platform). The orchestrator aggregates these
+into the project-level `assumptions.md`; do not embed them in requirement frontmatter.

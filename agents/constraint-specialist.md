@@ -191,3 +191,9 @@ rules with `type: business_rule`, all `status: draft`, none carrying
 `ears_pattern`, each with populated `traces_to`/`traces_from` referencing only IDs
 in the `global_id_index`. The orchestrator merges your list with the FR/NFR drafts
 and forwards everything to the critic.
+
+You MAY also return optional sibling `assumptions` and `dependencies` lists (plain
+statements you relied on but could not confirm — e.g. an assumed regulatory
+interpretation or a dependency on a platform team's roadmap). The orchestrator
+aggregates these into the project-level `assumptions.md`; do not embed them in
+requirement frontmatter.
