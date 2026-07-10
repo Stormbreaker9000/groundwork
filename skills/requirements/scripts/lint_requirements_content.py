@@ -84,10 +84,50 @@ def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     return findings
 
 
+ACTION_VERBS = {
+    "create", "update", "delete", "remove", "send", "display", "show", "store",
+    "save", "validate", "verify", "notify", "alert", "log", "record", "generate",
+    "transition", "publish", "return", "reject", "accept", "allow", "prevent",
+    "block", "provide", "calculate", "compute", "export", "import", "retry",
+    "cancel", "archive", "encrypt", "decrypt", "authenticate", "authorize",
+    "render", "email", "persist", "enqueue", "dispatch", "present", "list",
+    "filter", "sort", "redirect", "set", "mark", "flag", "assign",
+}
+
+_COMPOUND_RE = re.compile(
+    r"\b(and|or)\s+(" + "|".join(sorted(ACTION_VERBS)) + r")\b"
+)
+
+
+def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
+    text = _text(fm.get("description"))
+    low = text.lower()
+    idx = low.find("shall")
+    if idx == -1:
+        return []
+    predicate = low[idx + len("shall"):]
+    match = _COMPOUND_RE.search(predicate)
+    if not match:
+        return []
+    return [Finding(
+        rule="compound",
+        severity="warn",
+        req_id=req_id,
+        field="description",
+        excerpt=text.strip()[:120],
+        message=(
+            f"multiple actions joined by '{match.group(1)}' "
+            f"('{match.group(2)}') in one requirement"
+        ),
+        suggested_rewrite_hint="split into one requirement per action",
+    )]
+
+
 # Registry of check functions, each (req_id, frontmatter) -> List[Finding].
 # Populated in later tasks.
 CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_vague_qualifiers,
+    check_compound,
 ]
 
 

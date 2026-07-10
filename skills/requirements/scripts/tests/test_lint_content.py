@@ -33,3 +33,12 @@ def test_vague_qualifier_downgraded_when_quantified():
     findings = lc.check_vague_qualifiers("FR-001", fm)
     assert findings, "expected a finding for 'fast'"
     assert all(f.severity == "info" for f in findings)
+
+
+def test_compound_requirement_flagged():
+    assert "compound" in rules_for("compound")
+
+
+def test_noun_conjunction_not_flagged_as_compound():
+    fm = {"description": "The system shall accept the terms and conditions."}
+    assert lc.check_compound("FR-001", fm) == []
