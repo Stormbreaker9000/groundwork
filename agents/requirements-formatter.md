@@ -106,6 +106,21 @@ requirements:
     path: functional/FR-002-cancel-pending-order.md
 ```
 
+The index MAY also carry a `review_queue` — every `confidence: low` requirement
+with a one-line reason — so low-confidence items are triageable without opening
+each file:
+
+```yaml
+review_queue:
+  - id: FR-007
+    confidence: low
+    reason: "depends on open question Q-2 (retention window)"
+```
+
+Derive `review_queue` from the same approved set: list every requirement whose
+`confidence` is `low`. Omit the key (or use an empty list) when none are
+low-confidence.
+
 The index is derived, not authoritative — the per-file frontmatter is the source
 of truth. Regenerate it wholesale rather than patching it.
 
@@ -152,6 +167,7 @@ Return a `formatter_result` (shape in `requirements-orchestrator.md`):
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-002-cancel-pending-order.md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  review_queue_count: 0            # number of confidence:low items in index.yaml's review_queue
   context_artifact: ".sdlc/requirements/assumptions.md"
   validator_rerun: { exit_code: 0 }
 ```

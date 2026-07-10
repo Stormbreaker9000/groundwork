@@ -246,5 +246,9 @@ sign-off and commit. You never commit.
 - Pass a single `created_at` date to every specialist so all files agree.
 - If `open_questions` is non-empty, ensure affected requirements are marked
   `confidence: low` so the human-in-the-loop can triage them.
+- The full set of `confidence: low` requirements is the triage queue: the
+  formatter persists it as `review_queue` in `index.yaml`, and the skill
+  foregrounds it in the Phase 5 summary. Keep these consistent — a requirement is
+  either low-confidence in all three places or none.
 - The formatter runs only after a passing critic gate. The critic's structural
   validator run is a hard gate — a non-zero exit blocks formatting.

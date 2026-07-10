@@ -56,6 +56,8 @@ Present as a single message: *"Here's what I'm thinking this needs: [hypotheses 
 
 This is ONE question. Do not ask multiple questions here.
 
+**Reach the business *why* (5-Whys).** Before moving to Phase 4, make sure you understand the underlying business or user goal driving the request — not just the surface *what*. Apply 5-Whys as judgment, not ritual: if the root motivation is already clear from the request, don't belabor it; if it's murky, fold a *why* into this same Phase 3 message (e.g. "…and what problem does this solve for [the user]?"). Requirements generated against a misunderstood goal satisfy the letter and miss the point.
+
 **Example — greenfield desktop tamagotchi app:**
 - Pet entity with state (hunger, happiness, health) that persists between sessions
 - Time-based decay — state degrades even while the app is closed
@@ -81,10 +83,24 @@ Work through six coverage areas. Do NOT go through them in a fixed order — fol
 5. **Constraints** — tech, time, scope, regulatory, or design limits
 6. **Out of scope** — what's explicitly not being built in this iteration
 
+**Also sweep the commonly-omitted categories.** These are the areas requirements processes routinely skip — walk them silently and surface only those that matter for this domain. Governing rule (same restraint as below): **infer where obvious; only ask when the category is high-stakes and non-obvious.**
+
+- Error / exception paths
+- Compliance / regulatory constraints
+- Data retention / migration / deletion
+- Internationalization & accessibility
+- Operational concerns — deployment, backup, monitoring, on-call
+- Legal / licensing
+- Stakeholder roles beyond "the user" — admin, operator, support, auditor, regulator, third-party
+
+This is a gap check, not a script. A well-scoped request may need none of these raised explicitly; do not manufacture questions to cover the list.
+
 **Per-exchange shape:**
 - Briefly state what you've confirmed so far
 - Surface your working assumption on the next uncovered area
 - Ask one targeted question to validate or correct it
+
+**Prefer numbered options.** When a question's answer space is enumerable, present 2–4 numbered candidate answers and invite the user to reply with a number (or add their own) instead of asking open-ended — this measurably improves answer quality. Reserve open-ended questions for genuinely open spaces. For example: *"For an unauthenticated user hitting a protected route, should the system (1) redirect to login, (2) return 401 with a JSON error, or (3) serve a public preview? Pick one, or describe another."*
 
 Infer as much as possible from context. Only ask when you genuinely cannot determine something. A well-described request typically needs 2–4 exchanges. A vague one may need more.
 
@@ -141,8 +157,9 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
 5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
 6. **requirements-formatter** — writes the atomic files plus the project-level
-   `assumptions.md` (Assumptions / Dependencies / Open Questions), running only
-   after the critic returns `gate: pass`.
+   `assumptions.md` (Assumptions / Dependencies / Open Questions) and an
+   `index.yaml` carrying a `review_queue` of every `confidence: low` requirement,
+   running only after the critic returns `gate: pass`.
 
 Do not advance to the formatter until the critic reports a passing gate.
 
@@ -169,7 +186,11 @@ Before writing any files, summarize the generated set for review:
 **Assumptions & Dependencies:** [key A-#/D-# items, or "None identified"]
 **Open Questions:** [Q-# items needing human follow-up, or "None"]
 
-**Flagged for review:** [low-confidence items + open questions — or "None"]
+**⚠️ Triage before sign-off — review these specifically:**
+- **Low-confidence requirements:** [each `confidence: low` FR/NFR/CON/BR ID with its one-line reason — or "None"]
+- **Open questions:** the items listed under **Open Questions** above.
+
+  These are the uncertain items; confirm or correct *these* rather than re-scanning the whole set. The same low-confidence list is persisted as `review_queue` in `index.yaml`.
 
 **Next Step:** Architecture & design
 ```
