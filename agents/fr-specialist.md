@@ -60,6 +60,16 @@ hide it behind passive voice ("shall be displayed").
 - **verification_method** is usually `test` for FRs (occasionally
   `demonstration` or `inspection`).
 
+### Confidence rubric
+
+Set `confidence` deliberately, not by default:
+
+- **high** — directly stated or confirmed by the user.
+- **medium** — reasonably inferred from the provided context.
+- **low** — rests on an open question or an unconfirmed assumption, or fills a gap the user did not address.
+
+The orchestrator additionally forces `low` for any requirement affected by an open question. Low-confidence items are the human triage queue: they are surfaced in the formatter's `index.yaml` `review_queue` and the skill's Phase 5 triage block — so assigning `confidence` honestly is what makes the human gate efficient.
+
 ## Body structure (rendered into `body_markdown`)
 
 ```

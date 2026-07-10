@@ -65,8 +65,17 @@ dangling references and will fail the gate.
   for a business rule it is the condition under which the rule holds.
 - `verification_method` is commonly `inspection` or `analysis` for constraints,
   `test` for enforced business rules.
-- `priority` (MoSCoW) and `confidence` as usual; lower `confidence` when the
-  boundary stems from an open question.
+- `priority` (MoSCoW) and `confidence` per the rubric below.
+
+### Confidence rubric
+
+Set `confidence` deliberately, not by default:
+
+- **high** — directly stated or confirmed by the user.
+- **medium** — reasonably inferred from the provided context.
+- **low** — rests on an open question or an unconfirmed assumption, or fills a gap the user did not address.
+
+The orchestrator additionally forces `low` for any requirement affected by an open question. Low-confidence items are the human triage queue: they are surfaced in the formatter's `index.yaml` `review_queue` and the skill's Phase 5 triage block — so assigning `confidence` honestly is what makes the human gate efficient.
 
 ## Body structure (rendered into `body_markdown`)
 
