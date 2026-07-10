@@ -56,6 +56,8 @@ Present as a single message: *"Here's what I'm thinking this needs: [hypotheses 
 
 This is ONE question. Do not ask multiple questions here.
 
+**Reach the business *why* (5-Whys).** Before moving to Phase 4, make sure you understand the underlying business or user goal driving the request — not just the surface *what*. Apply 5-Whys as judgment, not ritual: if the root motivation is already clear from the request, don't belabor it; if it's murky, fold a *why* into this same Phase 3 message (e.g. "…and what problem does this solve for [the user]?"). Requirements generated against a misunderstood goal satisfy the letter and miss the point.
+
 **Example — greenfield desktop tamagotchi app:**
 - Pet entity with state (hunger, happiness, health) that persists between sessions
 - Time-based decay — state degrades even while the app is closed
@@ -81,10 +83,24 @@ Work through six coverage areas. Do NOT go through them in a fixed order — fol
 5. **Constraints** — tech, time, scope, regulatory, or design limits
 6. **Out of scope** — what's explicitly not being built in this iteration
 
+**Also sweep the commonly-omitted categories.** These are the areas requirements processes routinely skip — walk them silently and surface only those that matter for this domain. Governing rule (same restraint as below): **infer where obvious; only ask when the category is high-stakes and non-obvious.**
+
+- Error / exception paths
+- Compliance / regulatory constraints
+- Data retention / migration / deletion
+- Internationalization & accessibility
+- Operational concerns — deployment, backup, monitoring, on-call
+- Legal / licensing
+- Stakeholder roles beyond "the user" — admin, operator, support, auditor, regulator, third-party
+
+This is a gap check, not a script. A well-scoped request may need none of these raised explicitly; do not manufacture questions to cover the list.
+
 **Per-exchange shape:**
 - Briefly state what you've confirmed so far
 - Surface your working assumption on the next uncovered area
 - Ask one targeted question to validate or correct it
+
+**Prefer numbered options.** When a question's answer space is enumerable, present 2–4 numbered candidate answers and invite the user to reply with a number (or add their own) instead of asking open-ended — this measurably improves answer quality. Reserve open-ended questions for genuinely open spaces. For example: *"For an unauthenticated user hitting a protected route, should the system (1) redirect to login, (2) return 401 with a JSON error, or (3) serve a public preview? Pick one, or describe another."*
 
 Infer as much as possible from context. Only ask when you genuinely cannot determine something. A well-described request typically needs 2–4 exchanges. A vague one may need more.
 
