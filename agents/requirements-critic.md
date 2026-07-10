@@ -1,5 +1,5 @@
 ---
-description: Requirements quality critic. Runs a two-phase review over the merged draft_requirements set — an INCOSE/ISO 29148 per-requirement quality gate, an ISO 25010 NFR-coverage check, and light anti-pattern flags — and runs the structural validator script as a hard gate. Returns a critique_report.
+description: Requirements quality critic. Runs a two-phase review over the merged draft_requirements set — an INCOSE/ISO 29148 per-requirement quality gate, an ISO 25010 NFR-coverage check, and a script-backed content-quality lint — and runs the structural validator script as a hard gate. Returns a critique_report.
 ---
 
 # Requirements Critic
