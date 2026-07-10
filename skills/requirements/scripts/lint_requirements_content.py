@@ -209,6 +209,41 @@ def check_passive(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     return []
 
 
+TECH_TERMS = {
+    "button", "dropdown", "checkbox", "modal", "click", "tap", "page", "screen",
+    "react", "vue", "angular", "postgres", "postgresql", "mysql", "mongodb",
+    "redis", "kafka", "rest", "graphql", "endpoint", "sql", "css", "html",
+    "javascript", "docker", "kubernetes",
+}
+
+
+def check_impl_bias(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
+    if fm.get("tier") not in ("business", "stakeholder"):
+        return []
+    tier = fm.get("tier")
+    for field in ("title", "description"):
+        text = _text(fm.get(field))
+        low = text.lower()
+        for term in sorted(TECH_TERMS):
+            if re.search(rf"\b{re.escape(term)}\b", low):
+                return [Finding(
+                    rule="impl-bias",
+                    severity="info",
+                    req_id=req_id,
+                    field=field,
+                    excerpt=text.strip()[:120],
+                    message=(
+                        f"implementation detail '{term}' in a "
+                        f"{tier}-tier requirement"
+                    ),
+                    suggested_rewrite_hint=(
+                        "move technology/UI choices to a constraint or the "
+                        "solution tier"
+                    ),
+                )]
+    return []
+
+
 # Registry of check functions, each (req_id, frontmatter) -> List[Finding].
 # Populated in later tasks.
 CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
@@ -216,6 +251,7 @@ CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_compound,
     check_ears,
     check_passive,
+    check_impl_bias,
 ]
 
 

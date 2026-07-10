@@ -127,3 +127,25 @@ def test_passive_nameless_flagged():
 def test_passive_with_named_actor_not_flagged():
     fm = {"description": "When triggered, the record shall be archived by the ledger service."}
     assert lc.check_passive("FR-001", fm) == []
+
+
+def test_impl_bias_flagged_at_stakeholder_tier():
+    findings = lc.lint_dir(os.path.join(CONTENT, "impl-bias"))
+    impl = [f for f in findings if f.rule == "impl-bias"]
+    assert impl
+    assert all(f.severity == "info" for f in impl)
+
+
+def test_impl_bias_not_flagged_at_solution_tier():
+    fm = {"tier": "solution", "title": "x",
+          "description": "When the user clicks the button, the system shall cancel."}
+    assert lc.check_impl_bias("FR-001", fm) == []
+
+
+def test_json_output_is_parseable(capsys):
+    code = lc.main([os.path.join(CONTENT, "vague"), "--json"])
+    out = capsys.readouterr().out
+    data = json.loads(out)
+    assert code == 0
+    assert isinstance(data, list) and data
+    assert {"rule", "severity", "req_id", "field", "message"} <= set(data[0])
