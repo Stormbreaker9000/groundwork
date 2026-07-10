@@ -111,6 +111,8 @@ _COMPOUND_RE = re.compile(
 
 _CONDITION_LEAD_RE = re.compile(r"^(when|while|if|where)\b")
 
+_PASSIVE_RE = re.compile(r"shall be \w+(?:ed|en)\b")
+
 
 def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     text = _text(fm.get("description"))
@@ -186,12 +188,34 @@ def check_ears(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     return []
 
 
+def check_passive(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
+    desc = _text(fm.get("description"))
+    low = desc.lower()
+    for match in _PASSIVE_RE.finditer(low):
+        tail = low[match.end():match.end() + 40]
+        if " by " in tail:
+            continue  # actor is named
+        return [Finding(
+            rule="passive-nameless",
+            severity="warn",
+            req_id=req_id,
+            field="description",
+            excerpt=desc.strip()[:120],
+            message="passive voice hides the responsible actor",
+            suggested_rewrite_hint=(
+                "name the actor: 'the <system/component> shall <verb> ...'"
+            ),
+        )]
+    return []
+
+
 # Registry of check functions, each (req_id, frontmatter) -> List[Finding].
 # Populated in later tasks.
 CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_vague_qualifiers,
     check_compound,
     check_ears,
+    check_passive,
 ]
 
 

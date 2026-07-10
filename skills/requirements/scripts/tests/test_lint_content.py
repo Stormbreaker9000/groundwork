@@ -118,3 +118,12 @@ def test_ears_complex_pattern_skipped():
     fm = {"type": "functional", "ears_pattern": "complex",
           "description": "The system shall do something without a standard lead."}
     assert lc.check_ears("FR-006", fm) == []
+
+
+def test_passive_nameless_flagged():
+    assert "passive-nameless" in rules_for("passive")
+
+
+def test_passive_with_named_actor_not_flagged():
+    fm = {"description": "When triggered, the record shall be archived by the ledger service."}
+    assert lc.check_passive("FR-001", fm) == []
