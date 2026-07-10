@@ -55,3 +55,20 @@ dangling); functional requirements declare an `ears_pattern`.
 ```bash
 pytest skills/requirements/scripts/tests
 ```
+
+## Content-quality linter — `lint_requirements_content.py`
+
+Advisory linter for requirement *prose* (distinct from the structural validator).
+Flags vague qualifiers, compound requirements, EARS non-conformance, passive voice
+with a nameless subject, and implementation bias at the business/stakeholder tier.
+
+```bash
+python3 lint_requirements_content.py .sdlc/requirements        # human report
+python3 lint_requirements_content.py --json .sdlc/requirements # machine-readable
+python3 lint_requirements_content.py --strict reqs             # exit non-zero on error-severity
+```
+
+Exit codes: `0` always (advisory), except `--strict` returns `1` when an
+`error`-severity finding exists, and `2` on a missing directory. It reuses
+`validate_requirements.discover_files`/`parse_frontmatter`, so it sees exactly the
+same atomic requirement files and skips the same non-atomic files.

@@ -186,6 +186,14 @@ python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
 
 The validator MUST exit 0. If it exits non-zero, fix the flagged files (re-dispatch to the owning specialist) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
 
+Then run the advisory content-quality linter and address any `warn`-severity
+findings (the structural validator is the hard gate; the content linter guides
+prose quality):
+
+```bash
+python3 skills/requirements/scripts/lint_requirements_content.py .sdlc/requirements
+```
+
 **Step 5 — Generate the Definition of Done stub:**
 
 Run **dod-generator** to derive `.sdlc/requirements/definition-of-done.md` from the requirement set (functional acceptance gates, NFR fitness gates, constraint/business-rule compliance, test coverage, docs, deployment readiness). This is an M1 stub that M3 expands.

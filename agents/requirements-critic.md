@@ -51,20 +51,31 @@ characteristic that was silently skipped under `coverage.iso_25010_gaps`. An
 unjustified gap is a gate finding, not an automatic failure — surface it for the
 orchestrator/human to decide.
 
-## Gate C — Light anti-pattern flags (prompt-level)
+## Gate C — Content-quality lint (script-backed)
 
-Flag, do not silently rewrite:
+Run the content-quality linter and fold its findings into your per-requirement
+verdicts. It is advisory (it never fails the pipeline by itself); you decide which
+findings warrant a `revise`:
 
-- **Vague qualifiers without metrics**: user-friendly, easy, intuitive, fast,
-  rapid, efficient, robust, flexible, scalable, secure, minimize, maximize,
-  optimize, approximately, as appropriate, TBD.
-- **Compound statements**: any `and`/`or` in an action clause → split.
-- **Implementation bias at the stakeholder tier**: prescribing
-  technology/framework/UI in a `tier: stakeholder` or `tier: business`
-  requirement → move into a constraint or push down to solution tier.
+```bash
+python3 skills/requirements/scripts/lint_requirements_content.py --json .sdlc/requirements
+```
 
-(Deep content-quality linting is deferred to a later milestone; keep this at the
-prompt level.)
+The linter reports, per requirement: `vague-qualifier`, `compound`,
+`ears-conformance`, `passive-nameless`, and `impl-bias` findings, each with an
+`excerpt` and a `suggested_rewrite_hint`. Treat `warn`-severity findings
+(vague qualifiers, compound statements, EARS non-conformance, passive/nameless)
+as defects requiring a `revise`; treat `impl-bias` (`info`) as a prompt to check
+the tier and reword. Add your own judgment on top:
+
+- **Implementation bias**: confirm the flagged tech/UI term truly leaks a
+  solution decision into a `business`/`stakeholder` requirement before requiring
+  a rewrite (the linter is deliberately conservative here).
+- **Suggested rewrites**: author the concrete bad→good rewrite in your findings;
+  the linter only hints at the shape.
+
+If the linter is unavailable (missing interpreter/deps), fall back to flagging
+these anti-patterns by inspection and note the degraded mode in your report.
 
 ## Gate D — Structural validator (HARD GATE)
 
