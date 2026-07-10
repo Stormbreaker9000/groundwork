@@ -29,8 +29,12 @@ clarification_context
         ▼  (orchestrator merges all draft_requirements)
 [ requirements-critic ]  INCOSE/29148 gate + ISO 25010 coverage + validator → critique_report
         │
-        ▼  (orchestrator applies fixes / re-dispatches failed items)
-[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml → formatter_result
+        ▼  (orchestrator applies fixes / re-dispatches failed items; on pass,
+        ▼   orchestrator synthesizes assumptions/dependencies/open-questions)
+[ context synthesis ]  → context_artifact
+        │
+        ▼
+[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml + assumptions.md → formatter_result
 ```
 
 Dispatch order is fixed: **FR specialist first, then NFR specialist, then
@@ -225,6 +229,7 @@ On a passing gate, hand the approved set to `requirements-formatter`. It returns
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-001-...md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  context_artifact: ".sdlc/requirements/assumptions.md"
   validator_rerun: { exit_code: 0 }
 ```
 

@@ -244,8 +244,7 @@ def check_impl_bias(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     return []
 
 
-# Registry of check functions, each (req_id, frontmatter) -> List[Finding].
-# Populated in later tasks.
+# Registry of content-quality checks, each (req_id, frontmatter) -> List[Finding].
 CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_vague_qualifiers,
     check_compound,

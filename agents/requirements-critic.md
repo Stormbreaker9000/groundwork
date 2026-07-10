@@ -65,7 +65,7 @@ The linter reports, per requirement: `vague-qualifier`, `compound`,
 `ears-conformance`, `passive-nameless`, and `impl-bias` findings, each with an
 `excerpt` and a `suggested_rewrite_hint`. Treat `warn`-severity findings
 (vague qualifiers, compound statements, EARS non-conformance, passive/nameless)
-as defects requiring a `revise`; treat `impl-bias` (`info`) as a prompt to check
+as strong candidates for a `revise`; treat `impl-bias` (`info`) as a prompt to check
 the tier and reword. Add your own judgment on top:
 
 - **Implementation bias**: confirm the flagged tech/UI term truly leaks a

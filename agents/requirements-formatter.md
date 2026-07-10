@@ -152,6 +152,7 @@ Return a `formatter_result` (shape in `requirements-orchestrator.md`):
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-002-cancel-pending-order.md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  context_artifact: ".sdlc/requirements/assumptions.md"
   validator_rerun: { exit_code: 0 }
 ```
 
