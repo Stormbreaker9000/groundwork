@@ -157,8 +157,9 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
 5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
 6. **requirements-formatter** — writes the atomic files plus the project-level
-   `assumptions.md` (Assumptions / Dependencies / Open Questions), running only
-   after the critic returns `gate: pass`.
+   `assumptions.md` (Assumptions / Dependencies / Open Questions) and an
+   `index.yaml` carrying a `review_queue` of every `confidence: low` requirement,
+   running only after the critic returns `gate: pass`.
 
 Do not advance to the formatter until the critic reports a passing gate.
 
@@ -185,7 +186,11 @@ Before writing any files, summarize the generated set for review:
 **Assumptions & Dependencies:** [key A-#/D-# items, or "None identified"]
 **Open Questions:** [Q-# items needing human follow-up, or "None"]
 
-**Flagged for review:** [low-confidence items + open questions — or "None"]
+**⚠️ Triage before sign-off — review these specifically:**
+- **Low-confidence requirements:** [each `confidence: low` FR/NFR/CON/BR ID with its one-line reason — or "None"]
+- **Open questions:** [Q-# items still needing a human answer — or "None"]
+
+  These are the uncertain items; confirm or correct *these* rather than re-scanning the whole set. The same low-confidence list is persisted as `review_queue` in `index.yaml`.
 
 **Next Step:** Architecture & design
 ```
