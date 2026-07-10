@@ -57,3 +57,64 @@ def test_event_pattern_with_when_is_clean():
 def test_ears_check_skips_non_functional():
     fm = {"type": "non_functional", "description": "no shall here"}
     assert lc.check_ears("NFR-001", fm) == []
+
+
+def test_ears_missing_shall_flagged():
+    fm = {"type": "functional", "ears_pattern": "event",
+          "description": "When a user logs in, the system records the timestamp."}
+    findings = lc.check_ears("FR-001", fm)
+    assert findings and findings[0].rule == "ears-conformance"
+
+
+def test_ears_state_pattern_requires_while():
+    # State pattern with "While" opening should be clean
+    fm_clean = {"type": "functional", "ears_pattern": "state",
+                "description": "While the account is locked, the system shall reject logins."}
+    assert lc.check_ears("FR-002", fm_clean) == []
+
+    # State pattern without "While" opening should flag
+    fm_bad = {"type": "functional", "ears_pattern": "state",
+              "description": "The system shall reject logins."}
+    findings = lc.check_ears("FR-002", fm_bad)
+    assert len(findings) >= 1 and findings[0].rule == "ears-conformance"
+
+
+def test_ears_unwanted_requires_if_and_then():
+    # Unwanted pattern with "If...then" should be clean
+    fm_clean = {"type": "functional", "ears_pattern": "unwanted",
+                "description": "If the payment fails, then the system shall notify the user."}
+    assert lc.check_ears("FR-003", fm_clean) == []
+
+    # Unwanted pattern with "If" but no "then" should flag
+    fm_bad = {"type": "functional", "ears_pattern": "unwanted",
+              "description": "If the payment fails, the system shall notify the user."}
+    findings = lc.check_ears("FR-003", fm_bad)
+    assert len(findings) >= 1 and findings[0].rule == "ears-conformance"
+
+
+def test_ears_optional_requires_where():
+    # Optional pattern with "Where" opening should be clean
+    fm_clean = {"type": "functional", "ears_pattern": "optional",
+                "description": "Where premium is enabled, the system shall show analytics."}
+    assert lc.check_ears("FR-004", fm_clean) == []
+
+    # Optional pattern without "Where" opening should flag
+    fm_bad = {"type": "functional", "ears_pattern": "optional",
+              "description": "The system shall show analytics."}
+    findings = lc.check_ears("FR-004", fm_bad)
+    assert len(findings) >= 1 and findings[0].rule == "ears-conformance"
+
+
+def test_ears_ubiquitous_violation_flagged():
+    # Ubiquitous pattern with condition keyword opening should flag
+    fm = {"type": "functional", "ears_pattern": "ubiquitous",
+          "description": "When a user logs in, the system shall log the event."}
+    findings = lc.check_ears("FR-005", fm)
+    assert len(findings) >= 1 and findings[0].rule == "ears-conformance"
+
+
+def test_ears_complex_pattern_skipped():
+    # Complex pattern with "shall" should be clean (no single-lead rule)
+    fm = {"type": "functional", "ears_pattern": "complex",
+          "description": "The system shall do something without a standard lead."}
+    assert lc.check_ears("FR-006", fm) == []
