@@ -48,9 +48,47 @@ def _text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value)).strip()
 
 
+VAGUE_TERMS = {
+    "fast", "rapid", "quick", "user-friendly", "easy", "intuitive", "seamless",
+    "efficient", "robust", "flexible", "scalable", "secure", "reliable",
+    "performant", "minimize", "maximize", "optimize", "approximately",
+    "appropriate", "adequate", "sufficient", "state-of-the-art", "modern", "tbd",
+}
+
+
+def _sentences(text: str) -> List[str]:
+    return [s for s in re.split(r"[.;\n]+", text) if s.strip()]
+
+
+def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
+    findings: List[Finding] = []
+    for field in ("title", "description"):
+        text = _text(fm.get(field))
+        for sentence in _sentences(text):
+            low = sentence.lower()
+            quantified = bool(re.search(r"\d", sentence))
+            for term in sorted(VAGUE_TERMS):
+                if re.search(rf"\b{re.escape(term)}\b", low):
+                    findings.append(Finding(
+                        rule="vague-qualifier",
+                        severity="info" if quantified else "warn",
+                        req_id=req_id,
+                        field=field,
+                        excerpt=sentence.strip()[:120],
+                        message=f"vague qualifier '{term}' without a concrete metric",
+                        suggested_rewrite_hint=(
+                            f"replace '{term}' with a measurable threshold "
+                            f"(a time, count, or percentage)"
+                        ),
+                    ))
+    return findings
+
+
 # Registry of check functions, each (req_id, frontmatter) -> List[Finding].
 # Populated in later tasks.
-CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = []
+CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
+    check_vague_qualifiers,
+]
 
 
 def lint_dir(reqs_dir: str) -> List[Finding]:
