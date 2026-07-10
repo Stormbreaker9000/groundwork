@@ -55,8 +55,8 @@ hide it behind passive voice ("shall be displayed").
 - **tier** — most FRs are `solution`; trace each to its stakeholder need via
   `traces_from`. Flag implementation bias (technology/UI choices) up to the
   critic rather than baking it into a stakeholder-tier requirement.
-- **priority** uses MoSCoW (`must`/`should`/`could`/`wont`); **confidence** is
-  `high`/`medium`/`low` (lower it if the need touches an open question).
+- **priority** uses MoSCoW (`must`/`should`/`could`/`wont`); set **confidence**
+  per the rubric below.
 - **verification_method** is usually `test` for FRs (occasionally
   `demonstration` or `inspection`).
 

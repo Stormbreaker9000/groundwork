@@ -188,7 +188,7 @@ Before writing any files, summarize the generated set for review:
 
 **⚠️ Triage before sign-off — review these specifically:**
 - **Low-confidence requirements:** [each `confidence: low` FR/NFR/CON/BR ID with its one-line reason — or "None"]
-- **Open questions:** [Q-# items still needing a human answer — or "None"]
+- **Open questions:** the items listed under **Open Questions** above.
 
   These are the uncertain items; confirm or correct *these* rather than re-scanning the whole set. The same low-confidence list is persisted as `review_queue` in `index.yaml`.
 
