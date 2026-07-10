@@ -94,9 +94,22 @@ ACTION_VERBS = {
     "filter", "sort", "redirect", "set", "mark", "flag", "assign",
 }
 
+# ears_pattern -> required leading keyword (None = must have NO condition lead;
+# "SKIP" = combination pattern, no single-lead rule).
+EARS_LEADS: Dict[str, Optional[str]] = {
+    "event": "when",
+    "state": "while",
+    "unwanted": "if",       # also requires a "then" clause
+    "optional": "where",
+    "ubiquitous": None,
+    "complex": "SKIP",
+}
+
 _COMPOUND_RE = re.compile(
     r"\b(and|or)\s+(" + "|".join(sorted(ACTION_VERBS)) + r")\b"
 )
+
+_CONDITION_LEAD_RE = re.compile(r"^(when|while|if|where)\b")
 
 
 def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
@@ -123,11 +136,62 @@ def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     )]
 
 
+def _ears_finding(req_id: str, desc: str, message: str) -> Finding:
+    return Finding(
+        rule="ears-conformance",
+        severity="warn",
+        req_id=req_id,
+        field="description",
+        excerpt=desc.strip()[:120],
+        message=message,
+        suggested_rewrite_hint="rephrase to the declared EARS pattern's shape",
+    )
+
+
+def check_ears(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
+    if fm.get("type") != "functional":
+        return []
+    desc = _text(fm.get("description"))
+    low = desc.lower()
+    if "shall" not in low:
+        return [_ears_finding(
+            req_id, desc,
+            "functional requirement description does not contain 'shall'",
+        )]
+
+    pattern = fm.get("ears_pattern")
+    lead = EARS_LEADS.get(pattern, "SKIP")
+    if lead == "SKIP":
+        return []
+    if lead is None:
+        # ubiquitous: must NOT open with a condition keyword.
+        if _CONDITION_LEAD_RE.match(low):
+            return [_ears_finding(
+                req_id, desc,
+                "ears_pattern 'ubiquitous' should have no leading condition, "
+                "but the description opens with one",
+            )]
+        return []
+    # Conditional patterns: must open with the required keyword.
+    if not re.match(rf"^{lead}\b", low):
+        return [_ears_finding(
+            req_id, desc,
+            f"ears_pattern '{pattern}' requires a leading '{lead}' clause",
+        )]
+    if pattern == "unwanted" and "then" not in low:
+        return [_ears_finding(
+            req_id, desc,
+            "ears_pattern 'unwanted' requires an 'If ... then ...' structure",
+        )]
+    return []
+
+
 # Registry of check functions, each (req_id, frontmatter) -> List[Finding].
 # Populated in later tasks.
 CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_vague_qualifiers,
     check_compound,
+    check_ears,
 ]
 
 

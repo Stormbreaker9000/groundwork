@@ -42,3 +42,18 @@ def test_compound_requirement_flagged():
 def test_noun_conjunction_not_flagged_as_compound():
     fm = {"description": "The system shall accept the terms and conditions."}
     assert lc.check_compound("FR-001", fm) == []
+
+
+def test_ears_mismatch_flagged():
+    assert "ears-conformance" in rules_for("ears")
+
+
+def test_event_pattern_with_when_is_clean():
+    fm = {"type": "functional", "ears_pattern": "event",
+          "description": "When a user logs in, the system shall record the timestamp."}
+    assert lc.check_ears("FR-001", fm) == []
+
+
+def test_ears_check_skips_non_functional():
+    fm = {"type": "non_functional", "description": "no shall here"}
+    assert lc.check_ears("NFR-001", fm) == []
