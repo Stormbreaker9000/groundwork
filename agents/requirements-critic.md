@@ -131,5 +131,8 @@ items (with your findings) to their owning specialist and re-runs you.
   over-correction).
 - The validator exit code overrides your prose judgment — a non-zero exit is
   always a failed gate.
-- Lower-confidence requirements (touching open questions) should be flagged for
-  human triage, not auto-failed.
+- Lower-confidence requirements (touching open questions or unconfirmed
+  assumptions) should be flagged for human triage, not auto-failed. This
+  low-confidence set is what the formatter persists as `index.yaml`'s
+  `review_queue` and the skill surfaces in its Phase 5 triage block — keep your
+  verdicts consistent with it.
