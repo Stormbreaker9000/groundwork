@@ -107,9 +107,24 @@ def _mentions(haystack: str, phrase: str) -> bool:
     failure being hunted is an invented glossary entry nobody used, so being
     strict about word forms would only produce false warnings on normal English.
     """
-    escaped = re.escape(phrase.strip()).replace(r"\ ", r"\s+")
+    stripped = phrase.strip()
+    escaped = re.escape(stripped).replace(r"\ ", r"\s+")
+
+    # \b requires a word-char/non-word-char transition. When the term itself
+    # starts or ends with a non-word character (e.g. "C++", "state (persisted)"),
+    # that transition never happens in the normal case (term surrounded by
+    # plain whitespace) because both sides of the boundary are non-word
+    # characters too. Anchor on the term's own edges instead: word-boundary
+    # for a word-initial/final term, "not preceded/followed by non-space" for
+    # a punctuation-initial/final one.
+    lead = r"(?<!\w)" if stripped[:1].isalnum() or stripped[:1] == "_" else r"(?<!\S)"
+    if stripped[-1:].isalnum() or stripped[-1:] == "_":
+        tail = r"(?:s|es|d|ed|ing)?\b"
+    else:
+        tail = r"(?!\S)"
+
     return re.search(
-        rf"\b{escaped}(?:s|es|d|ed|ing)?\b", haystack, re.IGNORECASE
+        rf"{lead}{escaped}{tail}", haystack, re.IGNORECASE
     ) is not None
 
 

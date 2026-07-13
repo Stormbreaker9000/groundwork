@@ -218,3 +218,23 @@ def test_term_absent_entirely_is_flagged(tmp_path):
     )
     assert len(findings) == 1
     assert findings[0].rule == "glossary-unused"
+
+
+# ---------------------------------------------------------------------------
+# STO-135 follow-up: punctuation-bearing glossary terms (boundary-anchor bug).
+# ---------------------------------------------------------------------------
+def test_mentions_matches_punctuation_prefixed_and_suffixed_term():
+    """A term like 'C++' must be found even though \\b fails on both its edges."""
+    assert lc._mentions("the C++ runtime must work", "C++")
+    assert lc._mentions("we use C++", "C++")
+
+
+def test_mentions_matches_parenthesised_multiword_term():
+    assert lc._mentions(
+        "the state (persisted) shall survive restarts", "state (persisted)"
+    )
+
+
+def test_mentions_cat_does_not_match_inside_category():
+    """Regression guard: word-boundary anchoring must still hold for plain terms."""
+    assert not lc._mentions("assign a Category to each item", "Cat")
