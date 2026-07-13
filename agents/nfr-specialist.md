@@ -161,3 +161,20 @@ You MAY also return optional sibling `assumptions` and `dependencies` lists (pla
 statements you relied on but could not confirm — e.g. an assumed load profile or a
 dependency on an external monitoring platform). The orchestrator aggregates these
 into the project-level `assumptions.md`; do not embed them in requirement frontmatter.
+
+You MAY additionally return a `terms` sibling — domain vocabulary you used whose
+meaning is specific to this domain and not self-evident to a reader outside this
+conversation. Apply the same bar you apply to surfacing an assumption: if a
+competent engineer on another team would have to guess what the word means here,
+define it.
+
+```yaml
+terms:
+  - term: Decay
+    definition: The reduction of a pet's stat values over elapsed time, applied whether or not the app was running.
+    aliases: [stat decay]        # optional
+```
+
+Do not define ordinary English ("user", "system", "request"). Do not write terms
+into requirement frontmatter — they are siblings, collected by the orchestrator at
+Stage 6.5, exactly like `assumptions` and `dependencies`.

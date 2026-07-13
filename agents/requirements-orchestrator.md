@@ -34,7 +34,7 @@ clarification_context
 [ context synthesis ]  → context_artifact
         │
         ▼
-[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml + assumptions.md → formatter_result
+[ requirements-formatter ]  writes atomic MD+YAML files + index.yaml + assumptions.md + glossary.md → formatter_result
 ```
 
 Dispatch order is fixed: **FR specialist first, then NFR specialist, then
@@ -163,8 +163,9 @@ Merge the three specialists' `draft_requirements` lists into one set, preserving
 ID order, before handing to the critic.
 
 Each specialist MAY additionally return sibling `assumptions` and `dependencies`
-lists (plain statements) alongside its `draft_requirements`. These are optional
-and feed Stage 6.5; they are NOT written into individual requirement frontmatter.
+lists (plain statements) and a `terms` list (domain-vocabulary entries) alongside
+its `draft_requirements`. These are optional and feed Stage 6.5; they are NOT
+written into individual requirement frontmatter.
 
 ## Stage 6 — Critique gate: the `critique_report` hand-off
 
@@ -208,6 +209,10 @@ context_artifact:
     - id: Q-1
       statement: string
       owner: string       # who should resolve it (or "unassigned")
+  glossary:               # domain vocabulary — the M2/M3 anchor
+    - term: Decay
+      definition: The reduction of a pet's stat values over elapsed time, applied whether or not the app was running.
+      aliases: [stat decay]
 ```
 
 Sources, in order:
@@ -216,10 +221,29 @@ Sources, in order:
 2. `assumptions` / `dependencies` — merge any `assumptions`/`dependencies` a
    specialist surfaced in its return object (see Stage 5), then add anything the
    generated set implies that no requirement states outright. De-duplicate.
+3. `glossary` — merge the `terms` siblings returned by the specialists (Stage 5)
+   with any domain vocabulary established in the `clarification_context`. Each
+   specialist saw only its own slice, so collisions are the expected case, not an
+   edge case. You own the merge:
+
+   - Collapse terms differing only in surface form (case, plural, word order) into
+     one entry.
+   - Collapse near-synonyms into a single canonical term, recording the losers as
+     `aliases` — two specialists independently coining "stat decay" and "hunger
+     decay" for one concept is the failure this prevents.
+   - Drop terms that are ordinary English rather than domain vocabulary. A glossary
+     defining "user" and "system" teaches a downstream agent nothing.
+   - Sort entries alphabetically by `term`, so regenerated files diff cleanly.
+
+   An empty `glossary` is legal: a project may have little domain vocabulary, and an
+   honest empty section beats invented entries. The formatter renders it as
+   `None identified`.
 
 If a section has no items, emit a single `None identified` entry. Pass the
-`context_artifact` to the formatter; it writes `.sdlc/requirements/assumptions.md`.
-The structural validator hard-gates that file's presence and its three headings.
+`context_artifact` to the formatter; it writes `.sdlc/requirements/assumptions.md`
+and `.sdlc/requirements/glossary.md`. The structural validator hard-gates
+`assumptions.md`'s presence and its three headings, and separately hard-gates
+`glossary.md`'s presence and its `## Terms` heading.
 
 ## Stage 7 — Format: the `formatter_result` hand-off
 
@@ -229,7 +253,9 @@ On a passing gate, hand the approved set to `requirements-formatter`. It returns
 formatter_result:
   files_written: [ ".sdlc/requirements/functional/FR-001-...md", ... ]
   index: ".sdlc/requirements/index.yaml"
+  review_queue_count: 0
   context_artifact: ".sdlc/requirements/assumptions.md"
+  glossary: ".sdlc/requirements/glossary.md"
   validator_rerun: { exit_code: 0 }
 ```
 

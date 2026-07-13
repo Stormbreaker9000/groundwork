@@ -148,6 +148,33 @@ This is a project-level file, not an atomic requirement — the validator skips 
 as a requirement but hard-gates its presence and its three headings. All three
 headings MUST be present even when a section is empty.
 
+## Glossary artifact — `glossary.md`
+
+When the orchestrator supplies a `glossary` on the `context_artifact` (Stage 6.5),
+write `.sdlc/requirements/glossary.md`. The format is a contract — the structural
+validator gates the `## Terms` heading, and the content linter parses the bullets to
+find terms nobody uses. Deviating from it means the linter silently finds nothing.
+
+```markdown
+# Glossary
+
+## Terms
+- **Decay**: the reduction of a pet's stat values over elapsed time, applied whether or not the app was running. *Also: stat decay.*
+- **Neglect**: a sustained period during which the pet's needs go unmet, progressing toward sickness and death.
+```
+
+Rules:
+- One `# Glossary` H1, one `## Terms` H2.
+- One bullet per term: `- **Term**: definition.` — the term bolded, a colon, then the
+  definition as a sentence.
+- Aliases, when present, go in a trailing italic clause: `*Also: alias, alias.*`
+- Entries sorted alphabetically by term.
+- When the glossary is empty, the `## Terms` section contains the single line
+  `None identified`. Never invent entries to fill it.
+
+Like `assumptions.md`, this is a project-level file, not an atomic requirement: the
+validator skips it as a requirement and hard-gates its presence and its heading.
+
 ## Verify, then report
 
 After writing, the critic's hard gate applies to the real files: run (or ask the
@@ -169,6 +196,7 @@ formatter_result:
   index: ".sdlc/requirements/index.yaml"
   review_queue_count: 0            # number of confidence:low items in index.yaml's review_queue
   context_artifact: ".sdlc/requirements/assumptions.md"
+  glossary: ".sdlc/requirements/glossary.md"
   validator_rerun: { exit_code: 0 }
 ```
 

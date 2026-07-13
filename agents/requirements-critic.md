@@ -77,6 +77,21 @@ the tier and reword. Add your own judgment on top:
 If the linter is unavailable (missing interpreter/deps), fall back to flagging
 these anti-patterns by inspection and note the degraded mode in your report.
 
+### Glossary coverage
+
+Read `glossary.md` against the approved requirement set and flag:
+
+- **Undefined terms** — domain vocabulary used in requirement text that the glossary
+  never defines. This is the direction the content linter deliberately does *not*
+  check: deciding what counts as a domain term in free prose is a judgment call, and
+  a regex attempting it fires on ordinary English. It is your job.
+- **Circular or vacuous definitions** — "Decay: the process of decaying."
+- **Padding** — entries that restate ordinary English rather than domain vocabulary.
+
+These are advisory findings in the `critique_report`, not gate failures. The linter's
+complementary `glossary-unused` finding (a defined term no requirement uses) arrives
+in the `--json` output you already consume.
+
 ## Gate D — Structural validator (HARD GATE)
 
 You MUST run the structural validator built by the schema workstream. Do not
