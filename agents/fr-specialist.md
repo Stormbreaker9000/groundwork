@@ -184,5 +184,7 @@ terms:
 ```
 
 Do not define ordinary English ("user", "system", "request"). Do not write terms
-into requirement frontmatter — they are siblings, collected by the orchestrator at
-Stage 6.5, exactly like `assumptions` and `dependencies`.
+into requirement frontmatter — they are siblings. Unlike `assumptions` and
+`dependencies`, which the orchestrator collects and feeds into Stage 6.5 only,
+`terms` is collected by the orchestrator at Stage 5, forwarded to the critic at
+Stage 6 for review, and merged into the glossary at Stage 6.5.

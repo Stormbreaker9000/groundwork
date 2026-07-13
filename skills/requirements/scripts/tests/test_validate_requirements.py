@@ -169,3 +169,43 @@ def test_glossary_is_not_validated_as_a_requirement(capsys):
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "glossary.md" not in out
+
+
+# ---------------------------------------------------------------------------
+# Heading anchoring — the required heading must match a whole line, not just
+# appear as a substring. A naive `heading in text` check would be fooled by a
+# deeper heading level (### Terms) or a longer heading that merely starts with
+# the required text (## Terms of Service). These pin that behavior against a
+# future refactor of `_check_project_artifact`.
+# ---------------------------------------------------------------------------
+def test_glossary_artifact_h3_terms_is_rejected(tmp_path):
+    """An H3 '### Terms' contains the substring '## Terms' but must not satisfy
+    the '## Terms' H2 heading requirement."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n### Terms\n- **Decay**: x.\n", encoding="utf-8"
+    )
+    errors = vr.check_glossary_artifact(str(tmp_path))
+    assert any("missing required heading" in e for e in errors)
+
+
+def test_glossary_artifact_terms_of_service_heading_is_rejected(tmp_path):
+    """A longer heading that starts with '## Terms' must not satisfy the
+    '## Terms' heading requirement."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms of Service\n- **Decay**: x.\n", encoding="utf-8"
+    )
+    errors = vr.check_glossary_artifact(str(tmp_path))
+    assert any("missing required heading" in e for e in errors)
+
+
+def test_context_artifact_h3_assumptions_is_rejected(tmp_path):
+    """An H3 '### Assumptions' contains the substring '## Assumptions' but must
+    not satisfy the '## Assumptions' H2 heading requirement. Pins the same
+    anchoring behavior for check_context_artifact, which shares
+    _check_project_artifact with check_glossary_artifact."""
+    (tmp_path / "assumptions.md").write_text(
+        "### Assumptions\n- none\n## Dependencies\n- none\n## Open Questions\n- none\n",
+        encoding="utf-8",
+    )
+    errors = vr.check_context_artifact(str(tmp_path))
+    assert any("missing required heading" in e and "Assumptions" in e for e in errors)

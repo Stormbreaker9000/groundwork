@@ -150,10 +150,13 @@ headings MUST be present even when a section is empty.
 
 ## Glossary artifact — `glossary.md`
 
-When the orchestrator supplies a `glossary` on the `context_artifact` (Stage 6.5),
-write `.sdlc/requirements/glossary.md`. The format is a contract — the structural
-validator gates the `## Terms` heading, and the content linter parses the bullets to
-find terms nobody uses. Deviating from it means the linter silently finds nothing.
+Always write `.sdlc/requirements/glossary.md`, whether or not the `context_artifact`
+(Stage 6.5) carries a non-empty `glossary` — a project with no domain vocabulary
+still gets the file, with `None identified` under `## Terms`. The structural
+validator's presence gate is unconditional, so the write must be too. The format is
+a contract — the structural validator gates the `## Terms` heading, and the content
+linter parses the bullets to find terms nobody uses. Deviating from it means the
+linter silently finds nothing.
 
 ```markdown
 # Glossary
@@ -169,7 +172,8 @@ Rules:
   definition as a sentence.
 - Aliases, when present, go in a trailing italic clause: `*Also: alias, alias.*`
 - Entries sorted alphabetically by term.
-- When the glossary is empty, the `## Terms` section contains the single line
+- When the glossary is empty or the `glossary` key is absent from the
+  `context_artifact` entirely, the `## Terms` section contains the single line
   `None identified`. Never invent entries to fill it.
 
 Like `assumptions.md`, this is a project-level file, not an atomic requirement: the
