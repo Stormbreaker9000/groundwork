@@ -58,6 +58,8 @@ INVALID_CASES = {
     "fr_missing_ears": "ears_pattern",
     "missing_context_artifact": "context artifact",
     "context_artifact_missing_heading": "missing required heading",
+    "missing_glossary": "glossary artifact",
+    "glossary_missing_heading": "missing required heading",
 }
 
 
@@ -125,3 +127,45 @@ def test_context_artifact_non_utf8_is_reported_not_raised(tmp_path):
     (tmp_path / "assumptions.md").write_bytes(b"\xff\xfe## Assumptions\n")
     errors = vr.check_context_artifact(str(tmp_path))
     assert errors and any("could not read" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Glossary artifact (STO-135) — presence + heading gate.
+# ---------------------------------------------------------------------------
+def test_glossary_artifact_present_passes(tmp_path):
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\n- **Decay**: the reduction of stat values over time.\n",
+        encoding="utf-8",
+    )
+    assert vr.check_glossary_artifact(str(tmp_path)) == []
+
+
+def test_glossary_artifact_empty_section_passes(tmp_path):
+    """An honest 'None identified' glossary is legal — content is never gated."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\nNone identified\n", encoding="utf-8"
+    )
+    assert vr.check_glossary_artifact(str(tmp_path)) == []
+
+
+def test_glossary_artifact_missing_file_is_flagged(tmp_path):
+    errors = vr.check_glossary_artifact(str(tmp_path))
+    assert any("glossary artifact" in e for e in errors)
+
+
+def test_glossary_artifact_missing_heading_is_flagged(tmp_path):
+    (tmp_path / "glossary.md").write_text("# Glossary\n\n- **Decay**: x.\n", encoding="utf-8")
+    errors = vr.check_glossary_artifact(str(tmp_path))
+    assert any("missing required heading" in e for e in errors)
+
+
+def test_glossary_artifact_non_utf8_is_reported_not_raised(tmp_path):
+    (tmp_path / "glossary.md").write_bytes(b"\xff\xfe## Terms\n")
+    errors = vr.check_glossary_artifact(str(tmp_path))
+    assert errors and any("could not read" in e for e in errors)
+
+
+def test_glossary_is_not_validated_as_a_requirement(capsys):
+    run(VALID_DIR)
+    out = capsys.readouterr().out
+    assert "glossary.md" not in out

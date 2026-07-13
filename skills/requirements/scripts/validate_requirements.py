@@ -91,7 +91,9 @@ except ImportError:  # pragma: no cover - exercised only without the dep
 
 
 # Files that live in the requirements dir but are not atomic requirements.
-SKIP_FILENAMES = {"definition-of-done.md", "index.yaml", "assumptions.md"}
+SKIP_FILENAMES = {
+    "definition-of-done.md", "index.yaml", "assumptions.md", "glossary.md",
+}
 
 # ID prefix -> expected `type`. Mirrors the schema contract.
 PREFIX_TO_TYPE = {
@@ -105,6 +107,11 @@ PREFIX_TO_TYPE = {
 # Project-level context artifact (STO-134): assumptions/dependencies/open-questions.
 CONTEXT_ARTIFACT = "assumptions.md"
 REQUIRED_CONTEXT_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
+
+# Project-level glossary artifact (STO-135): the shared vocabulary anchor that keeps
+# downstream stages (M2 architecture, M3 QA) from drifting on terminology.
+GLOSSARY_ARTIFACT = "glossary.md"
+REQUIRED_GLOSSARY_HEADINGS = ["## Terms"]
 
 # Minimal enum/required knowledge for the stdlib fallback path only. The JSON
 # Schema remains the single source of truth when jsonschema is available.
@@ -403,33 +410,52 @@ def cross_file_checks(files: List[RequirementFile]) -> List[str]:
     return global_errors
 
 
-def check_context_artifact(reqs_dir: str) -> List[str]:
-    """Assumptions/Dependencies/Open-Questions artifact presence + headings (hard gate).
+def _check_project_artifact(
+    reqs_dir: str, filename: str, required_headings: List[str], label: str, hint: str
+) -> List[str]:
+    """Gate a project-level artifact's presence and its required H2 headings.
 
-    Returns a list of set-level error strings (empty when the artifact is present
-    and contains all three required H2 headings, even if a section reads
-    'None identified').
+    Presence and headings only — content is never gated. A section reading
+    'None identified' is legal and passes.
     """
-    path = os.path.join(reqs_dir, CONTEXT_ARTIFACT)
+    path = os.path.join(reqs_dir, filename)
     if not os.path.isfile(path):
-        return [
-            f"missing required context artifact '{CONTEXT_ARTIFACT}' "
-            f"(Assumptions / Dependencies / Open Questions)"
-        ]
+        return [f"missing required {label} '{filename}' ({hint})"]
     try:
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
     except (OSError, UnicodeDecodeError) as exc:
-        return [f"could not read context artifact '{CONTEXT_ARTIFACT}': {exc}"]
+        return [f"could not read {label} '{filename}': {exc}"]
 
     errors: List[str] = []
-    for heading in REQUIRED_CONTEXT_HEADINGS:
+    for heading in required_headings:
         if not re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE):
             errors.append(
-                f"context artifact '{CONTEXT_ARTIFACT}' missing required heading "
-                f"'{heading}'"
+                f"{label} '{filename}' missing required heading '{heading}'"
             )
     return errors
+
+
+def check_context_artifact(reqs_dir: str) -> List[str]:
+    """Assumptions/Dependencies/Open-Questions artifact (hard gate)."""
+    return _check_project_artifact(
+        reqs_dir,
+        CONTEXT_ARTIFACT,
+        REQUIRED_CONTEXT_HEADINGS,
+        "context artifact",
+        "Assumptions / Dependencies / Open Questions",
+    )
+
+
+def check_glossary_artifact(reqs_dir: str) -> List[str]:
+    """Glossary artifact (hard gate). An empty 'None identified' Terms section passes."""
+    return _check_project_artifact(
+        reqs_dir,
+        GLOSSARY_ARTIFACT,
+        REQUIRED_GLOSSARY_HEADINGS,
+        "glossary artifact",
+        "Terms",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -476,6 +502,7 @@ def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], Li
 
     global_errors = cross_file_checks(files)
     global_errors.extend(check_context_artifact(reqs_dir))
+    global_errors.extend(check_glossary_artifact(reqs_dir))
     return files, global_errors
 
 
