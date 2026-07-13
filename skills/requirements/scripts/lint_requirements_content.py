@@ -25,7 +25,7 @@ import os
 import re
 import sys
 from dataclasses import asdict, dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import validate_requirements as vr
 
@@ -58,6 +58,90 @@ VAGUE_TERMS = {
 
 def _sentences(text: str) -> List[str]:
     return [s for s in re.split(r"[.;\n]+", text) if s.strip()]
+
+
+# --- Glossary (STO-135) -----------------------------------------------------
+# The on-disk contract: "- **Term**: definition. *Also: alias, alias.*"
+_GLOSSARY_TERM_RE = re.compile(r"^\s*-\s+\*\*(?P<term>[^*]+)\*\*\s*:\s*(?P<rest>.*)$")
+_GLOSSARY_ALIAS_RE = re.compile(r"\*Also:\s*(?P<aliases>[^*]+?)\.?\*")
+
+# Requirement fields whose prose is searched for glossary-term usage.
+GLOSSARY_SEARCH_FIELDS = ("title", "description", "rationale", "fit_criterion")
+
+
+def parse_glossary(reqs_dir: str) -> List[Tuple[str, List[str]]]:
+    """Return [(term, aliases)] parsed from glossary.md, or [] if it is absent.
+
+    A missing glossary is the structural validator's hard gate, not a content
+    finding — so this returns [] rather than raising or reporting.
+    """
+    path = os.path.join(reqs_dir, vr.GLOSSARY_ARTIFACT)
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    entries: List[Tuple[str, List[str]]] = []
+    for line in text.splitlines():
+        match = _GLOSSARY_TERM_RE.match(line)
+        if not match:
+            continue
+        term = match.group("term").strip()
+        aliases: List[str] = []
+        alias_match = _GLOSSARY_ALIAS_RE.search(match.group("rest"))
+        if alias_match:
+            aliases = [
+                a.strip() for a in alias_match.group("aliases").split(",") if a.strip()
+            ]
+        entries.append((term, aliases))
+    return entries
+
+
+def _mentions(haystack: str, phrase: str) -> bool:
+    """True if `phrase` appears in `haystack`, tolerating ordinary inflection.
+
+    'decay' matches 'decays' / 'decaying' / 'decayed'. Deliberately loose: the
+    failure being hunted is an invented glossary entry nobody used, so being
+    strict about word forms would only produce false warnings on normal English.
+    """
+    escaped = re.escape(phrase.strip()).replace(r"\ ", r"\s+")
+    return re.search(
+        rf"\b{escaped}(?:s|es|d|ed|ing)?\b", haystack, re.IGNORECASE
+    ) is not None
+
+
+def check_glossary_unused(
+    reqs_dir: str, frontmatters: List[Dict[str, Any]]
+) -> List[Finding]:
+    """Warn for any glossary term (and its aliases) that no requirement uses."""
+    entries = parse_glossary(reqs_dir)
+    if not entries:
+        return []
+
+    corpus = " ".join(
+        _text(fm.get(field)) for fm in frontmatters for field in GLOSSARY_SEARCH_FIELDS
+    )
+
+    findings: List[Finding] = []
+    for term, aliases in entries:
+        if any(_mentions(corpus, phrase) for phrase in (term, *aliases)):
+            continue
+        findings.append(Finding(
+            rule="glossary-unused",
+            severity="warn",
+            req_id=vr.GLOSSARY_ARTIFACT,
+            field="terms",
+            excerpt=term,
+            message=f"glossary term '{term}' is used by no requirement",
+            suggested_rewrite_hint=(
+                "drop the entry, or check whether a requirement should be using "
+                "this term and is wording it differently"
+            ),
+        ))
+    return findings
 
 
 def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
@@ -253,17 +337,28 @@ CHECKS: List[Callable[[str, Dict[str, Any]], List[Finding]]] = [
     check_impl_bias,
 ]
 
+# Registry of set-level checks, each (reqs_dir, [frontmatter]) -> List[Finding].
+# These need the whole set at once — "no requirement uses this term" is not
+# decidable from a single file.
+SET_CHECKS: List[Callable[[str, List[Dict[str, Any]]], List[Finding]]] = [
+    check_glossary_unused,
+]
+
 
 def lint_dir(reqs_dir: str) -> List[Finding]:
     findings: List[Finding] = []
+    frontmatters: List[Dict[str, Any]] = []
     for path in vr.discover_files(reqs_dir):
         fm, err = vr.parse_frontmatter(path)
         if err or not isinstance(fm, dict):
             # Parse/structure problems are the structural validator's job.
             continue
+        frontmatters.append(fm)
         req_id = fm.get("id") or os.path.basename(path)
         for check in CHECKS:
             findings.extend(check(req_id, fm))
+    for set_check in SET_CHECKS:
+        findings.extend(set_check(reqs_dir, frontmatters))
     return findings
 
 
