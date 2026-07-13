@@ -1,0 +1,194 @@
+requirements:
+  - id: FR-001
+    type: functional
+    tier: solution
+    title: Persist pet state to local storage
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-001-persist-pet-state-to-local-storage.md
+  - id: FR-002
+    type: functional
+    tier: solution
+    title: Apply offline-elapsed decay on launch
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-002-apply-offline-elapsed-decay-on-launch.md
+  - id: FR-003
+    type: functional
+    tier: solution
+    title: Feed the pet
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-003-feed-the-pet.md
+  - id: FR-004
+    type: functional
+    tier: solution
+    title: Play with the pet
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-004-play-with-the-pet.md
+  - id: FR-005
+    type: functional
+    tier: solution
+    title: Clean the pet
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-005-clean-the-pet.md
+  - id: FR-006
+    type: functional
+    tier: solution
+    title: Put the pet to sleep
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-006-put-the-pet-to-sleep.md
+  - id: FR-007
+    type: functional
+    tier: solution
+    title: Display pet mood expression
+    priority: must
+    confidence: medium
+    status: draft
+    path: functional/FR-007-display-pet-mood-expression.md
+  - id: FR-008
+    type: functional
+    tier: solution
+    title: Progress neglect to sickness and death
+    priority: must
+    confidence: low
+    status: draft
+    path: functional/FR-008-progress-neglect-to-sickness-and-death.md
+  - id: FR-009
+    type: functional
+    tier: solution
+    title: Optional local care reminders
+    priority: could
+    confidence: medium
+    status: draft
+    path: functional/FR-009-optional-local-care-reminders.md
+  - id: FR-010
+    type: functional
+    tier: solution
+    title: Recover from corrupted or missing save file
+    priority: must
+    confidence: high
+    status: draft
+    path: functional/FR-010-recover-from-corrupted-or-missing-save-file.md
+  - id: NFR-001
+    type: non_functional
+    tier: solution
+    title: Offline-elapsed decay correctness
+    priority: must
+    confidence: medium
+    status: draft
+    path: non-functional/NFR-001-offline-elapsed-decay-correctness.md
+  - id: NFR-002
+    type: non_functional
+    tier: solution
+    title: Idle CPU and memory footprint budget
+    priority: must
+    confidence: low
+    status: draft
+    path: non-functional/NFR-002-idle-cpu-and-memory-footprint-budget.md
+  - id: NFR-003
+    type: non_functional
+    tier: solution
+    title: Keyboard and screen-reader accessibility
+    priority: must
+    confidence: high
+    status: draft
+    path: non-functional/NFR-003-keyboard-and-screen-reader-accessibility.md
+  - id: NFR-004
+    type: non_functional
+    tier: solution
+    title: Crash-safe state recovery
+    priority: must
+    confidence: high
+    status: draft
+    path: non-functional/NFR-004-crash-safe-state-recovery.md
+  - id: NFR-005
+    type: non_functional
+    tier: solution
+    title: Local-only data handling
+    priority: must
+    confidence: high
+    status: draft
+    path: non-functional/NFR-005-local-only-data-handling.md
+  - id: NFR-006
+    type: non_functional
+    tier: solution
+    title: Cross-platform desktop support
+    priority: should
+    confidence: medium
+    status: draft
+    path: non-functional/NFR-006-cross-platform-desktop-support.md
+  - id: NFR-007
+    type: non_functional
+    tier: solution
+    title: Local diagnostic logging of state decay
+    priority: should
+    confidence: medium
+    status: draft
+    path: non-functional/NFR-007-local-diagnostic-logging-of-state-decay.md
+  - id: CON-001
+    type: constraint
+    tier: solution
+    title: Lightweight always-on runtime footprint boundary
+    priority: must
+    confidence: low
+    status: draft
+    path: constraints/CON-001-lightweight-always-on-runtime-footprint-boundary.md
+  - id: CON-002
+    type: constraint
+    tier: solution
+    title: Fully offline local-only operation
+    priority: must
+    confidence: high
+    status: draft
+    path: constraints/CON-002-fully-offline-local-only-operation.md
+  - id: CON-003
+    type: constraint
+    tier: business
+    title: Cross-platform delivery target
+    priority: should
+    confidence: low
+    status: draft
+    path: constraints/CON-003-cross-platform-delivery-target.md
+  - id: BR-001
+    type: business_rule
+    tier: business
+    title: Death only after sustained neglect
+    priority: must
+    confidence: low
+    status: draft
+    path: business-rules/BR-001-death-only-after-sustained-neglect.md
+  - id: BR-002
+    type: business_rule
+    tier: business
+    title: Decay accrues only for real forward elapsed time
+    priority: must
+    confidence: medium
+    status: draft
+    path: business-rules/BR-002-decay-accrues-only-for-real-forward-elapsed-time.md
+
+review_queue:
+  - id: FR-008
+    confidence: low
+    reason: "rests on open question Q-2 (is death permanent or a configurable soft reset)"
+  - id: NFR-002
+    confidence: low
+    reason: "idle-footprint budget depends on open question Q-4 (framework/runtime choice: Electron vs Tauri vs native)"
+  - id: CON-001
+    confidence: low
+    reason: "runtime footprint boundary rests on open question Q-4 (framework/runtime choice)"
+  - id: CON-003
+    confidence: low
+    reason: "cross-platform delivery scope rests on open question Q-3 (which platforms ship in v1)"
+  - id: BR-001
+    confidence: low
+    reason: "death/reset policy rests on open question Q-2 (death permanence)"
