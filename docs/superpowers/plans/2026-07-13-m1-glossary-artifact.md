@@ -419,12 +419,38 @@ def test_glossary_term_matched_through_inflection():
     assert not lc._mentions(lc._text(fm.get("description")), "Quarantine")
 
 
-def test_alias_counts_as_usage():
+def test_alias_counts_as_usage(tmp_path):
+    """A requirement using only the ALIAS counts as using the term.
+
+    The term itself ('Erasure') never appears in the corpus, so this fails if
+    alias matching is broken — unlike a term that is a substring of its own alias.
+    """
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\n"
+        "- **Erasure**: the permanent removal of a data subject's personal data. "
+        "*Also: right to be forgotten.*\n",
+        encoding="utf-8",
+    )
     findings = lc.check_glossary_unused(
-        os.path.join(CONTENT, "glossary-used"),
-        [{"description": "Apply stat decay on launch."}],
+        str(tmp_path),
+        [{"description": "The system shall honour the right to be forgotten."}],
     )
     assert findings == []
+
+
+def test_term_absent_entirely_is_flagged(tmp_path):
+    """Same glossary, but neither the term nor its alias is used anywhere."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\n"
+        "- **Erasure**: the permanent removal of a data subject's personal data. "
+        "*Also: right to be forgotten.*\n",
+        encoding="utf-8",
+    )
+    findings = lc.check_glossary_unused(
+        str(tmp_path), [{"description": "The system shall export personal data."}]
+    )
+    assert len(findings) == 1
+    assert findings[0].rule == "glossary-unused"
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
