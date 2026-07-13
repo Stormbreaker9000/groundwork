@@ -164,12 +164,16 @@ ID order, before handing to the critic.
 
 Each specialist MAY additionally return sibling `assumptions` and `dependencies`
 lists (plain statements) and a `terms` list (domain-vocabulary entries) alongside
-its `draft_requirements`. These are optional and feed Stage 6.5; they are NOT
-written into individual requirement frontmatter.
+its `draft_requirements`. These are optional and are NOT written into individual
+requirement frontmatter. `assumptions` and `dependencies` feed Stage 6.5 only.
+`terms` feeds both Stage 6 — the critic reviews it for undefined, circular, or
+padding entries — and Stage 6.5, where it is merged into the glossary.
 
 ## Stage 6 — Critique gate: the `critique_report` hand-off
 
-Pass the merged set to `requirements-critic`. It returns a `critique_report`:
+Pass the merged set, along with the `terms` siblings collected in Stage 5, to
+`requirements-critic` — it needs `terms` for its glossary-coverage check, since
+`glossary.md` does not exist yet at this stage. It returns a `critique_report`:
 
 ```yaml
 critique_report:
