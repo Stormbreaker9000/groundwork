@@ -184,12 +184,18 @@ critique_report:
       findings: [ ...INCOSE/29148 + anti-pattern notes... ]
   coverage:
     iso_25010_gaps: [ ...characteristics with no NFR + justification... ]
+  glossary_findings:
+    - term: Decay
+      issue: undefined | circular | vacuous | padding
+      note: string       # what's wrong, and (for undefined) a proposed definition
 ```
 
 If `gate: fail` or any item is `revise`, re-dispatch only the affected items to
 their owning specialist with the critic findings attached, then re-run the critic.
 Do not advance to the formatter until `gate: pass`. Keep the critic's
 comprehension and critique separate (it enforces this) to avoid over-correction.
+`glossary_findings` is advisory and never affects `gate` on its own — carry it
+forward into Stage 6.5 rather than re-dispatching on it.
 
 ## Stage 6.5 — Synthesize the context artifact
 
@@ -233,6 +239,12 @@ Sources, in order:
      decay" for one concept is the failure this prevents.
    - Drop terms that are ordinary English rather than domain vocabulary. A glossary
      defining "user" and "system" teaches a downstream agent nothing.
+   - Incorporate the critic's `glossary_findings` from Stage 6's `critique_report`:
+     add an entry (with a definition) for each term it flagged `undefined`, and
+     drop or rewrite the entries it flagged `circular`, `vacuous`, or `padding`.
+     This is why the glossary is assembled here, after the critique gate, rather
+     than earlier — the critic's findings are an input to this merge, not a
+     downstream consumer of its output.
    - Sort entries alphabetically by `term`, so regenerated files diff cleanly.
 
    An empty `glossary` is legal: a project may have little domain vocabulary, and an

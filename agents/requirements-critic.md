@@ -79,18 +79,30 @@ these anti-patterns by inspection and note the degraded mode in your report.
 
 ### Glossary coverage
 
-Read `glossary.md` against the approved requirement set and flag:
+You run before the glossary exists: `glossary.md` is not written until Stage 7,
+and the merged `glossary` list it is written from is not even assembled until
+Stage 6.5, which happens after your gate passes. So review the collected `terms`
+siblings the specialists returned (Stage 5 of the orchestrator) against the
+requirement prose in the merged draft set you were handed — that is the input
+that actually exists at this point — and flag:
 
-- **Undefined terms** — domain vocabulary used in requirement text that the glossary
-  never defines. This is the direction the content linter deliberately does *not*
-  check: deciding what counts as a domain term in free prose is a judgment call, and
-  a regex attempting it fires on ordinary English. It is your job.
+- **Undefined terms** — domain vocabulary used in requirement text that no
+  specialist defined in its `terms`. This is the direction the content linter
+  deliberately does *not* check: deciding what counts as a domain term in free
+  prose is a judgment call, and a regex attempting it fires on ordinary English.
+  It is your job.
 - **Circular or vacuous definitions** — "Decay: the process of decaying."
-- **Padding** — entries that restate ordinary English rather than domain vocabulary.
+- **Padding** — entries that restate ordinary English rather than domain
+  vocabulary.
 
-These are advisory findings in the `critique_report`, not gate failures. The linter's
-complementary `glossary-unused` finding (a defined term no requirement uses) arrives
-in the `--json` output you already consume.
+These are advisory findings in the `critique_report`, under `glossary_findings`,
+not gate failures. The orchestrator folds them into the Stage 6.5 merge — adding
+the terms you flagged as undefined, dropping or rewriting the ones you flagged as
+circular, vacuous, or padding — so the glossary the formatter writes is already
+corrected. The linter's complementary `glossary-unused` finding (a defined term no
+requirement uses) is a different, later signal: it can only exist once
+`glossary.md` is on disk, so it arrives when the linter runs after formatting,
+not something you consume at gate time.
 
 ## Gate D — Structural validator (HARD GATE)
 
@@ -133,6 +145,10 @@ critique_report:
       findings: [ ... ]        # empty when pass
   coverage:
     iso_25010_gaps: [ ... ]
+  glossary_findings:
+    - term: Decay
+      issue: undefined | circular | vacuous | padding
+      note: string              # what's wrong, and (for undefined) a proposed definition
 ```
 
 Set `gate: pass` only when the validator exits zero AND no requirement is marked
