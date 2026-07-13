@@ -157,7 +157,8 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
 5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
 6. **requirements-formatter** — writes the atomic files plus the project-level
-   `assumptions.md` (Assumptions / Dependencies / Open Questions) and an
+   `assumptions.md` (Assumptions / Dependencies / Open Questions), `glossary.md`
+   (the domain vocabulary that anchors the hand-off to architecture and QA), and an
    `index.yaml` carrying a `review_queue` of every `confidence: low` requirement,
    running only after the critic returns `gate: pass`.
 
@@ -212,9 +213,12 @@ python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
 
 The validator MUST exit 0. If it exits non-zero, fix the flagged files (re-dispatch to the owning specialist) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
 
-The formatter also writes `.sdlc/requirements/assumptions.md`. The structural
-validator hard-gates its presence and its three headings (`## Assumptions`,
-`## Dependencies`, `## Open Questions`) — a missing file or heading fails the gate.
+The formatter also writes `.sdlc/requirements/assumptions.md` and
+`.sdlc/requirements/glossary.md`. The structural validator hard-gates both: the
+assumptions file must carry its three headings (`## Assumptions`, `## Dependencies`,
+`## Open Questions`) and the glossary must carry `## Terms`. A missing file or
+heading fails the gate. Content is never gated — a section reading `None identified`
+is legal, and an honest empty glossary beats invented entries.
 
 Then run the advisory content-quality linter and address any `warn`-severity
 findings (the structural validator is the hard gate; the content linter guides
