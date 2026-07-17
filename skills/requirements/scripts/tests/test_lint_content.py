@@ -149,3 +149,92 @@ def test_json_output_is_parseable(capsys):
     assert code == 0
     assert isinstance(data, list) and data
     assert {"rule", "severity", "req_id", "field", "message"} <= set(data[0])
+
+
+# ---------------------------------------------------------------------------
+# Glossary (STO-135) — set-level unused-term check.
+# ---------------------------------------------------------------------------
+def test_parse_glossary_reads_terms_and_aliases():
+    entries = lc.parse_glossary(os.path.join(CONTENT, "glossary-used"))
+    assert entries == [("Decay", ["stat decay"])]
+
+
+def test_parse_glossary_absent_file_yields_no_entries():
+    # The 'clean' fixture has no glossary.md — a missing glossary is the
+    # structural validator's problem, not the linter's.
+    assert lc.parse_glossary(os.path.join(CONTENT, "clean")) == []
+
+
+def test_unused_glossary_term_is_flagged():
+    findings = lc.lint_dir(os.path.join(CONTENT, "glossary-unused"))
+    unused = [f for f in findings if f.rule == "glossary-unused"]
+    assert len(unused) == 1
+    assert "Quarantine" in unused[0].message
+    assert unused[0].severity == "warn"
+
+
+def test_used_glossary_term_is_not_flagged():
+    findings = lc.lint_dir(os.path.join(CONTENT, "glossary-used"))
+    assert [f for f in findings if f.rule == "glossary-unused"] == []
+
+
+def test_glossary_term_matched_through_inflection():
+    """'Decay' is used as 'decays' — inflection must count as usage."""
+    fm = {"description": "The system shall apply decay while the app is closed."}
+    assert lc._mentions("the pet's hunger decays over time", "Decay")
+    assert lc._mentions("applying stat decay on launch", "stat decay")
+    assert not lc._mentions(lc._text(fm.get("description")), "Quarantine")
+
+
+def test_alias_counts_as_usage(tmp_path):
+    """A requirement using only the ALIAS counts as using the term.
+
+    The term itself ('Erasure') never appears in the corpus, so this fails if
+    alias matching is broken — unlike a term that is a substring of its own alias.
+    """
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\n"
+        "- **Erasure**: the permanent removal of a data subject's personal data. "
+        "*Also: right to be forgotten.*\n",
+        encoding="utf-8",
+    )
+    findings = lc.check_glossary_unused(
+        str(tmp_path),
+        [{"description": "The system shall honour the right to be forgotten."}],
+    )
+    assert findings == []
+
+
+def test_term_absent_entirely_is_flagged(tmp_path):
+    """Same glossary, but neither the term nor its alias is used anywhere."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n## Terms\n"
+        "- **Erasure**: the permanent removal of a data subject's personal data. "
+        "*Also: right to be forgotten.*\n",
+        encoding="utf-8",
+    )
+    findings = lc.check_glossary_unused(
+        str(tmp_path), [{"description": "The system shall export personal data."}]
+    )
+    assert len(findings) == 1
+    assert findings[0].rule == "glossary-unused"
+
+
+# ---------------------------------------------------------------------------
+# STO-135 follow-up: punctuation-bearing glossary terms (boundary-anchor bug).
+# ---------------------------------------------------------------------------
+def test_mentions_matches_punctuation_prefixed_and_suffixed_term():
+    """A term like 'C++' must be found even though \\b fails on both its edges."""
+    assert lc._mentions("the C++ runtime must work", "C++")
+    assert lc._mentions("we use C++", "C++")
+
+
+def test_mentions_matches_parenthesised_multiword_term():
+    assert lc._mentions(
+        "the state (persisted) shall survive restarts", "state (persisted)"
+    )
+
+
+def test_mentions_cat_does_not_match_inside_category():
+    """Regression guard: word-boundary anchoring must still hold for plain terms."""
+    assert not lc._mentions("assign a Category to each item", "Cat")
