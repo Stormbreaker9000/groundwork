@@ -1,0 +1,7 @@
+# Optional machine index of the design set. Skipped by the validator (it is not
+# an atomic artifact), present here to prove index.yaml is ignored.
+components:
+  - CMP-001
+  - CMP-002
+interfaces:
+  - IF-001
