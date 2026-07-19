@@ -24,11 +24,16 @@ This tool:
        - The ID prefix matches ``type``
          (FR->functional, NFR->non_functional, CON->constraint,
           BR->business_rule, UC->use_case).
-       - ``traces_from`` and every ``traces_to`` entry reference an existing
-         requirement ID (no dangling references).
+       - ``traces_from`` references an existing requirement ID (no dangling
+         references).
        - Functional requirements declare an ``ears_pattern``.
   5. Prints a readable per-file + summary report and exits non-zero on any
      violation.
+
+The stage-agnostic machinery (frontmatter parsing, the stdlib fallback parser,
+schema validation, project-artifact gating, discovery, reporting) lives in
+``lib/artifact_core.py`` and is shared with the M2 design validator. Only the
+requirement-specific cross-file checks and fallback field lists live here.
 
 Usage
 -----
@@ -61,33 +66,25 @@ schema path.
 from __future__ import annotations
 
 import argparse
-import datetime
-import json
 import os
-import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-# ---------------------------------------------------------------------------
-# Optional dependencies. We degrade gracefully if they are not installed.
-# ---------------------------------------------------------------------------
-try:  # PyYAML
-    import yaml  # type: ignore
+# Shared core lives at the repo root in ``lib/``; add it to the path before
+# importing. Resolved relative to this file, so cwd does not matter.
+_REPO_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
+_LIB_DIR = os.path.join(_REPO_ROOT, "lib")
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
 
-    _HAVE_YAML = True
-except ImportError:  # pragma: no cover - exercised only without the dep
-    yaml = None  # type: ignore
-    _HAVE_YAML = False
-
-try:  # jsonschema
-    import jsonschema  # type: ignore
-    from jsonschema import Draft202012Validator  # type: ignore
-
-    _HAVE_JSONSCHEMA = True
-except ImportError:  # pragma: no cover - exercised only without the dep
-    jsonschema = None  # type: ignore
-    Draft202012Validator = None  # type: ignore
-    _HAVE_JSONSCHEMA = False
+import artifact_core as core  # noqa: E402
+from artifact_core import (  # noqa: E402  (re-exported for tests/linter)
+    ArtifactFile,
+    extract_frontmatter_block,
+    parse_frontmatter,
+)
 
 
 # Files that live in the requirements dir but are not atomic requirements.
@@ -131,192 +128,18 @@ _FALLBACK_ENUMS = {
     "scope": {"project", "epic", "story"},
 }
 
-_FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 
-
-class RequirementFile:
-    """A parsed requirement file and the errors found while validating it."""
-
-    def __init__(self, path: str) -> None:
-        self.path = path
-        self.frontmatter: Optional[Dict[str, Any]] = None
-        self.errors: List[str] = []
-
-    @property
-    def ok(self) -> bool:
-        return not self.errors
+class RequirementFile(ArtifactFile):
+    """A parsed requirement file. ``req_id`` reads the generic ``artifact_id``."""
 
     @property
     def req_id(self) -> Optional[str]:
-        if isinstance(self.frontmatter, dict):
-            value = self.frontmatter.get("id")
-            if isinstance(value, str):
-                return value
-        return None
+        return self.artifact_id
 
 
 # ---------------------------------------------------------------------------
-# Frontmatter parsing
+# Schema validation (fallback path — requirement-specific field knowledge)
 # ---------------------------------------------------------------------------
-def extract_frontmatter_block(text: str) -> Optional[str]:
-    """Return the raw YAML frontmatter block, or None if absent."""
-    match = _FRONTMATTER_RE.match(text)
-    if not match:
-        return None
-    return match.group(1)
-
-
-def _strip_inline_comment(value: str) -> str:
-    # Remove a trailing ` # comment` (best effort, not quote-aware).
-    hash_idx = value.find(" #")
-    if hash_idx != -1:
-        value = value[:hash_idx]
-    return value.strip()
-
-
-def _coerce_scalar(value: str) -> Any:
-    value = _strip_inline_comment(value)
-    if value == "" or value == "~" or value.lower() == "null":
-        return None
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return []
-        return [_coerce_scalar(part) for part in inner.split(",")]
-    if value.startswith("{") and value.endswith("}"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return {}
-        result: Dict[str, Any] = {}
-        for pair in inner.split(","):
-            if ":" in pair:
-                pk, _, pv = pair.partition(":")
-                result[pk.strip()] = _coerce_scalar(pv.strip())
-        return result
-    if (value.startswith('"') and value.endswith('"')) or (
-        value.startswith("'") and value.endswith("'")
-    ):
-        return value[1:-1]
-    return value
-
-
-def _stdlib_parse_frontmatter(block: str) -> Dict[str, Any]:
-    """A tiny, intentionally limited YAML-ish parser for the fallback path.
-
-    Indentation-aware and recursive: supports flat scalars, inline ``[a, b]``
-    and ``{k: v}`` collections, block lists, and nested block mappings whose
-    values may themselves be block lists (e.g. ``traces_to.tests``). This is
-    NOT a general YAML parser; install PyYAML for full fidelity.
-    """
-    # Keep only meaningful lines paired with their indentation.
-    rows: List[Tuple[int, str]] = []
-    for raw in block.splitlines():
-        if not raw.strip() or raw.lstrip().startswith("#"):
-            continue
-        indent = len(raw) - len(raw.lstrip())
-        rows.append((indent, raw.strip()))
-
-    def parse_block(start: int, base_indent: int) -> Tuple[Any, int]:
-        """Parse rows[start:] at >= base_indent; return (value, next_index)."""
-        # Decide list vs mapping from the first child row.
-        if start >= len(rows):
-            return None, start
-        if rows[start][1].startswith("- "):
-            items: List[Any] = []
-            j = start
-            while j < len(rows) and rows[j][0] >= base_indent and rows[j][1].startswith("- "):
-                items.append(_coerce_scalar(rows[j][1][2:]))
-                j += 1
-            return items, j
-        mapping: Dict[str, Any] = {}
-        j = start
-        while j < len(rows) and rows[j][0] >= base_indent:
-            indent, text = rows[j]
-            if ":" not in text:
-                j += 1
-                continue
-            k, _, v = text.partition(":")
-            k = k.strip()
-            v = v.strip()
-            if v == "":
-                # Nested block follows if the next row is more indented.
-                if j + 1 < len(rows) and rows[j + 1][0] > indent:
-                    child, j = parse_block(j + 1, rows[j + 1][0])
-                    mapping[k] = child
-                else:
-                    mapping[k] = None
-                    j += 1
-            else:
-                mapping[k] = _coerce_scalar(v)
-                j += 1
-        return mapping, j
-
-    if not rows:
-        return {}
-    value, _ = parse_block(0, rows[0][0])
-    return value if isinstance(value, dict) else {}
-
-
-def parse_frontmatter(path: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Parse a file's frontmatter. Returns (data, error_message)."""
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            text = handle.read()
-    except OSError as exc:
-        return None, f"could not read file: {exc}"
-
-    block = extract_frontmatter_block(text)
-    if block is None:
-        return None, "missing YAML frontmatter (expected a leading '---' block)"
-
-    if _HAVE_YAML:
-        try:
-            data = yaml.safe_load(block)
-        except yaml.YAMLError as exc:  # type: ignore[union-attr]
-            return None, f"invalid YAML frontmatter: {exc}"
-    else:
-        data = _stdlib_parse_frontmatter(block)
-
-    if not isinstance(data, dict):
-        return None, "frontmatter did not parse to a mapping/object"
-    return _normalize_dates(data), None
-
-
-def _normalize_dates(value: Any) -> Any:
-    """Recursively convert YAML date/datetime objects to ISO-8601 strings.
-
-    PyYAML deserializes unquoted ``YYYY-MM-DD`` scalars to ``datetime.date``.
-    The schema models ``created_at`` as a string, so we coerce dates back to
-    their canonical string form, accepting both quoted and unquoted authoring.
-    """
-    if isinstance(value, (datetime.date, datetime.datetime)):
-        return value.isoformat()
-    if isinstance(value, dict):
-        return {k: _normalize_dates(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_normalize_dates(v) for v in value]
-    return value
-
-
-# ---------------------------------------------------------------------------
-# Schema validation
-# ---------------------------------------------------------------------------
-def load_schema(schema_path: str) -> Dict[str, Any]:
-    with open(schema_path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def validate_against_schema(
-    data: Dict[str, Any], validator: Any
-) -> List[str]:
-    """Return a list of human-readable schema errors (empty if valid)."""
-    errors: List[str] = []
-    for err in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
-        location = "/".join(str(p) for p in err.path) or "(root)"
-        errors.append(f"schema: {location}: {err.message}")
-    return errors
-
-
 def _fallback_validate(data: Dict[str, Any]) -> List[str]:
     """Best-effort structural validation when jsonschema is unavailable."""
     errors: List[str] = []
@@ -341,12 +164,13 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
 # Cross-file checks
 # ---------------------------------------------------------------------------
 def _collect_trace_targets(frontmatter: Dict[str, Any]) -> List[Tuple[str, str]]:
-    """Return (label, id) trace references that should point at requirement IDs.
+    """Return (label, id) trace references that must point at requirement IDs.
 
-    Only ``traces_from`` and ``traces_to.design`` requirement-style entries are
-    cross-checked against known requirement IDs. ``traces_to.tests`` and
-    ``traces_to.code`` reference external artifacts (test cases, source files),
-    not requirement IDs, so they are not treated as dangling.
+    Only ``traces_from`` is cross-checked against known requirement IDs. Every
+    ``traces_to`` sub-list references external artifacts — design IDs
+    (``traces_to.design``), test cases (``traces_to.tests``), or source files
+    (``traces_to.code``) — none of which are requirement IDs, so they are not
+    treated as dangling here. Design<->requirement resolution is M2's job.
     """
     targets: List[Tuple[str, str]] = []
     tf = frontmatter.get("traces_from")
@@ -410,35 +234,9 @@ def cross_file_checks(files: List[RequirementFile]) -> List[str]:
     return global_errors
 
 
-def _check_project_artifact(
-    reqs_dir: str, filename: str, required_headings: List[str], label: str, hint: str
-) -> List[str]:
-    """Gate a project-level artifact's presence and its required H2 headings.
-
-    Presence and headings only — content is never gated. A section reading
-    'None identified' is legal and passes.
-    """
-    path = os.path.join(reqs_dir, filename)
-    if not os.path.isfile(path):
-        return [f"missing required {label} '{filename}' ({hint})"]
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            text = handle.read()
-    except (OSError, UnicodeDecodeError) as exc:
-        return [f"could not read {label} '{filename}': {exc}"]
-
-    errors: List[str] = []
-    for heading in required_headings:
-        if not re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE):
-            errors.append(
-                f"{label} '{filename}' missing required heading '{heading}'"
-            )
-    return errors
-
-
 def check_context_artifact(reqs_dir: str) -> List[str]:
     """Assumptions/Dependencies/Open-Questions artifact (hard gate)."""
-    return _check_project_artifact(
+    return core._check_project_artifact(
         reqs_dir,
         CONTEXT_ARTIFACT,
         REQUIRED_CONTEXT_HEADINGS,
@@ -449,7 +247,7 @@ def check_context_artifact(reqs_dir: str) -> List[str]:
 
 def check_glossary_artifact(reqs_dir: str) -> List[str]:
     """Glossary artifact (hard gate). An empty 'None identified' Terms section passes."""
-    return _check_project_artifact(
+    return core._check_project_artifact(
         reqs_dir,
         GLOSSARY_ARTIFACT,
         REQUIRED_GLOSSARY_HEADINGS,
@@ -462,29 +260,14 @@ def check_glossary_artifact(reqs_dir: str) -> List[str]:
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
 def discover_files(reqs_dir: str) -> List[str]:
-    found: List[str] = []
-    for root, _dirs, names in os.walk(reqs_dir):
-        for name in names:
-            if not name.endswith(".md"):
-                continue
-            if name in SKIP_FILENAMES:
-                continue
-            found.append(os.path.join(root, name))
-    return sorted(found)
+    """Every requirement ``*.md`` under ``reqs_dir`` (project companions skipped)."""
+    return core.discover_files(reqs_dir, SKIP_FILENAMES)
 
 
 def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], List[str]]:
     files: List[RequirementFile] = []
 
-    validator = None
-    if _HAVE_JSONSCHEMA:
-        schema = load_schema(schema_path)
-        Draft202012Validator.check_schema(schema)  # type: ignore[union-attr]
-        # A FormatChecker enables `format: date` checks where supported; the
-        # `created_at` regex pattern guarantees the check even without it.
-        validator = Draft202012Validator(  # type: ignore[union-attr]
-            schema, format_checker=jsonschema.FormatChecker()  # type: ignore[union-attr]
-        )
+    validator = core.make_validator(schema_path)
 
     for path in discover_files(reqs_dir):
         rf = RequirementFile(path)
@@ -495,7 +278,7 @@ def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], Li
             continue
         rf.frontmatter = data
         if validator is not None:
-            rf.errors.extend(validate_against_schema(data, validator))
+            rf.errors.extend(core.validate_against_schema(data, validator))
         else:
             rf.errors.extend(_fallback_validate(data))
         files.append(rf)
@@ -504,61 +287,6 @@ def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], Li
     global_errors.extend(check_context_artifact(reqs_dir))
     global_errors.extend(check_glossary_artifact(reqs_dir))
     return files, global_errors
-
-
-# ---------------------------------------------------------------------------
-# Reporting
-# ---------------------------------------------------------------------------
-def print_report(
-    files: List[RequirementFile],
-    global_errors: List[str],
-    reqs_dir: str,
-    quiet: bool,
-) -> None:
-    total = len(files)
-    failed = [f for f in files if not f.ok]
-    passed = total - len(failed)
-
-    if not (_HAVE_YAML and _HAVE_JSONSCHEMA):
-        missing = []
-        if not _HAVE_YAML:
-            missing.append("pyyaml")
-        if not _HAVE_JSONSCHEMA:
-            missing.append("jsonschema")
-        print(
-            f"WARNING: running in reduced (stdlib fallback) mode; "
-            f"missing {', '.join(missing)}. "
-            f"For full schema validation: pip install {' '.join(missing)}"
-        )
-        print()
-
-    print(f"Validating requirements in: {reqs_dir}")
-    print(f"Discovered {total} requirement file(s).")
-    print("-" * 60)
-
-    for f in files:
-        if f.ok:
-            if not quiet:
-                rid = f.req_id or "(no id)"
-                print(f"  PASS  {rid:<14} {os.path.relpath(f.path, reqs_dir)}")
-        else:
-            rid = f.req_id or "(no id)"
-            print(f"  FAIL  {rid:<14} {os.path.relpath(f.path, reqs_dir)}")
-            for e in f.errors:
-                print(f"          - {e}")
-
-    if global_errors:
-        print("-" * 60)
-        print("Set-level errors:")
-        for e in global_errors:
-            print(f"  - {e}")
-
-    print("-" * 60)
-    error_count = sum(len(f.errors) for f in files) + len(global_errors)
-    print(
-        f"Summary: {passed}/{total} file(s) passed, "
-        f"{len(failed)} failed, {error_count} error(s) total."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -598,12 +326,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not os.path.isdir(reqs_dir):
         print(f"ERROR: requirements directory not found: {reqs_dir}", file=sys.stderr)
         return 2
-    if _HAVE_JSONSCHEMA and not os.path.isfile(schema_path):
+    if core.HAVE_JSONSCHEMA and not os.path.isfile(schema_path):
         print(f"ERROR: schema file not found: {schema_path}", file=sys.stderr)
         return 2
 
     files, global_errors = validate(reqs_dir, schema_path)
-    print_report(files, global_errors, reqs_dir, args.quiet)
+    core.print_report(files, global_errors, reqs_dir, args.quiet, noun="requirement")
 
     has_errors = bool(global_errors) or any(not f.ok for f in files)
     return 1 if has_errors else 0
