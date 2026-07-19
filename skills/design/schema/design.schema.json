@@ -241,5 +241,6 @@
       }
     }
   ],
+  "$comment": "Diagnostic note: when a branch field is present but INVALID (e.g. a bad provider pattern), its `then` applicator fails, contributes no evaluated-property annotations, and unevaluatedProperties then also reports the branch fields as unexpected. The precise per-field error is still emitted alongside the noisier line; this is an accepted tradeoff of the base-plus-branch composition (design spec C.4).",
   "unevaluatedProperties": false
 }

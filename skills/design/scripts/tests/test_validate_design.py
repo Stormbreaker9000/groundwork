@@ -202,6 +202,7 @@ def _base_component():
     }
 
 
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
 def test_component_field_on_interface_is_rejected():
     """A component-only field on an interface must be rejected. This is the test
     that proves unevaluatedProperties actually composed — get the schema wrong
@@ -213,6 +214,7 @@ def test_component_field_on_interface_is_rejected():
     assert errors, "schema wrongly accepted a component field on an interface"
 
 
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
 def test_interface_field_on_component_is_rejected():
     """The mirror direction, so neither branch leaks into the other."""
     validator = core_validator()
@@ -261,6 +263,29 @@ def test_valid_set_passes_in_fallback_mode(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert code == 0, f"fallback mode failed the valid set\n{out}"
     assert "reduced (stdlib fallback) mode" in out
+
+
+def test_stdlib_parser_handles_list_of_mappings():
+    """`operations` is a list of {name, summary} mappings — the first such shape
+    in the codebase. The stdlib fallback parser must parse it as a list of
+    dicts, NOT flatten each item to a string and leak the continuation keys up
+    into the top-level mapping as phantom siblings. Pins the fix for that
+    silent-corruption bug so a future parser refactor cannot regress it."""
+    iface_path = os.path.join(VALID_DIR, "interfaces", "IF-001-payment-api.md")
+    block = vd.extract_frontmatter_block(open(iface_path, encoding="utf-8").read())
+    data = vd.core._stdlib_parse_frontmatter(block)
+    assert data["operations"] == [
+        {"name": "authorize", "summary": "Reserve funds on a card without capturing them."},
+        {"name": "capture", "summary": "Capture previously authorized funds."},
+    ]
+    # No phantom keys leaked from inside operations into the top-level mapping.
+    assert "summary" not in data
+    assert "- name" not in data
+    assert set(data) == {
+        "id", "type", "title", "description", "traces_from", "traces_to",
+        "status", "confidence", "created_at", "provider", "operations",
+        "interaction", "error_modes",
+    }
 
 
 # ---------------------------------------------------------------------------

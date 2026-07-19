@@ -133,9 +133,20 @@ def _stdlib_parse_frontmatter(block: str) -> Dict[str, Any]:
     """A tiny, intentionally limited YAML-ish parser for the fallback path.
 
     Indentation-aware and recursive: supports flat scalars, inline ``[a, b]``
-    and ``{k: v}`` collections, block lists, and nested block mappings whose
-    values may themselves be block lists (e.g. ``traces_to.tests``). This is
-    NOT a general YAML parser; install PyYAML for full fidelity.
+    and ``{k: v}`` collections, block lists (of scalars OR of mappings, e.g.
+    ``operations: [{name, summary}]``), and nested block mappings whose values
+    may themselves be block lists (e.g. ``traces_to.tests``). This is NOT a
+    general YAML parser; install PyYAML for full fidelity.
+
+    A block-mapping list item — ``- name: authorize`` followed by an indented
+    ``summary: ...`` — is parsed into a dict, not flattened to a string. Getting
+    this wrong silently corrupts the document: the continuation keys leak up
+    into the enclosing mapping as phantom siblings.
+
+    Known non-support (install PyYAML if you need it): block scalars (``>``/
+    ``|``) are not folded — the value is left as the literal ``>`` marker. This
+    is harmless for the fallback's job (required-field *presence*) but is why
+    the fallback is never as faithful as the schema path.
     """
     # Keep only meaningful lines paired with their indentation.
     rows: List[Tuple[int, str]] = []
@@ -145,44 +156,62 @@ def _stdlib_parse_frontmatter(block: str) -> Dict[str, Any]:
         indent = len(raw) - len(raw.lstrip())
         rows.append((indent, raw.strip()))
 
-    def parse_block(start: int, base_indent: int) -> Tuple[Any, int]:
-        """Parse rows[start:] at >= base_indent; return (value, next_index)."""
-        # Decide list vs mapping from the first child row.
-        if start >= len(rows):
-            return None, start
-        if rows[start][1].startswith("- "):
-            items: List[Any] = []
-            j = start
-            while j < len(rows) and rows[j][0] >= base_indent and rows[j][1].startswith("- "):
-                items.append(_coerce_scalar(rows[j][1][2:]))
-                j += 1
-            return items, j
-        mapping: Dict[str, Any] = {}
-        j = start
-        while j < len(rows) and rows[j][0] >= base_indent:
-            indent, text = rows[j]
-            if ":" not in text:
-                j += 1
-                continue
-            k, _, v = text.partition(":")
-            k = k.strip()
-            v = v.strip()
-            if v == "":
-                # Nested block follows if the next row is more indented.
-                if j + 1 < len(rows) and rows[j + 1][0] > indent:
-                    child, j = parse_block(j + 1, rows[j + 1][0])
-                    mapping[k] = child
-                else:
-                    mapping[k] = None
-                    j += 1
-            else:
-                mapping[k] = _coerce_scalar(v)
-                j += 1
-        return mapping, j
+    def block_end(seg: List[Tuple[int, str]], i: int) -> int:
+        """Index one past the rows more-indented than seg[i] (its children)."""
+        base = seg[i][0]
+        j = i + 1
+        while j < len(seg) and seg[j][0] > base:
+            j += 1
+        return j
 
-    if not rows:
-        return {}
-    value, _ = parse_block(0, rows[0][0])
+    def parse(seg: List[Tuple[int, str]]) -> Any:
+        """Parse a segment of same-or-deeper rows into a list, mapping, or None."""
+        if not seg:
+            return None
+        return parse_list(seg) if seg[0][1].startswith("- ") else parse_mapping(seg)
+
+    def parse_mapping(seg: List[Tuple[int, str]]) -> Dict[str, Any]:
+        mapping: Dict[str, Any] = {}
+        i = 0
+        while i < len(seg):
+            _indent, text = seg[i]
+            if ":" not in text:
+                i += 1
+                continue
+            key, _, value = text.partition(":")
+            key, value = key.strip(), value.strip()
+            end = block_end(seg, i)
+            if value == "":
+                # Empty scalar, or a nested block in the deeper child rows.
+                mapping[key] = parse(seg[i + 1:end]) if end > i + 1 else None
+            else:
+                mapping[key] = _coerce_scalar(value)
+            i = end
+        return mapping
+
+    def parse_list(seg: List[Tuple[int, str]]) -> List[Any]:
+        items: List[Any] = []
+        i = 0
+        while i < len(seg):
+            indent, text = seg[i]
+            if not text.startswith("- "):
+                i += 1
+                continue
+            rest = text[2:]
+            end = block_end(seg, i)
+            children = seg[i + 1:end]
+            if ":" in rest:
+                # Block-mapping item: the dash line's `rest` is its first key,
+                # sitting one level in from the dash; children are its siblings.
+                items.append(parse_mapping([(indent + 2, rest)] + children))
+            elif children:
+                items.append(parse([(indent + 2, rest)] + children) if rest else parse(children))
+            else:
+                items.append(_coerce_scalar(rest))
+            i = end
+        return items
+
+    value = parse(rows)
     return value if isinstance(value, dict) else {}
 
 
