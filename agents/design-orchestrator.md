@@ -264,8 +264,15 @@ Execute exactly this, and apply no judgment:
    interface's `satisfies_capabilities`. Zero matches → re-dispatch to the
    interface specialist with the gap attached. Two or more → re-dispatch as a
    duplicated contract.
-3. Drop `required_capabilities`, `consumed_by`, and `satisfies_capabilities`. What
-   remains is schema-shaped.
+3. Derive `capability_map` from the matches step 2 just made — one entry per
+   `required_capability`: `{ component, capability, satisfied_by }`, where
+   `satisfied_by` is the interface whose `satisfies_capabilities` matched it. This
+   costs nothing: step 2 already walked every capability to completeness-check it,
+   so this is retaining that mapping rather than discarding it. Then drop
+   `required_capabilities`, `consumed_by`, and `satisfies_capabilities` — what
+   remains is schema-shaped. `capability_map` itself never reaches a file either;
+   it is not artifact content, it is an in-flight hand-off that travels forward
+   only as far as Stage 8, where the critic uses it and then it goes away.
 
 Step 2 is not optional bookkeeping. Without it a dropped edge is **invisible**: the
 artifacts still validate, because `depends_on: []` is legal frontmatter — the
@@ -278,7 +285,27 @@ interface — that is the interface specialist's judgment, not yours.
 
 ## Stage 8 — Critique gate: the `critique_report` hand-off
 
-Pass the back-filled, transient-stripped set to `design-critic`. It returns:
+Pass the back-filled, transient-stripped set to `design-critic`, along with the
+`capability_map` derived in Stage 7 step 3:
+
+```yaml
+capability_map:
+  - component: CMP-001
+    capability: "take card payments"
+    satisfied_by: IF-001
+```
+
+The critic needs `capability_map` for its operations-vs-capability check, because
+the transient fields that would otherwise carry that link — `required_capabilities`,
+`consumed_by`, `satisfies_capabilities` — are gone by now, dropped in Stage 7 step 3.
+Without the sidecar the critic could only judge an interface's `operations` against
+the interface's own `description`, and both were written by the interface
+specialist. This is the same move M1's orchestrator makes forwarding `terms` to
+`requirements-critic` in its own Stage 6, for its glossary-coverage check, since
+`glossary.md` does not exist yet at that stage — see `requirements-orchestrator.md`
+Stage 6.
+
+It returns:
 
 ```yaml
 critique_report:

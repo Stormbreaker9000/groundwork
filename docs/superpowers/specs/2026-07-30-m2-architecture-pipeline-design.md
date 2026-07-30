@@ -356,8 +356,12 @@ The orchestrator executes exactly this, and applies no judgment:
 2. **Completeness check (A.4).** Every `required_capability` must appear in exactly one
    interface's `satisfies_capabilities`. Zero matches → re-dispatch to the interface
    specialist with the gap attached. Two or more → re-dispatch as a duplicated contract.
-3. Drop `required_capabilities`, `consumed_by`, and `satisfies_capabilities`. What remains
-   is schema-shaped.
+3. Derive `capability_map` from the matches step 2 just made — one entry per
+   `required_capability`: `{ component, capability, satisfied_by }`. This is free: step 2
+   already walked every capability to completeness-check it, so this retains that mapping
+   rather than discarding it. Then drop `required_capabilities`, `consumed_by`, and
+   `satisfies_capabilities`. What remains is schema-shaped; `capability_map` never reaches
+   a file either — it is forwarded to the critic as a sidecar (D.6) and goes no further.
 
 ### D.6 `critique_report` — critic → orchestrator
 
@@ -383,6 +387,27 @@ critique_report:
 `unaddressed` fails the gate. `deferred_to_decision` passes but forces a `Q-` open question —
 the honest disposition until STO-100 exists to write the ADR, and it means the deferral is
 recorded rather than lost.
+
+Alongside the artifact set, the orchestrator also forwards the `capability_map` sidecar
+derived in D.5 step 3:
+
+```yaml
+capability_map:
+  - component: CMP-001
+    capability: "take card payments"
+    satisfied_by: IF-001
+```
+
+By Stage 8 the transient capability fields are already stripped, so without this sidecar the
+critic could only judge an interface's `operations` against the interface's own
+`description` — a comparison whose two sides were both written by the interface specialist.
+`capability_map` lets it check `operations` against the capability a *different* agent, the
+component specialist, declared, so agreement between them is real evidence rather than one
+agent agreeing with itself. This is the same move M1's orchestrator makes forwarding `terms`
+to `requirements-critic` (`requirements-orchestrator.md` Stage 6) for its glossary-coverage
+check, since `glossary.md` does not exist yet at that stage — and it costs nothing here for
+the same reason it costs nothing there: Stage 7 already builds this mapping to run its
+completeness check, and now keeps it instead of throwing it away.
 
 ### D.7 `design_context_artifact` — orchestrator → formatter
 
