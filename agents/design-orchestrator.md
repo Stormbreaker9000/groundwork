@@ -81,9 +81,14 @@ interface for an excluded item, and never let a specialist do so either.
 The `Q-` IDs in `inherited_open_questions` are preserved deliberately. A question
 resolved here traces back to the requirement that raised it; one still open keeps
 its identity when re-emitted into the design `assumptions.md` at Stage 9. Carry
-both `inherited_open_questions` and `inherited_review_queue` forward — any
-component or interface resting on a `still_open` question, or tracing from a
-requirement in the review queue, is `confidence: low`.
+both `inherited_open_questions` and `inherited_review_queue` forward. Any
+component or interface resting on a `still_open` question, or on a design decision
+this stage defers, is `confidence: low`. Membership in `inherited_review_queue` is
+not itself a trigger: it is a frozen snapshot from the requirements stage, and a
+requirement usually landed there because some question was open — quite possibly
+the one this stage's interview just resolved. Check whether that happened before
+propagating; mark `confidence: low` only if the underlying uncertainty is still
+live.
 
 ## Stage 2 — Read the requirement set
 
