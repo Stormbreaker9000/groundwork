@@ -116,11 +116,17 @@ is whatever component actually takes the payment.
   component. The component specialist modelled every integration point as a
   component precisely so the graph stays total and no dependency points outside
   it (STO-197 A.4).
-- The provider must appear in `component_set`. If no component in the set can
-  provide a declared capability, that is a gap in the decomposition, not a
-  licence to improvise: report it in your return so the orchestrator can
-  re-dispatch the component specialist. Never mint a `CMP-` ID — you hold no
-  component ID block — and never pick the nearest plausible component instead.
+- The provider must appear in `component_set`. **Every capability in
+  `component_set` has a provider within `component_set`** — the component
+  specialist guarantees this by contract: it must emit a provider (often a
+  `boundary: external` component) for every capability it declares, so a
+  capability with no possible provider cannot legitimately reach you. If you
+  genuinely cannot find one, the component specialist violated its contract.
+  Report that plainly as a contract violation in your return. Do not invent an
+  interface for it, do not coin a `CMP-` ID — you hold no component ID block
+  and only the orchestrator allocates IDs — and do not pick the nearest
+  plausible component instead. There is no re-dispatch path for this failure;
+  it surfaces to the human at the sign-off gate.
 - A component may provide many interfaces. It may also provide one it consumes
   nothing from. Neither is a problem.
 

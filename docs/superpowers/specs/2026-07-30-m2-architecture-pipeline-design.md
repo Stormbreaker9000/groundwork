@@ -83,6 +83,21 @@ A single combined architecture specialist was also rejected: it abandons the
 specialist-per-concern thesis that M1 validated, and one agent holding both concerns
 under-specifies the interfaces, which are the easy half to skimp.
 
+A review of this spec caught a hole the break above does not close on its own: nothing
+stops a component specialist from declaring a capability nothing in the component set can
+provide. The interface specialist would then have no `provider` to name, and the only
+re-dispatch target in Stage 7 for a zero-match capability is the interface specialist
+itself — which would go looking for the same missing provider and report the same gap
+forever. That is decided here rather than by adding an escalation contract: the component
+specialist is the only agent that both declares capabilities and owns the component set,
+so it is the only one that can guarantee every capability it declares has a provider in its
+own output — usually by emitting the `boundary: external` component the capability implies,
+the same move the `context.integration_points` sweep already makes for named external
+systems. **Consequence, accepted:** if the component specialist still violates this — a
+prompt failure, not a structural one — the interface specialist cannot invent a provider or
+a re-dispatch path; it reports the contract violation plainly, and it surfaces at the human
+sign-off gate rather than looping.
+
 ### A.4 The back-fill carries a completeness check, and it is load-bearing
 
 Every `required_capability` must appear in exactly one interface's `satisfies_capabilities`.
@@ -441,6 +456,7 @@ In order of evaluation:
 | --- | --- |
 | No `.sdlc/requirements/` | Stop. Direct the user to the requirements workflow. |
 | `validate_requirements.py` exits non-zero | Stop. Structurally invalid requirements cannot be designed against. |
+| Capability with no possible provider | Prevented at the source: the component specialist must emit a provider (often `boundary: external`) for every capability it declares, so this state cannot arise from a correct decomposition. A violation is a contract breach, not a re-dispatchable gap — the interface specialist reports it plainly and it surfaces at the human sign-off gate rather than looping. |
 | Unsatisfied or duplicated capability | Orchestrator re-dispatches to the interface specialist with the gap attached. Never silently accepted. |
 | Any ASR `unaddressed` | Critic gate fails. Re-dispatch to the owning specialist. |
 | ASR `deferred_to_decision` | Gate passes; a `Q-` open question is forced into `assumptions.md`. |

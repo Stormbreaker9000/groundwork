@@ -130,7 +130,7 @@ required_capabilities:
 | **Bad** | `capability: "use CMP-002"` | Names a *component*. The dependency edge must go through an interface — `CMP → IF → CMP` — so a component reference has nowhere to land. |
 | **Bad** | `capability: "persistence"` | Names a *category*, not a need. The interface specialist cannot write operations against it. |
 
-Two further rules:
+Three further rules:
 
 - **Do not declare a capability for something the component does itself.**
   `required_capabilities` is a list of external needs, not a summary of the
@@ -140,6 +140,24 @@ Two further rules:
   both need "take card payments", say it the same way in both, and they will
   share a single interface with both recorded as its consumers. Two different
   phrasings for the same need produce two interfaces where one belongs.
+- **Every capability you declare must be providable by a component in your own
+  output.** You are the only agent who both declares capabilities and owns the
+  component set, so you are the only one who can guarantee this. If you declare
+  a need that nothing in your decomposition can serve, add the component that
+  serves it — most often a `boundary: external` component representing the
+  third-party system or service the need implies.
+
+  This is the `context.integration_points` rule above, seen from the other
+  direction. That rule sweeps every *named* external system into a component;
+  this one catches the external systems a *capability* implies even when
+  `integration_points` never named one. Capabilities are the second source of
+  external components. Worked illustration: declaring `capability: "take card
+  payments"` on `CMP-001` (Order Service) obliges you to also emit `CMP-002` —
+  a Card Payment Provider component, `boundary: external` — whether or not a
+  payment processor was named in `context.integration_points`. Declaring the
+  need without emitting a provider leaves a capability nothing can satisfy: the
+  interface specialist cannot invent a provider outside `component_set`, and
+  nothing downstream can recover a component you never decomposed.
 
 **The consequence, stated plainly:** every capability you declare becomes
 **exactly one** interface. The interface specialist must satisfy each of yours
