@@ -15,8 +15,8 @@ YAML frontmatter, organized under a design directory::
 
 This tool:
   1. Discovers every ``*.md`` under the design dir (recursively), skipping the
-     ``adr/`` and ``diagrams/`` subtrees and the ``assumptions.md``/``index.yaml``
-     companions.
+     ``adr/`` and ``diagrams/`` subtrees and the
+     ``assumptions.md``/``drivers.md``/``index.yaml`` companions.
   2. Parses the YAML frontmatter from each file.
   3. Validates each artifact against the JSON Schema
      (``skills/design/schema/design.schema.json``, draft 2020-12).
@@ -98,7 +98,7 @@ PREFIX_TO_TYPE = {
 
 # Project-level assumptions artifact (design analogue of M1's context artifact).
 # Design does NOT get its own glossary — it inherits requirements/glossary.md
-# (STO-135), and this validator never reaches into the requirements set.
+# (STO-197 A.2), and this validator never reaches into the requirements set.
 ASSUMPTIONS_ARTIFACT = "assumptions.md"
 REQUIRED_ASSUMPTIONS_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
 

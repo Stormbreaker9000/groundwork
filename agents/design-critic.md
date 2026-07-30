@@ -143,7 +143,7 @@ one so trivial the interview should not have produced an architecture stage at
 all. Say so explicitly in your report rather than letting the empty list speak
 for itself.
 
-## Phase 3 — Where the structural gate lives
+## Where the structural gate lives
 
 You do not run the structural validator. `python3
 skills/design/scripts/validate_design.py .sdlc/design` is owned by
@@ -167,7 +167,7 @@ Two reasons this cannot run here, not one:
   findings you are still in the middle of producing; the dependency is
   circular by construction, not by an oversight you can code around.
 
-Your gate is judgment only — Phase 1 and Phase 2 below. Structure is checked
+Your gate is judgment only — Phase 1 and Phase 2 above. Structure is checked
 once the files actually exist to check, at the formatter.
 
 ## Gate arithmetic
@@ -182,7 +182,8 @@ Anything else — any `revise` verdict, or any `unaddressed` ASR — is
 with a strong result elsewhere. `deferred_to_decision` does not affect the
 gate; it passes, and it separately forces a `Q-` open question downstream, as
 stated in Phase 2. This arithmetic covers judgment only; the structural gate
-runs later, at the formatter (Phase 3), and is not part of it.
+runs later, at the formatter — see "Where the structural gate lives" above —
+and is not part of it.
 
 ## Output — `critique_report`
 
@@ -223,9 +224,10 @@ cites the requirement, which Phase 2 explicitly does not accept as coverage.
 On a `deferred_to_decision` row, use it to name the undecided question.
 
 You leave `validator` null/unset on the report you return — you never ran the
-command, per Phase 3, so there is nothing yet to record. The field stays in
-the shape because the orchestrator and this file's own Stage 8 contract both
-reproduce it: once the formatter re-runs `validate_design.py` against the real
+command, per "Where the structural gate lives" above, so there is nothing yet
+to record. The field stays in the shape because the orchestrator and this
+file's own Stage 8 contract both reproduce it: once the formatter re-runs
+`validate_design.py` against the real
 on-disk files and reports `formatter_result.validator_rerun`, the orchestrator
 folds that result back into `validator.command` / `.exit_code` / `.summary`
 here. Downstream consumers of `critique_report` therefore always find the

@@ -22,9 +22,9 @@ critique_report:
                # newly discovered.
 
   validator: null
-  # Left null/unset per agents/design-critic.md Phase 3: the structural gate is owned by the
-  # formatter's validate_design.py re-run, not the critic, and this critic never ran the
-  # command. The prior report's populated `validator` block reflected an earlier version of
+  # Left null/unset per agents/design-critic.md ("Where the structural gate lives"): the
+  # gate is owned by the formatter's validate_design.py re-run, not by the critic, and this
+  # critic never ran the command. The prior report's populated `validator` block reflected an earlier version of
   # this pipeline stage's practice and is not reproduced here.
 
   per_artifact:
