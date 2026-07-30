@@ -10,6 +10,7 @@ YAML frontmatter, organized under a design directory::
       adr/           ADR-XXX-*.md   (skipped — STO-100 owns the format)
       diagrams/      *.md           (skipped — STO-101 owns the format)
       assumptions.md                (gated: Assumptions/Dependencies/Open Questions)
+      drivers.md                    (gated: ASRs/Tradeoffs/Sensitivity Points)
       index.yaml                    (skipped)
 
 This tool:
@@ -29,7 +30,8 @@ This tool:
        - ``traces_from`` entries are requirement-SHAPED (FR/NFR/CON/BR/UC…);
          their existence in .sdlc/requirements/ is the cross-artifact
          validator's job (STO-102), not this one.
-  5. Gates the project-level ``assumptions.md`` (presence + three headings).
+  5. Gates the project-level ``assumptions.md`` and ``drivers.md`` (presence +
+     required headings).
   6. Prints a readable per-file + summary report and exits non-zero on any
      violation.
 
@@ -86,7 +88,7 @@ from artifact_core import (  # noqa: E402  (re-exported for tests)
 # Whole subtrees another stage owns in a non-artifact format.
 SKIP_DIRNAMES = {"adr", "diagrams"}
 # Companions that live in the design dir but are not atomic artifacts.
-SKIP_FILENAMES = {"assumptions.md", "index.yaml"}
+SKIP_FILENAMES = {"assumptions.md", "drivers.md", "index.yaml"}
 
 # ID prefix -> expected `type`. Mirrors the schema contract.
 PREFIX_TO_TYPE = {
@@ -320,6 +322,7 @@ def validate(design_dir: str, schema_path: str) -> Tuple[List[DesignFile], List[
 
     global_errors = cross_file_checks(files)
     global_errors.extend(check_assumptions_artifact(design_dir))
+    global_errors.extend(check_drivers_artifact(design_dir))
     return files, global_errors
 
 

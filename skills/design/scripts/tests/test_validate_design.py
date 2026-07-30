@@ -45,6 +45,7 @@ def test_skip_files_and_subtrees_are_ignored(capsys):
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
+    assert "drivers.md" not in out
     assert "index.yaml" not in out
     assert "ADR-001" not in out
     assert "c4-container" not in out
@@ -63,6 +64,8 @@ INVALID_CASES = {
     "traces_from_bad_format": "traces_from",
     "missing_assumptions": "assumptions",
     "assumptions_missing_heading": "missing required heading",
+    "missing_drivers": "drivers artifact",
+    "drivers_missing_heading": "missing required heading",
 }
 
 
