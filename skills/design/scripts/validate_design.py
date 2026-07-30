@@ -100,6 +100,16 @@ PREFIX_TO_TYPE = {
 ASSUMPTIONS_ARTIFACT = "assumptions.md"
 REQUIRED_ASSUMPTIONS_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
 
+# Project-level drivers artifact (STO-99). Persists the ASR analysis, tradeoffs,
+# and sensitivity points the critic produces, so the reasoning behind the
+# decomposition survives the conversation that produced it (design spec A.6).
+DRIVERS_ARTIFACT = "drivers.md"
+REQUIRED_DRIVERS_HEADINGS = [
+    "## Architecturally Significant Requirements",
+    "## Tradeoffs",
+    "## Sensitivity Points",
+]
+
 # traces_from points at requirement IDs. We check the SHAPE only; resolution is
 # STO-102's job. This mirrors the requirement schema's id pattern.
 REQUIREMENT_ID_RE = re.compile(r"^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$")
@@ -262,6 +272,22 @@ def check_assumptions_artifact(design_dir: str) -> List[str]:
         REQUIRED_ASSUMPTIONS_HEADINGS,
         "assumptions artifact",
         "Assumptions / Dependencies / Open Questions",
+    )
+
+
+def check_drivers_artifact(design_dir: str) -> List[str]:
+    """Architectural-drivers artifact (hard gate).
+
+    Presence plus the three headings, gated by the shared core. As with the
+    assumptions artifact, content is never gated — an honest 'None identified'
+    section is legal and passes.
+    """
+    return core._check_project_artifact(
+        design_dir,
+        DRIVERS_ARTIFACT,
+        REQUIRED_DRIVERS_HEADINGS,
+        "drivers artifact",
+        "Architecturally Significant Requirements / Tradeoffs / Sensitivity Points",
     )
 
 

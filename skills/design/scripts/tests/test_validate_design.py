@@ -181,6 +181,36 @@ def test_assumptions_h3_heading_is_rejected(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Drivers artifact (STO-99): ASRs / Tradeoffs / Sensitivity Points
+# ---------------------------------------------------------------------------
+DRIVERS_OK = (
+    "# Design Drivers\n\n"
+    "## Architecturally Significant Requirements\n- None identified.\n\n"
+    "## Tradeoffs\n- None identified.\n\n"
+    "## Sensitivity Points\n- None identified.\n"
+)
+
+
+def test_drivers_artifact_ok(tmp_path):
+    (tmp_path / "drivers.md").write_text(DRIVERS_OK, encoding="utf-8")
+    assert vd.check_drivers_artifact(str(tmp_path)) == []
+
+
+def test_missing_drivers_is_flagged(tmp_path):
+    errors = vd.check_drivers_artifact(str(tmp_path))
+    assert any("drivers artifact" in e for e in errors)
+
+
+def test_drivers_missing_heading_is_flagged(tmp_path):
+    truncated = DRIVERS_OK.split("## Sensitivity Points")[0]
+    (tmp_path / "drivers.md").write_text(truncated, encoding="utf-8")
+    errors = vd.check_drivers_artifact(str(tmp_path))
+    assert any(
+        "missing required heading" in e and "Sensitivity Points" in e for e in errors
+    )
+
+
+# ---------------------------------------------------------------------------
 # The two cases Part F singles out.
 # ---------------------------------------------------------------------------
 def _base_interface():
