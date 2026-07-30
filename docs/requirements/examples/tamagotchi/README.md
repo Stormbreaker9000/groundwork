@@ -15,8 +15,9 @@ closed them.
   `review_queue`).
 - **[`design/`](./design/)** — the architecture set generated from those requirements:
   11 component specs under `components/`, 12 interface specs under `interfaces/`, plus
-  `assumptions.md`, `drivers.md`, `index.yaml`, and the `critique-report.yaml` the design
-  critic produced against this set.
+  `assumptions.md`, `drivers.md`, and `index.yaml`. Those are the pipeline's declared
+  output. Alongside them sits `critique-report.yaml`, the design critic's real return
+  value against this set, **added here by hand** — see *How this set was produced* below.
 - **[`CONSOLIDATED.md`](./CONSOLIDATED.md)** — every requirement, the assumptions, and the
   review queue rendered into one readable document.
 - **[`dev-log-followup.md`](./dev-log-followup.md)** — the follow-up dev-log post
@@ -58,6 +59,36 @@ example root — the same reason `requirements/` has none either.
 - Per-requirement `confidence` with a low-confidence `review_queue` for human triage —
   including the runtime/footprint decision (`NFR-002`, `CON-001` → open question Q-4).
 
+## How this set was produced — two deviations from the documented pipeline
+
+Read this before treating the `design/` folder as a reference run. It is a faithful
+example of what the artifacts look like, but it is **not** reproducible by following the
+agent instructions, and two things about it are deliberate exceptions rather than normal
+behaviour.
+
+**The set was written on a failing gate, by human override.** The pipeline's hardest
+invariant is that nothing is written until the critic returns `gate: pass` —
+`agents/design-formatter.md` ("Never write anything before the critic has returned
+`gate: pass`") and `agents/design-orchestrator.md` ("Never advance to the formatter
+without `gate: pass`"). This set's `critique-report.yaml` says `gate: fail`, and the
+artifacts were written anyway. That was a human decision taken knowingly, for one reason:
+the alternative was to keep re-dispatching until the critic went quiet, and the seven
+remaining findings are *worth more than a clean gate* (see the next section — three of
+them are schema limitations no wording could satisfy, and one is arguably a false
+positive). A worked example whose critic found nothing would teach nothing about whether
+the critic works. **An ordinary run must not do this.** A `gate: fail` reaching the
+formatter is a bug in the run, not a judgment call available to the agents; only a human
+looking at the specific findings can decide they are acceptable, and that is what
+happened here.
+
+**`critique-report.yaml` is a hand-added exhibit, not pipeline output.** No agent is
+instructed to write it, and it appears in no declared layout — not in the spec's Part E,
+not in `agents/design-formatter.md`'s directory layout. The `critique_report` is an
+in-flight hand-off between the critic and the orchestrator; it is consumed and then it is
+gone. It was serialised to disk here so the findings could be published rather than
+described second-hand. A real `.sdlc/design/` will not contain this file, and the
+formatter should not start emitting one.
+
 ## What the design set demonstrates
 
 The architecture stage picks up exactly where the requirements stage left off, including
@@ -79,17 +110,17 @@ its unfinished business.
   the reasoning that would otherwise live only in the conversation that produced it.
 - **The critique is published, not hidden.** `critique-report.yaml` is the design critic's
   real output against this set. It returned `gate: fail`, and the set is shipped with that
-  visible rather than tidied away.
+  visible rather than tidied away — which took the human override described above.
 
 ### The open critic findings, and why they are still here
 
 Two findings were correctness faults and were fixed: `CMP-004` and `IF-008` traced from
 `BR-001` while asserting the opposite of its statement text. Both now pass.
 
-That one is worth reading in full, because it runs the other way. `BR-001` is *internally
-inconsistent*: its statement asserts the pet "is reset to a new pet", while its own
-rationale says whether death is permanent "is still open (Q-2), which is why this rule is
-held at low confidence". The design stage resolved Q-2 as permanent and the specialists
+The `BR-001` finding behind that pair is worth reading in full, because it runs the other
+way. `BR-001` is *internally inconsistent*: its statement asserts the pet "is reset to a
+new pet", while its own rationale says whether death is permanent "is still open (Q-2),
+which is why this rule is held at low confidence". The design stage resolved Q-2 as permanent and the specialists
 silently followed it. The critic caught the mismatch. The resolution recorded here is that
 `BR-001`'s statement text is stale and needs amending upstream — filed as **Q-5** in
 `design/assumptions.md`. Architecture found a latent defect in the requirements it was

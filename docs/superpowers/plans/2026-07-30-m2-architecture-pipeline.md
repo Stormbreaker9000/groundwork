@@ -4,9 +4,40 @@
 
 **Goal:** Build the M2 architecture stage — a `design` skill that interviews for technology context, and a five-agent pipeline that turns a validated requirement set into atomic component and interface specs under `.sdlc/design/`.
 
-**Architecture:** A `SKILL.md` runs a five-phase conversation (read requirements → hypothesise → interview → synthesise `design_context` → generate). The orchestrator reads the requirement set, identifies architecturally significant requirements, allocates `CMP`/`IF` ID blocks, and dispatches serially to a component specialist then an interface specialist. Because components declare `depends_on: [IF-…]` and interfaces declare `provider: CMP-…`, the authoring cycle is broken by having components declare *capabilities* in prose, interfaces satisfy them, and the orchestrator mechanically back-fill `depends_on`. A critic gates on ISO 42010 + ATAM-lite plus `validate_design.py`, then a formatter writes files.
+**Architecture:** A `SKILL.md` runs a five-phase conversation (read requirements → hypothesise → interview → synthesise `design_context` → generate). The orchestrator reads the requirement set, identifies architecturally significant requirements, allocates `CMP`/`IF` ID blocks, and dispatches serially to a component specialist then an interface specialist. Because components declare `depends_on: [IF-…]` and interfaces declare `provider: CMP-…`, the authoring cycle is broken by having components declare *capabilities* in prose, interfaces satisfy them, and the orchestrator mechanically back-fill `depends_on`. A critic gates on ISO 42010 + ATAM-lite judgment, then a formatter writes the files and re-runs `validate_design.py` against them as the structural gate. (Amended — see the amendment note below; as originally planned the critic ran the validator itself.)
 
 **Tech Stack:** Python 3.12 (stdlib, with optional `pyyaml` + `jsonschema`), pytest, Markdown + YAML frontmatter agent/skill files. No new dependencies.
+
+---
+
+## Amendment — 2026-07-30: the structural gate moved from the critic to the formatter
+
+**Read this before Task 4.** This plan was written before implementation and describes the
+critic running `validate_design.py` as its own hard gate — the design the spec originally
+carried. That did not survive the end-to-end run and was changed during implementation. The
+spec was amended (see **A.5**, and D.6/Part F); this plan was not, until now.
+
+The critic **does not run the validator**, for two independent reasons:
+
+- It runs *before* the formatter, and by this pipeline's own design nothing is written to
+  `.sdlc/design/` until the critic returns `gate: pass`. Pointing the validator at a
+  directory that does not exist yet exits 2 on every run, regardless of how sound the
+  architecture is — the gate could never pass.
+- `drivers.md`'s gated headings *are* the critic's own Phase 2 output. It cannot validate a
+  file assembled from findings it is still producing; the dependency is circular by
+  construction, not by an oversight.
+
+The structural gate lives at `design-formatter` instead, which writes the files and
+immediately re-runs `validate_design.py` against them, reporting
+`formatter_result.validator_rerun`. A non-zero exit there is a hard failure that re-opens the
+critique loop. The critic is therefore a **two-phase** agent whose gate is judgment only.
+
+The task breakdown below is left as the historical record of how the work was sequenced.
+Task 4's frontmatter string, its steps 4 and 5, its verification grep, the Architecture
+paragraph above, and the File Structure table have each been corrected in place, with the
+original claim noted where the correction is not self-explanatory. Nothing else was rewritten.
+
+---
 
 ## Global Constraints
 
@@ -33,8 +64,8 @@
 | `agents/design-orchestrator.md` | **Create.** Owns every hand-off contract, ASR identification, ID allocation, the back-fill algorithm, and the STO-100/101 slots. |
 | `agents/component-specialist.md` | **Create.** Decomposes into `CMP-` artifacts; declares `required_capabilities`. |
 | `agents/interface-specialist.md` | **Create.** Turns capabilities into `IF-` artifacts with `provider`, `consumed_by`, `satisfies_capabilities`. |
-| `agents/design-critic.md` | **Create.** 42010 per-artifact review, ATAM-lite ASR coverage, `validate_design.py` hard gate. |
-| `agents/design-formatter.md` | **Create.** Writes `CMP`/`IF` files, `assumptions.md`, `drivers.md`, `index.yaml`. |
+| `agents/design-critic.md` | **Create.** 42010 per-artifact review, ATAM-lite ASR coverage. Judgment gate only — *amended:* the `validate_design.py` hard gate is the formatter's, not this agent's. |
+| `agents/design-formatter.md` | **Create.** Writes `CMP`/`IF` files, `assumptions.md`, `drivers.md`, `index.yaml`, then re-runs `validate_design.py` against them — *amended:* this re-run is the pipeline's structural gate. |
 | `skills/design/SKILL.md` | **Create.** The five-phase conversation and the sign-off gate. |
 | `commands/groundwork.md` | **Modify.** Add the `design` workflow entry. |
 | `docs/requirements/examples/tamagotchi/design/` | **Create.** The end-to-end worked example. |
@@ -560,15 +591,19 @@ EOF
 
 **Interfaces:**
 - Consumes: the merged, back-filled `draft_components` + `draft_interfaces` set from the orchestrator, plus `asr_analysis` (spec D.3) and the `requirements_digest`.
-- Produces: `critique_report` (spec D.6). Fields: `gate`, `validator{command,exit_code,summary}`, `per_artifact[]{id,verdict,findings}`, `asr_coverage[]{requirement_id,addressed_by,verdict}`, `tradeoffs[]{decision,gains,costs,affected}`, `sensitivity_points[]{point,affected_requirements,note}`.
+- Produces: `critique_report` (spec D.6). Fields: `gate`, `validator{command,exit_code,summary}`, `per_artifact[]{id,verdict,findings}`, `asr_coverage[]{requirement_id,addressed_by,verdict,note?}`, `tradeoffs[]{decision,gains,costs,affected}`, `sensitivity_points[]{point,affected_requirements,note}`. `validator` is left null/unset by the critic and filled in by the orchestrator from the formatter's re-run — see the amendment note.
 
 - [ ] **Step 1: Write the agent file**
 
 ```markdown
 ---
-description: Architecture quality critic. Runs a three-phase review over the merged design set — an ISO/IEC/IEEE 42010 per-artifact quality gate, an ATAM-lite check that every architecturally significant requirement is addressed with its tradeoffs and sensitivity points named, and the structural validator as a hard gate. Returns a critique_report.
+description: Architecture quality critic. Runs a two-phase review over the merged design set — an ISO/IEC/IEEE 42010 per-artifact quality gate and an ATAM-lite check that every architecturally significant requirement is addressed with its tradeoffs and sensitivity points named. The structural gate runs later, at the formatter, once the artifacts exist on disk. Returns a critique_report.
 ---
 ```
+
+*Amended.* The string above originally read "a three-phase review … and the structural
+validator as a hard gate". It was corrected when the gate moved to the formatter; the shipped
+`agents/design-critic.md` carries the two-phase wording.
 
 Required body sections:
 
@@ -584,12 +619,8 @@ Required body sections:
    - `deferred_to_decision` — it turns on a decision not yet made. Legal, but it forces a `Q-` open question downstream.
    - `unaddressed` — nothing in the set serves it. **This fails the gate.**
    Then name the **tradeoffs** (a decision that helps one quality attribute at another's cost) and the **sensitivity points** (a decision where a small change moves a quality attribute sharply). State that a set with no tradeoffs at all is itself suspicious and worth a finding — every real architecture trades something.
-4. **Phase 3 — the structural hard gate.** Run:
-   ```bash
-   python3 skills/design/scripts/validate_design.py .sdlc/design
-   ```
-   Record `command`, `exit_code`, and a one-line summary. **A non-zero exit forces `gate: fail`** regardless of Phases 1 and 2.
-5. **Gate arithmetic**, stated unambiguously: `gate: pass` requires a zero validator exit, no `revise` verdicts, and no `unaddressed` ASRs. Anything else is `gate: fail`.
+4. **Where the structural gate lives** — *amended; this step originally read "Phase 3 — the structural hard gate" and instructed the critic to run `python3 skills/design/scripts/validate_design.py .sdlc/design` itself and fail its gate on a non-zero exit.* Write an unnumbered section stating that the critic does **not** run the validator, and both reasons it cannot: nothing is on disk yet (the critic gates the write), and `drivers.md`'s gated headings are the critic's own Phase 2 output. Point at `design-formatter`'s post-write re-run, reported as `formatter_result.validator_rerun`, as the pipeline's one structural gate.
+5. **Gate arithmetic**, stated unambiguously: `gate: pass` requires no `revise` verdicts and no `unaddressed` ASRs. Anything else is `gate: fail`. *Amended: this originally also required a zero validator exit.* State explicitly that this arithmetic covers judgment only and that the structural gate is not part of it.
 6. **Output.** Reproduce the D.6 `critique_report` block verbatim.
 7. **Scope boundaries.** State what you do **not** check, and who owns it:
    - `traces_from` *resolution* against `.sdlc/requirements/` — STO-102.
@@ -609,8 +640,18 @@ assert b is not None and b.strip().startswith('description:')
 print('frontmatter OK')
 "
 grep -c "skills/design/scripts/validate_design.py" agents/design-critic.md
+grep -c "validator_rerun" agents/design-formatter.md
 ```
-Expected: `frontmatter OK`, then a count of at least 1. The path must match the one in the orchestrator's D.6 block exactly — a stale path here means the hard gate silently never runs.
+Expected: `frontmatter OK`, then a count of at least 1 from each.
+
+*Amended.* This step originally asserted only the first grep, annotated "a stale path here
+means the hard gate silently never runs" — written when the critic was the agent that ran the
+validator. It no longer does: the path appears in `design-critic.md` only where the file
+disowns the command and names the formatter as its owner. So the grep no longer proves the
+gate runs, and the second grep is what does — the gate is live only if `design-formatter.md`
+re-runs the validator and reports `validator_rerun`. Where the path still appears, it must
+match the one in the D.6 block exactly, since the orchestrator folds the formatter's result
+back into `critique_report.validator` under that command string.
 
 - [ ] **Step 3: Commit**
 

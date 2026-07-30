@@ -568,9 +568,13 @@ live.
 
 The existing suite's interaction with this change was checked rather than assumed:
 
-- The invalid-case table asserts `exit != 0` and a substring needle. Those directories will
-  now also fail for a missing `drivers.md`, but each needle still appears, so every case
-  stays green untouched.
+- The invalid-case table asserts `exit != 0` and a substring needle. Once the gate is live,
+  the nine pre-existing invalid directories would *also* fail for a missing `drivers.md`.
+  Each needle would still appear, so the cases would stay green either way — but they would
+  no longer be testing one defect each; a fixture would fail for two reasons at once and the
+  assertion could not tell which. So each of the nine got a valid `drivers.md`, and every
+  case still exercises exactly the defect it is named for. The fixture data changed; the
+  test code did not.
 - The skip-coverage test enumerates skipped filenames that must not appear in the report.
   It gains one assertion for `drivers.md`. **This is the one existing test that changes**,
   and it is an addition, not a rewrite.

@@ -1,8 +1,16 @@
 # agents/design-critic.md Stage 8 output — focused re-review.
 # Re-review of two re-dispatched artifacts (CMP-004, IF-008) after revision to make the
 # BR-001 reconciliation explicit. The other 21 per_artifact verdicts, all of asr_coverage,
-# tradeoffs, and sensitivity_points are carried forward unchanged from
-# .superpowers/sdd/e2e/critique-report.yaml. This is not a fresh critique of the whole set.
+# tradeoffs, and sensitivity_points are carried forward unchanged from the critic's first
+# full-set report earlier in the same run. That report was a working file and is not
+# committed; everything it contributed is reproduced verbatim below, so this file is
+# self-contained. What it is NOT is a fresh critique of the whole set.
+#
+# Hand-added exhibit. The critique_report is an in-flight hand-off between the critic and
+# the orchestrator — no agent writes it to disk, and it is in no declared output layout.
+# It was serialised here so the findings could be published. See the example README
+# ("How this set was produced"), which also records that writing this artifact set on a
+# gate: fail required a deliberate human override of the formatter's precondition.
 critique_report:
   gate: fail   # 7 revise verdicts remain (CMP-001, CMP-003, CMP-006, CMP-008, IF-002, IF-006,
                # IF-012), all carried forward unchanged and none re-dispatched this round.
@@ -100,9 +108,9 @@ critique_report:
       findings:
         - "Single responsibility: 'Presents the pet to the owner AND turns the owner's input
            into care actions' joins two duties with an 'and' — the explicit Phase 1 revise
-           trigger. (Recorded per the rule as written. See stage4-report.md finding I-3: this
-           is a textbook cohesive UI responsibility and the rule has no exception for it, which
-           is a defect in the rule as much as in the artifact.)"
+           trigger. (Recorded per the rule as written, but flagged: this is a textbook
+           cohesive UI responsibility and the rule has no exception for it, which is a defect
+           in the rule as much as in the artifact.)"
         - "The same coarseness is visible structurally: CMP-006 is the only component that
            consumes five interfaces and provides none, and it is the one component CON-001's
            process boundary actually cuts through — every one of its five edges is an IPC hop
@@ -233,8 +241,8 @@ critique_report:
            mentions the second operation. Third instance of the same shape in this set
            (IF-002, IF-006, IF-012)."
 
-  # asr_coverage, tradeoffs, and sensitivity_points are unchanged from
-  # .superpowers/sdd/e2e/critique-report.yaml — this re-review did not touch Phase 2.
+  # asr_coverage, tradeoffs, and sensitivity_points are unchanged from the first full-set
+  # report of this run and are reproduced verbatim — this re-review did not touch Phase 2.
   asr_coverage:
     - requirement_id: FR-001
       addressed_by: [CMP-001, CMP-003, CMP-007, IF-003]
@@ -523,28 +531,31 @@ critique_report:
         every band boundary' measure unprovable. Nothing in the set budgets the hop.
 
   # Additional dispositions the report shape has no field for, recorded here so they
-  # do not evaporate. See stage4-report.md and critique-report.yaml for the original.
+  # do not evaporate. "The prior report" throughout means the critic's first full-set
+  # report from earlier in the same run — a working file that was not committed, so
+  # everything it said that still matters is restated here rather than cited.
   notes:
     re_review_scope: >-
       This report is a focused re-review of CMP-004 and IF-008 only, per this run's
       dispatch. The other 21 per_artifact entries, and all of asr_coverage, tradeoffs, and
-      sensitivity_points, are reproduced verbatim from critique-report.yaml and were not
+      sensitivity_points, are reproduced verbatim from the prior report and were not
       re-examined here.
     open_questions_forced:
-      - "Q-5 (new, this round): recorded in .superpowers/sdd/e2e/br001-open-question.yaml.
+      - "Q-5 (new, this round): forced by this finding and carried into the design set's
+         assumptions.md, where it is the entry of record.
          Verified against BR-001-death-only-after-sustained-neglect.md directly: the
          statement asserts a reset, the rationale defers exactly that clause to Q-2 and holds
          the rule at low confidence for that reason. Q-5's ask — strike the reset clause from
          BR-001's statement/description, record the Q-2 resolution in its rationale, and
          re-assess confidence — matches what BR-001 actually says and is the correct upstream
-         fix. This supersedes the placeholder 'Q- (new)' entry recorded in
-         critique-report.yaml's notes for the same finding."
-      - "Q-1 (inherited, still_open): unchanged from critique-report.yaml — named as a
+         fix. This supersedes the placeholder 'Q- (new)' entry the prior report recorded
+         for the same finding."
+      - "Q-1 (inherited, still_open): unchanged from the prior report — named as a
          sensitivity point rather than a `deferred_to_decision` coverage row, because the
          structural seams Q-1 touches are all present; only their parameters are undecided."
     deferred_to_decision_count: 0
     granularity: >-
-      Unchanged from critique-report.yaml. Both specialists reported that granularity is
+      Unchanged from the prior report. Both specialists reported that granularity is
       undocumented. It is visible in the artifacts: CMP-003 provides three contracts and
       CMP-001 two, with nothing arguing the ceiling; and three interfaces (IF-002, IF-006,
       IF-012) each bundle a blocking operation with a non-blocking one under a single
