@@ -18,8 +18,6 @@ Do not write any code and do not author component or interface bodies. You plan,
 analyse drivers, allocate IDs, back-fill edges, and coordinate. Architecture
 judgment lives in the specialists; you wire and never decide.
 
-Run every command from the repository root. Do not `cd`.
-
 ## Pipeline overview
 
 ```
@@ -106,8 +104,8 @@ the response measure for an NFR), `priority`, and `confidence`. Preserve ID orde
 
 ## Stage 3 — Identify architecturally significant requirements
 
-Produce the `asr_analysis` object. This is your routing judgment, and it is the
-one place in this file where you exercise any:
+Produce the `asr_analysis` object. This is your routing judgment — the one place
+in this file where you exercise judgment rather than mechanical wiring:
 
 ```yaml
 asr_analysis:
@@ -397,13 +395,15 @@ back-population. Do not invent diagram files.
   two is a duplicated contract.
 - Never let `required_capabilities`, `consumed_by`, or `satisfies_capabilities`
   reach the formatter. They are transient by construction and are not in the schema.
-- Any `CMP` or `IF` resting on an unresolved inherited open question is
-  `confidence: low`. So is one tracing from a requirement in
-  `inherited_review_queue`.
+- Any `CMP` or `IF` resting on an unresolved inherited open question
+  (`disposition: still_open`) is `confidence: low`, as is one resting on a
+  design decision this stage deferred. Membership in `inherited_review_queue`
+  is not itself a trigger — it's a prompt to check why that requirement was
+  uncertain and whether this stage's interview resolved it. Propagate only if
+  it did not.
 - The full set of `confidence: low` artifacts is the triage queue: the formatter
   persists it as `review_queue` in `index.yaml`, and the skill foregrounds it in
   its Phase 5 summary. Keep these consistent — an artifact is either low-confidence
   in all three places or none.
 - The formatter runs only after a passing critic gate. The critic's
   `validate_design.py` run is a hard gate — a non-zero exit blocks formatting.
-- Run every command from the repository root; never `cd`.
