@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://groundwork.dev/schemas/design.schema.json",
+  "title": "Groundwork Atomic Design Artifact",
+  "description": "Schema for a single atomic design-artifact file's YAML frontmatter. One artifact per Markdown file under .sdlc/design/<components|interfaces>/<ID>-<kebab-title>.md. A shared base plus a per-type branch: component specs (CMP-) carry responsibility/boundary/depends_on; interface specs (IF-) carry provider/operations/interaction/error_modes. The dependency edge lives once as CMP.depends_on -> IF.provider (there is no consumers field). Branch fields are declared inside their type's `then` clause, never at top level, so unevaluatedProperties:false rejects a component field on an interface (and vice versa) while still composing through the branch.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "description",
+    "traces_from",
+    "traces_to",
+    "status",
+    "confidence",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: CMP->component, IF->interface. An optional uppercase category infix is allowed (e.g. CMP-AUTH-004).",
+      "pattern": "^(CMP|IF)(-[A-Z0-9]+)*-[0-9]{3,}$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Design-artifact category.",
+      "enum": [
+        "component",
+        "interface"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Short human-readable title (matches the kebab-case used in the filename).",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "One clear statement of what this element is.",
+      "minLength": 1
+    },
+    "traces_from": {
+      "type": "array",
+      "description": "Upstream traceability: requirement IDs (FR-/NFR-/CON-/BR-/UC-) this element satisfies. May be empty. Existence is resolved by the cross-artifact validator (STO-102), not this schema.",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "traces_to": {
+      "type": "object",
+      "description": "Downstream traceability to ADRs, diagrams, code, and tests. Any key may be omitted or empty.",
+      "additionalProperties": false,
+      "properties": {
+        "adr": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "diagrams": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "code": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle status. IDs are never re-used; set status to obsolete instead of deleting.",
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved",
+        "implemented",
+        "verified",
+        "obsolete"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "description": "Confidence level for human-in-the-loop triage (STO-138).",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Creation date in YYYY-MM-DD format.",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "scope": {
+      "type": "string",
+      "description": "RESERVED (agile planning scope). Present-but-optional; mirrors the requirement schema.",
+      "enum": [
+        "project",
+        "epic",
+        "story"
+      ]
+    },
+    "parent_scope": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional."
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "Component branch. Declaring responsibility/boundary/depends_on here (not at top level) is what makes them valid ONLY on a component: on an interface this `then` never applies, the fields stay unevaluated, and unevaluatedProperties:false rejects them.",
+      "if": {
+        "properties": {
+          "type": {
+            "const": "component"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "responsibility",
+          "boundary",
+          "depends_on"
+        ],
+        "properties": {
+          "responsibility": {
+            "type": "string",
+            "description": "The single clear purpose of the unit.",
+            "minLength": 1
+          },
+          "boundary": {
+            "type": "string",
+            "description": "Whether the unit is inside the system boundary or an external system modelled as a component (C4).",
+            "enum": [
+              "internal",
+              "external"
+            ]
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "The interface contracts this component consumes. IF- IDs only; may be empty. Existence is resolved by the design validator.",
+            "items": {
+              "type": "string",
+              "pattern": "^IF(-[A-Z0-9]+)*-[0-9]{3,}$"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Interface branch. Same mechanism in reverse: provider/operations/interaction/error_modes are valid only on an interface.",
+      "if": {
+        "properties": {
+          "type": {
+            "const": "interface"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "provider",
+          "operations",
+          "interaction",
+          "error_modes"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "The single component that provides this contract. Exactly one CMP- ID.",
+            "pattern": "^CMP(-[A-Z0-9]+)*-[0-9]{3,}$"
+          },
+          "operations": {
+            "type": "array",
+            "description": "The operations this contract exposes, at architecture altitude (name + summary; no payload schemas).",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "summary"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "interaction": {
+            "type": "string",
+            "description": "Interaction style.",
+            "enum": [
+              "synchronous",
+              "asynchronous"
+            ]
+          },
+          "error_modes": {
+            "type": "array",
+            "description": "How this contract can fail. An interface that does not say how it fails is a gap; at least one mode is required.",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "Diagnostic note: when a branch field is present but INVALID (e.g. a bad provider pattern), its `then` applicator fails, contributes no evaluated-property annotations, and unevaluatedProperties then also reports the branch fields as unexpected. The precise per-field error is still emitted alongside the noisier line; this is an accepted tradeoff of the base-plus-branch composition (design spec C.4).",
+  "unevaluatedProperties": false
+}
