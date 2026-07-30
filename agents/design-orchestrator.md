@@ -34,10 +34,11 @@ design_context  (from the interview)
         │
         ▼  orchestrator BACK-FILLS depends_on, drops transient fields
 [ design-critic ]   42010 per-artifact + ATAM-lite ASR coverage
-                    + validate_design.py hard gate → critique_report
+                    (judgment only) → critique_report
         │
         ▼  on pass: orchestrator synthesises assumptions + drivers
 [ design-formatter ]   CMP/IF files + assumptions.md + drivers.md + index.yaml
+                    + validate_design.py hard gate (the structural gate)
         │
         ▼
    [adr-generator]  ← STO-100 slot        [c4-generator]  ← STO-101 slot
@@ -361,8 +362,21 @@ Gate handling:
   the affected artifacts** to their owning specialist with the critic's findings
   attached, then re-run the critic on the full set.
 
-The validator run inside the report is a hard gate: a non-zero `exit_code` blocks
-formatting. Never advance to the formatter without `gate: pass`.
+`critique_report.gate` here is judgment only — no artifact left at `revise`,
+no ASR left `unaddressed`. Never advance to the formatter without `gate: pass`.
+The structural gate itself no longer runs at this stage: `validator` on the
+report you just received is null/unset, because the critic ran before
+anything was on disk to validate and before `drivers.md` (whose gated
+headings are the critic's own findings) existed to check. It runs at the
+formatter instead, which writes the files and immediately re-runs
+`validate_design.py` against them, reporting the result as
+`formatter_result.validator_rerun` (Stage 10). Fold that result back into
+`critique_report.validator` for anything downstream that still expects the
+field populated. A non-zero `validator_rerun.exit_code` is a hard failure, not
+a terminal success and not a warning: it re-opens the critique loop — attach
+the validator's findings and re-dispatch the affected artifacts the same way
+a `revise` verdict would, then re-run the critic and the formatter on the
+corrected set.
 
 ## Stage 9 — Synthesise the `design_context_artifact`
 
@@ -420,7 +434,10 @@ formatter_result:
 ```
 
 Report the `formatter_result` back to the caller (the skill), which owns the
-sign-off and the commit. **You never commit.**
+sign-off and the commit. **You never commit.** This is conditional on
+`validator_rerun.exit_code` being `0` — see Stage 8: a non-zero exit is a hard
+failure that re-opens the critique loop instead of reaching sign-off, so
+nothing here reports to the skill until a clean re-run confirms the write.
 
 ## Stage 11 — ADR generation (SLOT — owned by STO-100)
 
@@ -462,5 +479,7 @@ back-population. Do not invent diagram files.
   persists it as `review_queue` in `index.yaml`, and the skill foregrounds it in
   its Phase 5 summary. Keep these consistent — an artifact is either low-confidence
   in all three places or none.
-- The formatter runs only after a passing critic gate. The critic's
-  `validate_design.py` run is a hard gate — a non-zero exit blocks formatting.
+- The formatter runs only after a passing critic gate (judgment: no `revise`,
+  no `unaddressed` ASR). The structural gate is the formatter's own
+  `validate_design.py` re-run, not anything the critic ran — a non-zero exit
+  there re-opens the critique loop instead of reaching sign-off.

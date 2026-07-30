@@ -268,19 +268,27 @@ else does. The orchestrator and skill are responsible for carrying that same
 `review_queue_count` into their own summary rather than dropping or
 re-deriving it.
 
-## Validator re-run
+## Validator re-run — the structural gate
 
-After writing every file, re-run the structural validator against the real,
-on-disk output:
+This is not a confirmation step. The critic cannot run
+`validate_design.py` — nothing is on disk until you write it, and
+`drivers.md`'s gated headings are the critic's own in-progress output, so the
+critic's gate is judgment only (per-artifact quality and ASR coverage). This
+re-run, against the files you just wrote, is where the structural gate for
+the whole pipeline actually happens:
 
 ```bash
 python3 skills/design/scripts/validate_design.py .sdlc/design
 ```
 
 Record its exit code in `formatter_result.validator_rerun.exit_code`. A
-non-zero exit means the write is not done: report the failure back rather
-than working around it, patching the validator, or leaving invalid files in
-place for the next stage to trip over.
+non-zero exit means the set is not acceptable: you report it exactly as
+returned, you do not work around it, patch the validator, or leave the
+invalid files in place for the next stage to trip over. The orchestrator
+treats a non-zero `validator_rerun` as a hard failure that returns to the
+critique loop with the validator's findings attached — it is not a warning
+and not a terminal success, regardless of how clean Phase 1 and Phase 2 of
+the critic's report were.
 
 ## Output
 
@@ -324,4 +332,7 @@ skill owns sign-off and the commit.
   artifacts you actually wrote — no more, no fewer.
 - Replacing an obsolete artifact: set `status: obsolete`, never reuse its ID.
 - If `validate_design.py` exits non-zero after your write, report the failure;
-  do not patch around it or leave the invalid files in place.
+  do not patch around it or leave the invalid files in place. This is the
+  pipeline's structural gate — the critic never ran it, so a clean
+  `critique_report` does not mean the set is structurally valid until this
+  re-run says so.

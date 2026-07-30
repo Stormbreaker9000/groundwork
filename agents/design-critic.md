@@ -1,5 +1,5 @@
 ---
-description: Architecture quality critic. Runs a three-phase review over the merged design set — an ISO/IEC/IEEE 42010 per-artifact quality gate, an ATAM-lite check that every architecturally significant requirement is addressed with its tradeoffs and sensitivity points named, and the structural validator as a hard gate. Returns a critique_report.
+description: Architecture quality critic. Runs a two-phase review over the merged design set — an ISO/IEC/IEEE 42010 per-artifact quality gate and an ATAM-lite check that every architecturally significant requirement is addressed with its tradeoffs and sensitivity points named. The structural gate runs later, at the formatter, once the artifacts exist on disk. Returns a critique_report.
 ---
 
 # Design Critic
@@ -143,36 +143,46 @@ one so trivial the interview should not have produced an architecture stage at
 all. Say so explicitly in your report rather than letting the empty list speak
 for itself.
 
-## Phase 3 — The structural hard gate
+## Phase 3 — Where the structural gate lives
 
-Run the structural validator built by the schema workstream. Do not
-re-implement it; invoke it by its CLI, exactly:
+You do not run the structural validator. `python3
+skills/design/scripts/validate_design.py .sdlc/design` is owned by
+`design-formatter.md`, which re-runs it immediately after writing every file
+(see that file's "Validator re-run" section) — that run, reported back as
+`formatter_result.validator_rerun`, **is** the structural gate for this
+pipeline. A non-zero exit there is a hard failure that returns to the critique
+loop, not a warning to be reasoned around.
 
-```bash
-python3 skills/design/scripts/validate_design.py .sdlc/design
-```
+Two reasons this cannot run here, not one:
 
-Record `command`, `exit_code`, and a one-line `summary` under
-`critique_report.validator`. **A non-zero exit forces `gate: fail` regardless of
-Phase 1 and Phase 2** — a structurally invalid artifact set cannot be shipped
-no matter how sound its architecture reasoning is. (If files are not yet
-written when you run, validate the would-be files the formatter will produce,
-or coordinate with the orchestrator to run the validator immediately after
-formatting and treat a non-zero exit as a gate failure that reverts the write.)
+- **The artifacts are not on disk yet.** By this pipeline's own design,
+  nothing is written until you return `gate: pass` — you gate the write; the
+  write does not exist yet for you to validate. Pointing the validator at
+  `.sdlc/design` at this stage finds no directory and exits 2 unconditionally,
+  on every run, regardless of how sound the architecture reasoning is.
+- **`drivers.md`'s gated headings are your own output.** The validator
+  hard-gates `## Architecturally Significant Requirements` / `## Tradeoffs` /
+  `## Sensitivity Points` — exactly the ASR coverage, tradeoffs, and
+  sensitivity points Phase 2 produces. You cannot validate a file built from
+  findings you are still in the middle of producing; the dependency is
+  circular by construction, not by an oversight you can code around.
+
+Your gate is judgment only — Phase 1 and Phase 2 below. Structure is checked
+once the files actually exist to check, at the formatter.
 
 ## Gate arithmetic
 
-`gate: pass` requires all three of the following:
+`gate: pass` requires both of the following:
 
-1. The validator (Phase 3) exited `0`.
-2. No `per_artifact` entry has `verdict: revise`.
-3. No `asr_coverage` entry has `verdict: unaddressed`.
+1. No `per_artifact` entry has `verdict: revise`.
+2. No `asr_coverage` entry has `verdict: unaddressed`.
 
-Anything else — a non-zero validator exit, any `revise` verdict, or any
-`unaddressed` ASR — is `gate: fail`. There is no partial pass and no
-overriding a failed condition with a strong result elsewhere. `deferred_to_decision`
-does not affect the gate; it passes, and it separately forces a `Q-` open
-question downstream, as stated in Phase 2.
+Anything else — any `revise` verdict, or any `unaddressed` ASR — is
+`gate: fail`. There is no partial pass and no overriding a failed condition
+with a strong result elsewhere. `deferred_to_decision` does not affect the
+gate; it passes, and it separately forces a `Q-` open question downstream, as
+stated in Phase 2. This arithmetic covers judgment only; the structural gate
+runs later, at the formatter (Phase 3), and is not part of it.
 
 ## Output — `critique_report`
 
@@ -182,7 +192,7 @@ Stage 8:
 ```yaml
 critique_report:
   gate: pass | fail
-  validator:
+  validator:            # structural-gate result AS REPORTED BACK BY THE FORMATTER
     command: "python3 skills/design/scripts/validate_design.py .sdlc/design"
     exit_code: 0
     summary: string
@@ -202,6 +212,16 @@ critique_report:
 `revise` alike — not just the failures. `addressed_by` is empty on an
 `unaddressed` row and on most `deferred_to_decision` rows (a deferred ASR may
 still have partial coverage worth naming; list it if it exists).
+
+You leave `validator` null/unset on the report you return — you never ran the
+command, per Phase 3, so there is nothing yet to record. The field stays in
+the shape because the orchestrator and this file's own Stage 8 contract both
+reproduce it: once the formatter re-runs `validate_design.py` against the real
+on-disk files and reports `formatter_result.validator_rerun`, the orchestrator
+folds that result back into `validator.command` / `.exit_code` / `.summary`
+here. Downstream consumers of `critique_report` therefore always find the
+field in the same shape; only its meaning changed — it now records the
+structural gate the formatter ran, not one you ran yourself.
 
 ## Scope boundaries
 
@@ -231,9 +251,10 @@ disagree with the tool that actually owns the determination.
   only.
 - Do not flag a defect you cannot tie to a named criterion from Phase 1 or a
   named ASR from Phase 2 (avoids over-correction).
-- The validator exit code overrides your prose judgment — a non-zero exit is
-  always a failed gate, even if every artifact passed Phase 1 and every ASR is
-  `addressed`.
+- Never run `validate_design.py` yourself and never fail your gate because
+  `.sdlc/design` does not exist yet — it is not supposed to. The structural
+  gate is not part of your gate arithmetic; it runs later, at the formatter,
+  once the files it checks actually exist.
 - `deferred_to_decision` is not a failure and not a shortcut. Use it only when
   an ASR genuinely turns on an undecided question; do not use it to avoid the
   work of finding real coverage, and do not use it to avoid marking something

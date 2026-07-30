@@ -124,8 +124,25 @@ not a hand-written checklist that cannot answer "why these checks and not others
   quality-attribute scenarios, which is exactly the shape M1's NFRs are already written in.
   The six-part QAS the NFR specialist emits is an ATAM input with no conversion.
 
-The critic runs three phases: per-artifact quality (42010), ASR coverage with tradeoffs and
-sensitivity points named (ATAM-lite), and `validate_design.py` as the same hard gate M1 uses.
+The critic runs two phases: per-artifact quality (42010) and ASR coverage with tradeoffs and
+sensitivity points named (ATAM-lite). It does **not** run `validate_design.py` — an
+end-to-end run of the pipeline surfaced why that cannot work here even though M1's critic runs
+its analogous validator directly. Two reasons, not one:
+
+- The critic runs **before** the formatter, by the pipeline's own design — nothing is written
+  to `.sdlc/design/` until the critic returns `gate: pass`. Pointing the validator at a
+  directory that does not exist yet exits 2 unconditionally, failing the gate on every run
+  regardless of how sound the architecture is.
+- `drivers.md`'s gated headings — Architecturally Significant Requirements, Tradeoffs,
+  Sensitivity Points — **are** the critic's own Phase 2 output. It cannot validate a file built
+  from findings it is still in the middle of producing; the dependency is circular by
+  construction.
+
+The structural gate belongs where the files actually exist: at `design-formatter`, which
+writes them and immediately re-runs `validate_design.py` against the real on-disk output,
+reporting the result as `formatter_result.validator_rerun`. That run is the pipeline's one
+structural gate; a non-zero exit is a hard failure that re-opens the critique loop rather than
+a second, earlier check duplicating it.
 
 **Scope discipline:** the critic does not resolve `traces_from` (STO-102) and does not detect
 cycles, orphan interfaces, or vague prose (STO-208). Those tiers exist; this one does not
@@ -406,6 +423,15 @@ critique_report:
 the honest disposition until STO-100 exists to write the ADR, and it means the deferral is
 recorded rather than lost.
 
+`validator` keeps its three fields, but its meaning changed from the original draft of this
+spec (A.5): the critic does not run `validate_design.py` (nothing is on disk yet, and
+`drivers.md`'s gated headings are the critic's own output), so it leaves `validator`
+null/unset on the report it returns. The orchestrator fills it in afterward, once
+`design-formatter` re-runs the validator against the files it actually wrote and reports the
+result as `formatter_result.validator_rerun` (D.8) — that value is what `critique_report.validator`
+records. Consumers of this contract see the same three fields either way; only who produced
+the value, and when, changed.
+
 Alongside the artifact set, the orchestrator also forwards the `capability_map` sidecar
 derived in D.5 step 3:
 
@@ -504,7 +530,7 @@ In order of evaluation:
 | Any ASR `unaddressed` | Critic gate fails. Re-dispatch to the owning specialist. |
 | ASR `deferred_to_decision` | Gate passes; a `Q-` open question is forced into `assumptions.md`. |
 | Critic `gate: fail` or any `revise` | Re-dispatch only the affected artifacts, re-run the critic. Never advance to the formatter. |
-| `validate_design.py` exits non-zero | Hard block before commit. Fix and re-run until clean. |
+| `validate_design.py` exits non-zero (run by `design-formatter`'s post-write re-run — the pipeline's structural gate, not the critic) | Hard block before commit. Re-open the critique loop with the validator's findings attached; re-dispatch, re-run the critic and the formatter until clean. |
 
 ---
 

@@ -215,15 +215,19 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 3. **interface-specialist** — receives the component set and turns every
    declared capability into an interface with a `provider`, operations,
    interaction style, and error modes.
-4. **design-critic** — runs a three-phase review: per-artifact quality
-   (ISO/IEC/IEEE 42010), ASR coverage with tradeoffs and sensitivity points
-   named (ATAM-lite), and `validate_design.py` as a hard gate. Returns
-   `gate: pass` or `gate: fail`.
+4. **design-critic** — runs a two-phase review, judgment only: per-artifact
+   quality (ISO/IEC/IEEE 42010) and ASR coverage with tradeoffs and
+   sensitivity points named (ATAM-lite). Returns `gate: pass` or
+   `gate: fail`. It does not run `validate_design.py` — nothing is on disk
+   yet at this stage, and `drivers.md`'s gated headings are this critic's own
+   output, so the structural check belongs downstream, at the formatter.
 5. **design-formatter** — writes the atomic component/interface files plus
-   `assumptions.md` and `drivers.md`, and `index.yaml`'s `review_queue`.
-   **Runs only on `gate: pass`.** Do not advance to the formatter on a
-   failing or partial gate — the orchestrator re-dispatches only the affected
-   artifacts back to their owning specialist and re-runs the critic.
+   `assumptions.md` and `drivers.md`, and `index.yaml`'s `review_queue`, then
+   re-runs `validate_design.py` against what it just wrote — the pipeline's
+   single structural gate (see Step 4). **Runs only on `gate: pass`.** Do not
+   advance to the formatter on a failing or partial gate — the orchestrator
+   re-dispatches only the affected artifacts back to their owning specialist
+   and re-runs the critic.
 
 **Step 2 — Render in-conversation summary (before writing anything):**
 
@@ -267,17 +271,24 @@ is not relaxed here.
 
 **Step 4 — Write, then validate (hard gate):**
 
-On confirmation, run the formatter, then run the structural validator:
+On confirmation, run the formatter. The formatter writes the files and, as
+part of its own contract, immediately re-runs the structural validator
+against them (`agents/design-formatter.md`'s "Validator re-run" section) —
+this is the pipeline's single structural gate, and it is the first point at
+which structure *can* be checked, since nothing was on disk before now. The
+critic's earlier `gate: pass` was judgment only (per-artifact quality and ASR
+coverage); it never ran this command.
 
 ```bash
 python3 skills/design/scripts/validate_design.py .sdlc/design
 ```
 
-The validator MUST exit 0. If it exits non-zero, fix the flagged files
-(re-dispatch to the owning specialist) and re-run until clean. It requires
-`pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see
-`skills/requirements/scripts/README.md` for the install and fallback details
-(the design validator shares the same dependency story).
+The validator MUST exit 0. If it exits non-zero, do not treat the write as
+done: fix the flagged files (re-dispatch to the owning specialist through the
+critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema`
+(`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`
+for the install and fallback details (the design validator shares the same
+dependency story).
 
 **Step 5 — Commit:**
 
