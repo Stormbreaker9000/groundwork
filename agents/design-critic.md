@@ -44,20 +44,21 @@ description must contain. For every component and every interface, record a
 - **Description is a claim, not an echo.** `description` says what the element
   *is*. A `description` that just restates the `title` in sentence case
   ("Order Service: a service for orders") asserts nothing and is a `revise`.
-- **Interface operations serve the capability they exist to satisfy.**
+- **Interface operations serve the capabilities they exist to satisfy.**
   `satisfies_capabilities` has already been stripped by the back-fill by the
-  time you see the set, but you still have the link: look up the interface's
-  `id` in `capability_map` to find the capability it satisfies and the
-  component that declared it. The sharpened question is whether `operations`
-  actually let that component do the thing it declared it needed — not
-  whether `operations` agrees with the interface's own `description` or body
-  Rationale. That older comparison was weak because the interface specialist
-  wrote both sides of it; it could not catch an interface that consistently
-  misread the capability. Checking against `capability_map` instead compares
-  the interface specialist's `operations` to a capability the component
-  specialist authored, so agreement between them is real evidence. An
-  interface satisfying "take card payments and issue refunds" whose
-  `operations` list only names `authorize` is under-specified.
+  time you see the set, but you still have the link: filter `capability_map`
+  for the rows whose `satisfied_by` equals the interface's `id` — an interface
+  can satisfy more than one capability, so expect more than one row some of
+  the time. The sharpened question is whether `operations` actually serve all
+  of the capabilities those rows name — not whether `operations` agrees with
+  the interface's own `description` or body Rationale. That older comparison
+  was weak because the interface specialist wrote both sides of it; it could
+  not catch an interface that consistently misread the capability. Checking
+  against `capability_map` instead compares the interface specialist's
+  `operations` to capabilities the component specialist authored, so
+  agreement between them is real evidence. An interface satisfying "take card
+  payments and issue refunds" whose `operations` list only names `authorize`
+  is under-specified.
 - **Error modes name real failures.** `error_modes` entries must say something
   a consumer would branch on. `"error"`, `"failure"`, `"exception"`, and
   paraphrases of the same non-answer are a `revise`. A mutating operation with

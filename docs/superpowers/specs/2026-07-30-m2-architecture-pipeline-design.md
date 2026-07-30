@@ -15,7 +15,7 @@ STO-100 (ADRs) and STO-101 (C4 diagrams) plug into dispatch slots declared here.
 
 ## Part A — Settled decisions
 
-Six decisions were taken during brainstorming. Each closes off an alternative that will
+Seven decisions were taken during brainstorming. Each closes off an alternative that will
 look attractive again later, so each is recorded with its reasoning.
 
 ### A.1 This ticket is the pipeline plus the `CMP`/`IF` specialists — not ADRs, not C4

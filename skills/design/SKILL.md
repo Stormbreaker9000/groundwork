@@ -185,11 +185,11 @@ The confirmed Phase 4 block serialises 1:1 to the `design_context` the
 ```yaml
 design_context:
   requirements_root: ".sdlc/requirements"
-  system_purpose: string
+  system_purpose: string             # restated from the requirement set, not re-elicited
   runtime_and_stack: string
   persistence: string
   deployment_target: string
-  integration_points: string
+  integration_points: string         # external systems → boundary: external components
   operational_constraints: string
   team_constraints: string
   out_of_scope: string               # or "None identified"
