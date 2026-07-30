@@ -202,6 +202,7 @@ critique_report:
     - requirement_id: NFR-002
       addressed_by: [ CMP-001, IF-001 ]
       verdict: addressed | deferred_to_decision | unaddressed
+      note: string                   # optional — the evidence for this verdict
   tradeoffs:
     - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }
   sensitivity_points:
@@ -212,6 +213,14 @@ critique_report:
 `revise` alike — not just the failures. `addressed_by` is empty on an
 `unaddressed` row and on most `deferred_to_decision` rows (a deferred ASR may
 still have partial coverage worth naming; list it if it exists).
+
+`note` on an `asr_coverage` row is optional but strongly preferred on an
+`addressed` verdict: it is the only field in which you can record *why* the
+listed IDs actually serve the requirement — the specific responsibility,
+operation, or error mode Phase 2 requires you to be able to point at. A bare
+list of IDs is indistinguishable from a component whose `traces_from` merely
+cites the requirement, which Phase 2 explicitly does not accept as coverage.
+On a `deferred_to_decision` row, use it to name the undecided question.
 
 You leave `validator` null/unset on the report you return — you never ran the
 command, per Phase 3, so there is nothing yet to record. The field stays in

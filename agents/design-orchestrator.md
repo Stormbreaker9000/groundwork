@@ -279,6 +279,15 @@ specialist turns each one into an interface.
 These three fields are consumed by Stage 7 and **must never reach a file.** They
 are not in the schema; a formatter that receives them writes invalid frontmatter.
 
+Each specialist MAY additionally return sibling `assumptions` and `dependencies`
+lists (plain statements — "we assume the order store has a single writer") beside
+its `draft_components` / `draft_interfaces`. These are optional, they carry no
+IDs, and they are NOT written into component or interface frontmatter. Collect
+them: they feed Stage 9, which merges them, de-duplicates, and assigns the
+`A-#` / `D-#` IDs. Neither specialist returns a `terms` list — unlike M1, the
+design stage inherits the requirements glossary rather than growing a second one
+(STO-197 A.2).
+
 ## Stage 7 — Back-fill `depends_on`
 
 Execute exactly this, and apply no judgment:
@@ -310,8 +319,21 @@ interface — that is the interface specialist's judgment, not yours.
 
 ## Stage 8 — Critique gate: the `critique_report` hand-off
 
-Pass the back-filled, transient-stripped set to `design-critic`, along with the
-`capability_map` derived in Stage 7 step 3:
+Pass the back-filled, transient-stripped set to `design-critic`. The critic
+declares **four** inputs and needs all four — dispatch it:
+
+1. the merged, back-filled `draft_components` + `draft_interfaces` set;
+2. your `asr_analysis` from Stage 3;
+3. the `requirements_digest` from Stage 2;
+4. the `capability_map` derived in Stage 7 step 3.
+
+Sending fewer does not produce a smaller review, it produces a silently
+degraded one. Phase 2 emits exactly one `asr_coverage` row per `asr_analysis`
+entry, so without it the ATAM-lite half of the gate cannot run at all and the
+report comes back with an empty `asr_coverage` that reads like clean coverage.
+Without `requirements_digest`, Phase 1's `traces_from` plausibility check has
+nothing to judge the cited requirements against. The `capability_map` sidecar
+is shaped:
 
 ```yaml
 capability_map:
@@ -345,6 +367,7 @@ critique_report:
     - requirement_id: NFR-002
       addressed_by: [ CMP-001, IF-001 ]
       verdict: addressed | deferred_to_decision | unaddressed
+      note: string                   # optional — the evidence for this verdict
   tradeoffs:
     - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }
   sensitivity_points:
@@ -421,9 +444,20 @@ Sources, in order:
    questions continue the inherited sequence rather than restarting it: if the
    requirements set ended at `Q-4`, the first new one is `Q-5`. A `resolved`
    question does **not** also appear here — it is resolved; it is a tradeoff.
-5. `assumptions` / `dependencies` — the architecture's own, e.g. "the database has
-   a single writer" or "the payment provider's sandbox is available in CI". These
-   are what the design assumes, distinct from what drove it. De-duplicate.
+5. `assumptions` / `dependencies` — merge the sibling `assumptions` and
+   `dependencies` lists the specialists returned in Stage 6, then add anything
+   the architecture implies that no artifact states outright, e.g. "the database
+   has a single writer" or "the payment provider's sandbox is available in CI".
+   These are what the design assumes, distinct from what drove it. De-duplicate
+   across both sources — two specialists surfacing the same assumption from
+   different angles is the expected case, not an edge case.
+
+   **You assign the `A-#` and `D-#` IDs**, here, at the merge. The specialists
+   return plain statements with no IDs precisely so that neither has to guess
+   what the other numbered; this contract expects `{ id, statement }`, and you
+   are the only agent that sees both lists. Number from `A-1` / `D-1` after
+   de-duplication, never before, so no ID is minted for an entry that then
+   collapses into another.
 
 If a section has no items, emit a single `None identified` entry. An honest empty
 section beats invented entries. The formatter writes `.sdlc/design/assumptions.md`

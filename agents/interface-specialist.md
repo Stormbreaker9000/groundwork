@@ -428,9 +428,9 @@ Contrast with an interface that would be re-dispatched:
   `unevaluatedProperties: false`.
 - **Quote capability strings exactly** in `satisfies_capabilities`. A paraphrase
   reads as a miss to the completeness check.
-- **Never exceed your `id_block`.** Draw `IF-` IDs in order from
-  `id_block.start`. If you need more than the block reserves, stop and report
-  back rather than minting IDs the orchestrator did not allocate.
+- **Draw `IF-` IDs in order, upward from `id_block.start`,** one per interface,
+  with no gaps. Never mint an ID under a prefix that is not yours — `IF-` is the
+  only prefix you allocate from.
 - **Never generate anything in `context.out_of_scope`.** It is a hard exclusion
   list, not a hint.
 - **Use the `created_at` you were given** so every file written in this run

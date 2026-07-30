@@ -334,9 +334,9 @@ so assigning `confidence` honestly is what makes the human gate efficient.
   body. The interfaces do not exist yet.
 - **Never reference a component from a capability.** `"use CMP-002"` is not a
   capability; the edge must travel through an interface.
-- **Never exceed your `id_block`.** Draw `CMP-` IDs in order from
-  `id_block.start`. If you need more than the block reserves, stop and report
-  back — do not mint IDs the orchestrator did not allocate.
+- **Draw `CMP-` IDs in order, upward from `id_block.start`,** one per component,
+  with no gaps. Never mint an ID under a prefix that is not yours — `CMP-` is
+  the only prefix you allocate from.
 - **Never generate anything in `context.out_of_scope`.** It is a hard exclusion
   list, not a hint.
 - **Use the `created_at` you were given** so every file written in this run

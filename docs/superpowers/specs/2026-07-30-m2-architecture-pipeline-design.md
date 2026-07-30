@@ -423,6 +423,7 @@ critique_report:
     - requirement_id: NFR-002
       addressed_by: [ CMP-001, IF-001 ]
       verdict: addressed | deferred_to_decision | unaddressed
+      note: string                   # optional — the evidence for this verdict
   tradeoffs:
     - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }
   sensitivity_points:
@@ -442,8 +443,12 @@ result as `formatter_result.validator_rerun` (D.8) — that value is what `criti
 records. Consumers of this contract see the same three fields either way; only who produced
 the value, and when, changed.
 
-Alongside the artifact set, the orchestrator also forwards the `capability_map` sidecar
-derived in D.5 step 3:
+The critic takes **four** inputs, and the dispatch must carry all four: the artifact set,
+`asr_analysis` (D.3), `requirements_digest` (D.2), and the `capability_map` sidecar derived
+in D.5 step 3. `asr_analysis` is what Phase 2 emits one `asr_coverage` row per entry of —
+omit it and the ATAM-lite half of the gate does not run, returning an empty `asr_coverage`
+that reads like clean coverage. `requirements_digest` is what Phase 1 judges `traces_from`
+plausibility against. The sidecar is shaped:
 
 ```yaml
 capability_map:
