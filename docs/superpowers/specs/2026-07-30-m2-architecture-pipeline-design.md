@@ -158,6 +158,11 @@ Leaving them in the conversation loses them at the moment they become checkable.
 `.sdlc/design/drivers.md` is gated on three headings: `## Architecturally Significant
 Requirements`, `## Tradeoffs`, `## Sensitivity Points`. Content is never gated.
 
+The inherited open questions the interview resolves land under `## Tradeoffs` (see A.7 and D.7).
+They are the clearest instance of the reasoning this decision exists to preserve: the runtime,
+the platform scope and the death policy are the most consequential calls the stage makes, and
+without this they would live only in the interview transcript.
+
 Folding these into `assumptions.md` was rejected: it conflates *what this design assumes*
 with *what drove this design*, and it would have required extending the existing three-heading
 gate anyway — so it saves no validator work and costs clarity.
@@ -178,6 +183,10 @@ right place. So:
 
 - Phase 1 reads both, and the interview **opens** with the inherited open questions.
 - Resolved ones become design decisions (and, once STO-100 ships, ADRs).
+- Resolved ones are also **written down**: each becomes a tradeoff entry under `## Tradeoffs`
+  in `.sdlc/design/drivers.md` — the resolution as the decision, the interview's reasoning as
+  its gains and costs, and the requirements that rested on the question as `affected`. Without
+  that they vanish with the conversation, which is exactly what A.6 exists to prevent.
 - Unresolved ones propagate: any `CMP`/`IF` resting on one is marked `confidence: low`, and
   the question is re-emitted into `.sdlc/design/assumptions.md` with its original `Q-` ID.
 
@@ -206,10 +215,11 @@ design_context  (from the interview)
         │
         ▼  orchestrator BACK-FILLS depends_on, drops transient fields
 [ design-critic ]   42010 per-artifact + ATAM-lite ASR coverage
-                    + validate_design.py hard gate → critique_report
+                    (judgment only) → critique_report
         │
         ▼  on pass: orchestrator synthesises assumptions + drivers
 [ design-formatter ]   CMP/IF files + assumptions.md + drivers.md + index.yaml
+                    + validate_design.py hard gate (the structural gate)
         │
         ▼
    [adr-generator]  ← STO-100 slot        [c4-generator]  ← STO-101 slot
@@ -469,6 +479,16 @@ design_context_artifact:
     tradeoffs:          [ { decision, gains, costs, affected: [] } ]
     sensitivity_points: [ { point, affected_requirements: [], note } ]
 ```
+
+`drivers.tradeoffs` is not only the critic's. Every `inherited_open_questions` entry the
+interview closed with `disposition: resolved` becomes a tradeoff entry as well: `decision` is
+the resolution taken, `gains` and `costs` the reasoning behind it, and `affected` the
+requirement IDs that rested on the question, which the `inherited_review_queue` and the
+requirements citing that `Q-` ID identify. Tradeoffs is the right heading — a resolved runtime
+or scope question is a decision taken, with something gained and something paid — and the three
+`drivers.md` headings are fixed by the validator, so it is also the only heading available.
+A resolved question correspondingly does *not* reappear under `open_questions`; only
+`still_open` ones carry forward there.
 
 Empty sections render as `None identified`, as in M1. An honest empty section beats invented
 entries.

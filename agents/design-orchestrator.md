@@ -403,12 +403,25 @@ Sources, in order:
 1. `drivers.asrs` — your `asr_analysis` from Stage 3, unchanged.
 2. `drivers.tradeoffs` and `drivers.sensitivity_points` — copied from the
    `critique_report`.
-3. `open_questions` — every `inherited_open_questions` entry with
+3. `drivers.tradeoffs` additionally carries **every `inherited_open_questions`
+   entry with `disposition: resolved`**, one tradeoff entry each. `decision` is
+   the resolution taken, `gains` and `costs` the reasoning behind it, and
+   `affected` the requirement IDs that rested on the question — the
+   `inherited_review_queue` and the requirements that cite the question by its
+   `Q-` ID identify them.
+
+   These are the decisions the stage exists to make, and `drivers.md` is where
+   the stage's reasoning is externalised. A resolution recorded only in the
+   interview conversation is lost the moment it ends. Tradeoffs is the right
+   heading: a resolved runtime or scope question *is* a decision taken with
+   something gained and something paid for it.
+4. `open_questions` — every `inherited_open_questions` entry with
    `disposition: still_open`, **keeping its original `Q-` ID**, plus one new
    question for every ASR the critic marked `deferred_to_decision`. Newly raised
    questions continue the inherited sequence rather than restarting it: if the
-   requirements set ended at `Q-4`, the first new one is `Q-5`.
-4. `assumptions` / `dependencies` — the architecture's own, e.g. "the database has
+   requirements set ended at `Q-4`, the first new one is `Q-5`. A `resolved`
+   question does **not** also appear here — it is resolved; it is a tradeoff.
+5. `assumptions` / `dependencies` — the architecture's own, e.g. "the database has
    a single writer" or "the payment provider's sandbox is available in CI". These
    are what the design assumes, distinct from what drove it. De-duplicate.
 
