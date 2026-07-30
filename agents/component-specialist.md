@@ -40,9 +40,16 @@ generation_brief:
       type: non_functional
       title: string
       description: string
-      measure: string                # fit_criterion (FR) or response measure (NFR)
+      measure: string                # fit_criterion (FR), response measure (NFR), or a CON/BR's
+                                      # own fit_criterion where it states one — omitted when the
+                                      # requirement genuinely has no measure
       priority: must | should | could | wont
       confidence: high | medium | low
+  terms:                              # inherited verbatim from requirements/glossary.md — the design
+                                     # stage does not author vocabulary, only consumes it (STO-197 A.2)
+    - term: string
+      definition: string
+      aliases: [ string ]
   asr_analysis: [ ...the orchestrator's routing judgment... ]
   target_category: component | interface
   id_block: { prefix: CMP | IF, start: 1 }
@@ -63,6 +70,11 @@ Use `context` as shared background: `system_purpose`, `runtime_and_stack`,
 and `team_constraints` all shape the decomposition. Treat `context.out_of_scope`
 as a hard exclusion list — never emit a component for an excluded item. Stamp
 every component with the `created_at` you were given; do not use today's date.
+
+`terms` is the requirements set's glossary, inherited rather than authored here.
+When it already has a word for a concept you're naming — in a title, a
+description, or a `required_capabilities` entry — use that word instead of
+coining a synonym.
 
 ## How to decompose
 
@@ -289,7 +301,11 @@ Contrast with a component that would be re-dispatched:
 
 ## Confidence
 
-Set `confidence` deliberately, not by default:
+Set `confidence` deliberately, not by default. Applying the rule below is your
+job, not the orchestrator's: you hold `context.inherited_open_questions` in your
+brief, so check a question's `disposition` yourself before you author, rather
+than waiting for the orchestrator to catch it — the orchestrator verifies your
+assignment against this same rule, it does not make it for you.
 
 - **high** — the component follows directly from confirmed context and the
   requirement set.

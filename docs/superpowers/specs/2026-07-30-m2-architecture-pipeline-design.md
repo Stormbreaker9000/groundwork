@@ -276,9 +276,16 @@ generation_brief:
       type: non_functional
       title: string
       description: string
-      measure: string                # fit_criterion (FR) or response measure (NFR)
+      measure: string                # fit_criterion (FR), response measure (NFR), or a CON/BR's
+                                      # own fit_criterion where it states one — omitted when the
+                                      # requirement genuinely has no measure
       priority: must | should | could | wont
       confidence: high | medium | low
+  terms:                              # inherited verbatim from requirements/glossary.md — the design
+                                     # stage does not author vocabulary, only consumes it (STO-197 A.2)
+    - term: string
+      definition: string
+      aliases: [ string ]
   asr_analysis: [ ...see D.3... ]
   target_category: component | interface
   id_block: { prefix: CMP | IF, start: 1 }
@@ -289,6 +296,17 @@ generation_brief:
 The orchestrator is the single ID authority, as in M1. IDs are stable, never reused after
 deletion (`status: obsolete` instead), and the categorical prefix must match `type` —
 `CMP-`→`component`, `IF-`→`interface` — which the validator enforces.
+
+`terms` closes a gap the schema left open: the orchestrator is the only agent that reads
+`requirements/glossary.md` (A.2), and the specialists never re-read the requirement files, so
+without this field the vocabulary inheritance STO-197 decided on would be silently broken —
+two specialists free to coin different words for the same concept. Neither specialist gains a
+`terms` *output*; the design stage consumes the glossary, it does not grow one of its own.
+
+`measure` is likewise extended beyond FR/NFR: `requirements_digest` carries the full
+requirement set, which includes `CON-` and `BR-` entries. For those, `measure` is their own
+`fit_criterion` where one is stated, and the field is omitted where the requirement genuinely
+has none.
 
 ### D.3 `asr_analysis` — the orchestrator's routing judgment
 

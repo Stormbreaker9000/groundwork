@@ -90,12 +90,24 @@ the one this stage's interview just resolved. Check whether that happened before
 propagating; mark `confidence: low` only if the underlying uncertainty is still
 live.
 
+`confidence` is a field the **specialists** write, not you. This is the rule they
+apply at authoring time, using the `context.inherited_open_questions` copy of this
+same brief to check each question's `disposition` before they set it. Your job at
+Stage 6 is to verify their assignment against this rule, not to assign it
+yourself — the same division M1 uses, where specialists set confidence and later
+stages check it.
+
 ## Stage 2 — Read the requirement set
 
 Read every requirement file under `context.requirements_root`, plus its
-`index.yaml` and `assumptions.md`. You are the only agent that touches these
-files. **The specialists never re-read them** — the digest you build is their
-entire view of the requirements, so anything you omit does not exist downstream.
+`index.yaml`, `assumptions.md`, and `glossary.md`. You are the only agent that
+touches these files. **The specialists never re-read them** — the digest you
+build is their entire view of the requirements, so anything you omit does not
+exist downstream. `glossary.md` is read for the same reason: STO-197 A.2 decided
+the design stage inherits the requirements set's vocabulary rather than growing
+its own, and this is the one place that inheritance can actually happen — forward
+it as `terms` in Stage 5, or two specialists will quietly coin different words for
+the same concept.
 
 Build `requirements_digest` from the **full requirement set, not just the ASRs.**
 The component specialist needs every functional requirement to decompose against;
@@ -103,9 +115,11 @@ restricting the digest to the significant subset would leave it decomposing
 against a system it cannot see. `asr_analysis` (Stage 3) marks the significant
 subset *within* the digest rather than replacing it.
 
-Each digest entry is flattened to what a specialist actually needs:
-`id`, `type`, `title`, `description`, `measure` (the `fit_criterion` for an FR,
-the response measure for an NFR), `priority`, and `confidence`. Preserve ID order.
+Each digest entry is flattened to what a specialist actually needs: `id`, `type`,
+`title`, `description`, `measure`, `priority`, and `confidence`. `measure` is the
+`fit_criterion` for an FR, the response measure for an NFR, and for a `CON-` or
+`BR-` entry its `fit_criterion` where one is stated — omit the field entirely when
+the requirement genuinely has no measure. Preserve ID order.
 
 ## Stage 3 — Identify architecturally significant requirements
 
@@ -144,8 +158,11 @@ downstream will notice.
 ## Stage 4 — Allocate categorical, zero-padded ID blocks
 
 You are the single authority for ID allocation. IDs are categorical with a
-three-digit zero-padded sequence, allocated in contiguous blocks per prefix so the
-specialists never collide:
+three-digit zero-padded sequence. Each prefix has exactly one authoring
+specialist — `CMP-` is drawn only by the component specialist, `IF-` only by the
+interface specialist — and that specialist draws upward from `id_block.start` in
+order. That is why IDs cannot collide: a collision would require two specialists
+drawing from the same prefix, and there is only ever one:
 
 - `CMP-001`, `CMP-002`, … component (→ component-specialist)
 - `IF-001`, `IF-002`, … interface (→ interface-specialist)
@@ -177,9 +194,16 @@ generation_brief:
       type: non_functional
       title: string
       description: string
-      measure: string                # fit_criterion (FR) or response measure (NFR)
+      measure: string                # fit_criterion (FR), response measure (NFR), or a CON/BR's
+                                      # own fit_criterion where it states one — omitted when the
+                                      # requirement genuinely has no measure
       priority: must | should | could | wont
       confidence: high | medium | low
+  terms:                              # inherited verbatim from requirements/glossary.md — the design
+                                     # stage does not author vocabulary, only consumes it (STO-197 A.2)
+    - term: string
+      definition: string
+      aliases: [ string ]
   asr_analysis: [ ...see Stage 3... ]
   target_category: component | interface
   id_block: { prefix: CMP | IF, start: 1 }
@@ -432,7 +456,8 @@ back-population. Do not invent diagram files.
   design decision this stage deferred. Membership in `inherited_review_queue`
   is not itself a trigger — it's a prompt to check why that requirement was
   uncertain and whether this stage's interview resolved it. Propagate only if
-  it did not.
+  it did not. The specialists apply this rule themselves at authoring time; you
+  verify it against their drafts, you do not assign it.
 - The full set of `confidence: low` artifacts is the triage queue: the formatter
   persists it as `review_queue` in `index.yaml`, and the skill foregrounds it in
   its Phase 5 summary. Keep these consistent — an artifact is either low-confidence

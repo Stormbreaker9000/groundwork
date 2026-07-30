@@ -40,9 +40,16 @@ generation_brief:
       type: non_functional
       title: string
       description: string
-      measure: string                # fit_criterion (FR) or response measure (NFR)
+      measure: string                # fit_criterion (FR), response measure (NFR), or a CON/BR's
+                                      # own fit_criterion where it states one — omitted when the
+                                      # requirement genuinely has no measure
       priority: must | should | could | wont
       confidence: high | medium | low
+  terms:                              # inherited verbatim from requirements/glossary.md — the design
+                                     # stage does not author vocabulary, only consumes it (STO-197 A.2)
+    - term: string
+      definition: string
+      aliases: [ string ]
   asr_analysis: [ ...the orchestrator's routing judgment... ]
   target_category: component | interface
   id_block: { prefix: CMP | IF, start: 1 }
@@ -70,6 +77,11 @@ the requirements; the orchestrator read `.sdlc/requirements/` once on everyone's
 behalf, so do not read those files yourself. Treat `context.out_of_scope` as a
 hard exclusion list, and stamp every interface with the `created_at` you were
 given rather than today's date.
+
+`terms` is the requirements set's glossary, inherited rather than authored here.
+When it already has a word for a concept you're naming — in a title, a
+description, or an operation summary — use that word instead of coining a
+synonym.
 
 ## The core rule
 
@@ -272,7 +284,11 @@ second copy of the fields.
 
 ### Confidence
 
-Set `confidence` deliberately, not by default:
+Set `confidence` deliberately, not by default. Applying the rule below is your
+job, not the orchestrator's: you hold `context.inherited_open_questions` in your
+brief, so check a question's `disposition` yourself before you author, rather
+than waiting for the orchestrator to catch it — the orchestrator verifies your
+assignment against this same rule, it does not make it for you.
 
 - **high** — the contract follows directly from a clearly declared capability and
   confirmed context.
