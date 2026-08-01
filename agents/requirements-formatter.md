@@ -179,18 +179,28 @@ Rules:
 Like `assumptions.md`, this is a project-level file, not an atomic requirement: the
 validator skips it as a requirement and hard-gates its presence and its heading.
 
-## Verify, then report
+## Verify, then report — the structural gate
 
-After writing, the critic's hard gate applies to the real files: run (or ask the
-orchestrator to run) the structural validator and confirm a zero exit:
+This is not a confirmation step. The critic cannot run
+`validate_requirements.py` — nothing is on disk until you write it, and
+`assumptions.md` and `glossary.md`, both of which the validator hard-gates, are
+assembled at Stage 6.5 *after* the critique gate passes. So the critic's gate is
+judgment only (per-requirement quality, ISO 25010 coverage, content lint by
+inspection). This run, against the files you just wrote, is where the structural
+gate for the whole pipeline actually happens:
 
 ```bash
 python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
 ```
 
-If it exits non-zero, the write is not done — surface the failure to the
-orchestrator for re-dispatch rather than leaving invalid files in place. You do
-not commit; the skill owns the sign-off and commit step.
+Record its exit code in `formatter_result.validator_rerun.exit_code`. A non-zero
+exit means the set is not acceptable: you report it exactly as returned, you do
+not work around it, patch the validator, or leave the invalid files in place for
+the next stage to trip over. The orchestrator treats a non-zero
+`validator_rerun` as a hard failure that returns to the critique loop with the
+validator's findings attached — it is not a warning and not a terminal success,
+regardless of how clean the critic's report was. You do not commit; the skill
+owns the sign-off and commit step.
 
 Return a `formatter_result` (shape in `requirements-orchestrator.md`):
 
@@ -209,4 +219,9 @@ formatter_result:
 - Never write `body_markdown` into the frontmatter; it is the file body.
 - The filename ID prefix and the directory must agree with `type` and `id`.
 - Emit only schema fields — unknown keys fail `additionalProperties: false`.
+- If `validate_requirements.py` exits non-zero after your write, report the
+  failure; do not patch around it or leave the invalid files in place. This is
+  the pipeline's structural gate — the critic never ran it, so a clean
+  `critique_report` does not mean the set is structurally valid until this
+  re-run says so.
 - Replacing an obsolete requirement: set `status: obsolete`, never reuse its ID.

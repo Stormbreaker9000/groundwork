@@ -27,7 +27,7 @@ clarification_context
         └──► [ constraint-specialist ]→ draft_requirements (constraint, business_rule)
         │
         ▼  (orchestrator merges all draft_requirements)
-[ requirements-critic ]  INCOSE/29148 gate + ISO 25010 coverage + validator → critique_report
+[ requirements-critic ]  INCOSE/29148 gate + ISO 25010 coverage (judgment only) → critique_report
         │
         ▼  (orchestrator applies fixes / re-dispatches failed items; on pass,
         ▼   orchestrator synthesizes assumptions/dependencies/open-questions)
@@ -35,6 +35,7 @@ clarification_context
         │
         ▼
 [ requirements-formatter ]  writes atomic MD+YAML files + index.yaml + assumptions.md + glossary.md → formatter_result
+                            + validate_requirements.py hard gate (the structural gate)
 ```
 
 Dispatch order is fixed: **FR specialist first, then NFR specialist, then
@@ -178,7 +179,7 @@ Pass the merged set, along with the `terms` siblings collected in Stage 5, to
 ```yaml
 critique_report:
   gate: pass | fail
-  validator:
+  validator:           # structural-gate result, folded back in from the formatter (Stage 7)
     command: "python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements"
     exit_code: 0
     summary: string
@@ -200,6 +201,21 @@ Do not advance to the formatter until `gate: pass`. Keep the critic's
 comprehension and critique separate (it enforces this) to avoid over-correction.
 `glossary_findings` is advisory and never affects `gate` on its own — carry it
 forward into Stage 6.5 rather than re-dispatching on it.
+
+`critique_report.gate` here is judgment only — no requirement left at `revise`.
+The structural gate itself does not run at this stage: `validator` on the report
+you just received is null/unset, because the critic ran before anything was on
+disk to validate and before `assumptions.md` and `glossary.md` — both hard-gated
+by the validator, both assembled at Stage 6.5 — existed to check. It runs at the
+formatter instead, which writes the files and immediately re-runs
+`validate_requirements.py` against them, reporting the result as
+`formatter_result.validator_rerun` (Stage 7). Fold that result back into
+`critique_report.validator` for anything downstream that still expects the field
+populated. A non-zero `validator_rerun.exit_code` is a hard failure, not a
+terminal success and not a warning: it re-opens the critique loop — attach the
+validator's findings and re-dispatch the affected requirements the same way a
+`revise` verdict would, then re-run the critic and the formatter on the
+corrected set.
 
 ## Stage 6.5 — Synthesize the context artifact
 
@@ -276,7 +292,10 @@ formatter_result:
 ```
 
 Report the `formatter_result` back to the caller (the skill), which owns the
-sign-off and commit. You never commit.
+sign-off and commit. You never commit. This is conditional on
+`validator_rerun.exit_code` being `0` — see Stage 6: a non-zero exit is a hard
+failure that re-opens the critique loop instead of reaching sign-off, so nothing
+here reports to the skill until a clean re-run confirms the write.
 
 ## Gotchas
 
@@ -292,5 +311,7 @@ sign-off and commit. You never commit.
   formatter persists it as `review_queue` in `index.yaml`, and the skill
   foregrounds it in the Phase 5 summary. Keep these consistent — a requirement is
   either low-confidence in all three places or none.
-- The formatter runs only after a passing critic gate. The critic's structural
-  validator run is a hard gate — a non-zero exit blocks formatting.
+- The formatter runs only after a passing critic gate (judgment: no `revise`
+  verdict). The structural gate is the formatter's own
+  `validate_requirements.py` re-run, not anything the critic ran — a non-zero
+  exit there re-opens the critique loop instead of reaching sign-off.
