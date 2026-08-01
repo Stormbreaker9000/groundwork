@@ -141,6 +141,7 @@ required_capabilities:
 | **Bad** | `capability: "call the Stripe API"` | Names a *mechanism*. It pre-decides the interface, and it bakes a vendor into a component spec that should not care. |
 | **Bad** | `capability: "use CMP-002"` | Names a *component*. The dependency edge must go through an interface — `CMP → IF → CMP` — so a component reference has nowhere to land. |
 | **Bad** | `capability: "persistence"` | Names a *category*, not a need. The interface specialist cannot write operations against it. |
+| **Bad** | `capability: "keep the pet alive while the app is closed"` | Names an *outcome spanning providers*. Satisfying it takes the clock, the decay engine, and the store — three components, so no single interface can carry it. |
 
 Three further rules:
 
@@ -170,6 +171,37 @@ Three further rules:
   need without emitting a provider leaves a capability nothing can satisfy: the
   interface specialist cannot invent a provider outside `component_set`, and
   nothing downstream can recover a component you never decomposed.
+
+### How finely to slice a capability
+
+The rules above say what a capability must *name*. This one says how much it
+should *cover*, which is the question that silently decides how many interfaces
+the design ends up with.
+
+You already owe every capability a provider — the third rule above. Sharpen that
+from "a provider exists" to **exactly one provider suffices**, and it becomes a
+test you can apply as you write:
+
+> **Name the single component that could satisfy this capability entirely.**
+
+- **You cannot name one** — the capability spans providers and is too broad.
+  Split it along the providers it implies. `"keep the pet alive while the app is
+  closed"` needs the clock *and* the decay engine *and* the store.
+- **The name you give is a product, a vendor, or an API** — the capability is too
+  narrow and has named a mechanism rather than the need. Restate it as the need.
+- **Exactly one, and it is a component you have emitted** — correct.
+
+**Needing several operations does not make a capability too broad.**
+`"preserve the pet's state across restarts"` is one capability: one provider —
+the local store — offers it as one coherent service, and it becomes one interface
+carrying both a load and a commit. Never split a capability because satisfying it
+takes more than one operation. The test counts *providers*, never operations.
+
+Whether that contract is later split into two interfaces is not your call and not
+your concern: the interface specialist decides it on consumer sets you cannot
+see, having run first precisely so it can. A well-phrased capability sometimes
+becomes two interfaces. That is the pipeline working, not an error in your
+carving.
 
 **The consequence, stated plainly:** every capability you declare becomes
 **exactly one** interface. The interface specialist must satisfy each of yours
