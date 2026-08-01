@@ -96,11 +96,21 @@ the local store — offers it as one coherent service, and it becomes one interf
 carrying both a load and a commit. Never split a capability because satisfying it
 takes more than one operation. The test counts *providers*, never operations.
 
-Whether that contract is later split into two interfaces is not your call and not
-your concern: the interface specialist decides it on consumer sets you cannot
-see, having run first precisely so it can. A well-phrased capability sometimes
-becomes two interfaces. That is the pipeline working, not an error in your
-carving.
+**When in doubt, split.** The band leaves genuine ties — `"preserve the pet's
+state across restarts"` and the pair `"load saved state"` / `"commit state on
+change"` each name one provider, so both pass. Break the tie by splitting, because
+the pipeline can recover from one error and not the other:
+
+- **Too many capabilities is recoverable.** Two capabilities from one provider
+  whose consumers turn out to coincide are merged into a single interface by the
+  interface specialist. The design self-corrects.
+- **Too few is not.** Every capability you declare becomes exactly one interface,
+  and nothing downstream can split one into two. A bundled capability is a merge
+  decision you made early, silently, and permanently — on consumer sets you
+  cannot see.
+
+So declare the narrower capabilities and leave the merge to the stage that has
+the information to judge it.
 ```
 
 - [ ] **Step 4: Verify the subsection landed inside the right section**
@@ -335,13 +345,15 @@ This set was generated before the capability and interface granularity heuristic
 existed. Two divergences from what the pipeline now teaches are left in place, for
 the same reason the critic findings above are.
 
-- **`IF-003` is arguably two interfaces.** *Durable Pet State Persistence* carries
-  `load` and `commit`, and is consumed by `CMP-007`, which seeds the session, and
-  `CMP-003`, which commits on change. Under the Interface Segregation rule the
-  interface specialist now applies, consumers that do not coincide are grounds to
-  split. Note where the call sits: the capability behind it is correctly phrased —
-  one provider, the local store — so this is an interface-side judgment, not a
-  component-side carving error.
+- **`IF-003` should have been two interfaces.** *Durable Pet State Persistence*
+  carries `load` and `commit`, and is consumed by `CMP-007`, which seeds the
+  session, and `CMP-003`, which commits on change. Their consumer sets do not
+  coincide, which under the Interface Segregation rule is grounds to keep them
+  apart. Note where the fault actually sits: one capability can only ever become
+  one interface, so the interface specialist had no split available to it. The
+  capability was carved too coarsely upstream, and the split-when-unsure
+  tiebreaker the component specialist now carries is what would have prevented
+  it. This is the unrecoverable direction of that asymmetry, caught in the wild.
 - **Operation counts are suspiciously uniform.** Eleven of the twelve interfaces
   carry exactly two operations; only `IF-007` carries one. Twelve independent
   contracts over a clock, a log, a store, a decay calculator, a mood evaluator and

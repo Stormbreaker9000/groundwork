@@ -87,12 +87,34 @@ when it needs several operations.** Without that line, the obvious reading of
 across restarts" as badly phrased. With it, the band rules out the genuinely
 unusable phrasings and leaves the legitimate ones alone.
 
-Note that this settles only the *component-side* question. Whether the resulting
-contract is later split into two interfaces is the interface specialist's call
-under the ISP rule below, decided on consumer sets the component specialist
-cannot see. A well-phrased capability can still become two interfaces; that is
-the pipeline working, not a contradiction. IF-003 is exactly this case — see
-"Known divergence" below.
+### Splitting is recoverable; bundling is not
+
+The band rules out the extremes, but it does not by itself settle STO-217's
+motivating example. "Preserve the pet's state across restarts" names one
+provider. "Load saved state" and "commit state on change" name one provider
+each. Both pass the band. Something else has to break the tie.
+
+That something is an asymmetry in the pipeline. Every capability becomes
+**exactly one** interface — the orchestrator enforces this mechanically and
+re-dispatches on zero matches or two. Meanwhile `satisfies_capabilities` is a
+list, so a single interface may satisfy several capabilities. The mapping is
+many-to-one, and it runs in only one direction:
+
+- **Declaring too many capabilities is recoverable.** Two capabilities from one
+  provider whose consumers coincide get merged into a single interface by the
+  ISP rule below. The design self-corrects downstream.
+- **Declaring too few is not.** Nothing downstream can split one capability into
+  two interfaces; the exactly-once check forbids it. A bundled capability is a
+  merge decision made early, silently, and permanently.
+
+So the component specialist's tiebreaker is **when in doubt, split.** Declare
+"load saved state" and "commit state on change" separately, and let the
+interface specialist decide whether they are one contract or two on consumer
+sets it can see and you cannot.
+
+This is also the deeper reason ISP lives only at the interface stage. ISP is a
+*merge* rule, and merging is the only move still available once capabilities have
+been declared.
 
 The existing table's three bad rows are all *too specific* (mechanism) or *too
 vague* (category). The band adds the missing failure mode on the other side.
@@ -109,6 +131,13 @@ A third corollary joins the two already in `interface-specialist.md`:
 `required_capabilities`, and the test is over capabilities, not operations — a
 consumer is never expected to use every operation of a contract it depends on,
 only to genuinely need the capability the contract satisfies.
+
+**This rule can only merge.** It decides whether several capabilities from one
+provider share an interface; it can never split one capability across two,
+because the exactly-once check forbids that. When the interface specialist finds
+a capability that plainly should be two contracts, the correct report is that the
+capability was carved too coarsely upstream — not a split it has no authority to
+make.
 
 Stated as the Interface Segregation Principle. These files earn their authority
 by citing standards — ISO/IEC 25010, ISO/IEC/IEEE 42010, ATAM, INCOSE, EARS —
@@ -157,8 +186,18 @@ structurally cannot see, which produces guessing dressed as method.
 ## Known divergence, deliberately not fixed
 
 IF-003 (Durable Pet State Persistence) is one interface carrying `load` and
-`commit`, consumed by CMP-007 and CMP-003. Under the ISP rule this design
-introduces, it is arguably two interfaces — CMP-007 seeds, CMP-003 commits.
+`commit`, consumed by CMP-007 and CMP-003. Their consumer sets do not coincide —
+CMP-007 seeds the session, CMP-003 commits on change — so under the rules this
+design introduces it should have been two interfaces.
+
+**The error is component-side, not interface-side**, and the distinction matters
+because it is the asymmetry above playing out. One capability can only ever
+become one interface, so the interface specialist had no move available to it:
+splitting was never in its power. What should have happened is that the
+component specialist declared two capabilities under the split-when-unsure
+tiebreaker, leaving the interface specialist a merge decision that it would then
+have declined on the consumer sets. IF-003 is the unrecoverable direction,
+observed in the wild.
 
 It stays as-is. The example's value is as an honest record of what the pipeline
 produced, which is the same reason its seven open critic findings were left
