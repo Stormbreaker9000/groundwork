@@ -40,7 +40,7 @@ Three tasks, one per file. Each is independently reviewable: a reviewer could ac
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks
-- Produces: the phrase `"preserve the pet's state across restarts"` as the canonical right-sized capability example, and `"keep the pet alive while the app is closed"` as the canonical too-broad example. Task 3 refers to both; keep the strings identical.
+- Produces: `"keep the pet alive while the app is closed"` as the canonical too-broad example, and `"preserve the pet's state across restarts"` as the canonical *genuine tie* — a capability that passes the band (one provider) yet is resolved by the split-when-unsure tiebreaker. Task 3 refers to the tie case; keep the strings identical. The several-operations example is deliberately `"take card payments"` rather than the persistence phrase: using the latter would affirmatively endorse the exact carving Task 3's README calls the defect, deciding the ticket's motivating case both ways in one section.
 
 - [ ] **Step 1: Add the fourth Bad row to the existing table**
 
@@ -91,10 +91,10 @@ test you can apply as you write:
 - **Exactly one, and it is a component you have emitted** — correct.
 
 **Needing several operations does not make a capability too broad.**
-`"preserve the pet's state across restarts"` is one capability: one provider —
-the local store — offers it as one coherent service, and it becomes one interface
-carrying both a load and a commit. Never split a capability because satisfying it
-takes more than one operation. The test counts *providers*, never operations.
+`"take card payments"` is one capability: one provider offers it as one coherent
+service, and the contract it becomes may carry an authorize, a capture, and a
+void. Never split a capability because satisfying it takes more than one
+operation. The test counts *providers*, never operations.
 
 **When in doubt, split.** The band leaves genuine ties — `"preserve the pet's
 state across restarts"` and the pair `"load saved state"` / `"commit state on
