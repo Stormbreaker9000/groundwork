@@ -192,10 +192,10 @@ test you can apply as you write:
 - **Exactly one, and it is a component you have emitted** — correct.
 
 **Needing several operations does not make a capability too broad.**
-`"preserve the pet's state across restarts"` is one capability: one provider —
-the local store — offers it as one coherent service, and it becomes one interface
-carrying both a load and a commit. Never split a capability because satisfying it
-takes more than one operation. The test counts *providers*, never operations.
+`"take card payments"` is one capability: one provider offers it as one coherent
+service, and the contract it becomes may carry an authorize, a capture, and a
+void. Never split a capability because satisfying it takes more than one
+operation. The test counts *providers*, never operations.
 
 **When in doubt, split.** The band leaves genuine ties — `"preserve the pet's
 state across restarts"` and the pair `"load saved state"` / `"commit state on

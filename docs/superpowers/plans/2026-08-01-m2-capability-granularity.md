@@ -181,7 +181,7 @@ operations — so 'preserve the pet's state across restarts' stays legal while
 
 **Interfaces:**
 - Consumes: nothing from Task 1 at runtime. The two files are read by different agents and share no literal strings that must match.
-- Produces: the consumer-coincidence test that Task 3's README note refers to when explaining why `IF-003` is arguably two interfaces.
+- Produces: the consumer-coincidence test that Task 3's README note refers to when explaining why `IF-003` should have been two interfaces.
 
 - [ ] **Step 1: Change the list's introducing line**
 
@@ -403,9 +403,9 @@ Expected: `95 passed`. No script changed, so a failure here means something unin
 git add docs/requirements/examples/tamagotchi/README.md
 git commit -m "docs(sto-217): record the example's two granularity divergences
 
-IF-003 is arguably two interfaces under the ISP rule now taught, and eleven of
-twelve interfaces carry exactly two operations — the specialist matching a shape
-from its own instructions rather than deriving granularity from need.
+IF-003 should have been two interfaces under the ISP rule now taught, and eleven
+of twelve interfaces carry exactly two operations — the specialist matching a
+shape from its own instructions rather than deriving granularity from need.
 
 Recorded rather than fixed, for the same reason the seven open critic findings
 are. Regeneration is tracked separately so the examples are re-run once."

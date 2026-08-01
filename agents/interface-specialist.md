@@ -125,6 +125,12 @@ Three corollaries decide when to merge and when to split:
   consumer is never expected to call every operation of a contract it depends on,
   only to genuinely need the capability that contract satisfies.
 
+  This rule can only **merge**. It decides whether several capabilities from one
+  provider share an interface; it can never split one capability across two,
+  because the exactly-once check forbids that. If you find a capability that
+  plainly should be two contracts, say so plainly in your return as a too-coarse
+  carving upstream — do not emit two interfaces for it.
+
 Worked example — one provider, three interfaces. A pet state manager provides
 observation, care-action application, and session seeding:
 
@@ -140,6 +146,14 @@ contract would make the mood evaluator depend on care-action operations it never
 calls. Had all three rows listed the same components, one interface would have
 been right — that is the merge case in the first corollary, reached from a
 different direction.
+
+The test is exact-set equality, not overlap, so a strict subset fails it too, not
+just the fully-disjoint case above. If "commit state on change" is consumed by
+`{CMP-003, CMP-007}` and "load saved state" only by `{CMP-007}`, the second set is
+a strict subset of the first, not identical to it — and folding both into one
+interface would make `CMP-003` depend on a `load` operation it never calls. Split
+them, on the same reasoning: a consumer should never be made to depend on an
+operation its own capability doesn't need.
 
 ## Assigning `provider`
 

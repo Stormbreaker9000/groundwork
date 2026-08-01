@@ -186,9 +186,12 @@ structurally cannot see, which produces guessing dressed as method.
 ## Known divergence, deliberately not fixed
 
 IF-003 (Durable Pet State Persistence) is one interface carrying `load` and
-`commit`, consumed by CMP-007 and CMP-003. Their consumer sets do not coincide —
-CMP-007 seeds the session, CMP-003 commits on change — so under the rules this
-design introduces it should have been two interfaces.
+`commit`. CMP-007 consumes both — it restores at launch and commits at
+shutdown — but CMP-003 consumes only `commit`; its launch state arrives through
+IF-009, which CMP-003 itself provides. The consumer sets are nested, not
+identical, so under the rules this design introduces they do not coincide: the
+single contract makes CMP-003 depend on a `load` it never calls, so it should
+have been two interfaces.
 
 **The error is component-side, not interface-side**, and the distinction matters
 because it is the asymmetry above playing out. One capability can only ever
