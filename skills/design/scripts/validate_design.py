@@ -10,12 +10,13 @@ YAML frontmatter, organized under a design directory::
       adr/           ADR-XXX-*.md   (skipped — STO-100 owns the format)
       diagrams/      *.md           (skipped — STO-101 owns the format)
       assumptions.md                (gated: Assumptions/Dependencies/Open Questions)
+      drivers.md                    (gated: ASRs/Tradeoffs/Sensitivity Points)
       index.yaml                    (skipped)
 
 This tool:
   1. Discovers every ``*.md`` under the design dir (recursively), skipping the
-     ``adr/`` and ``diagrams/`` subtrees and the ``assumptions.md``/``index.yaml``
-     companions.
+     ``adr/`` and ``diagrams/`` subtrees and the
+     ``assumptions.md``/``drivers.md``/``index.yaml`` companions.
   2. Parses the YAML frontmatter from each file.
   3. Validates each artifact against the JSON Schema
      (``skills/design/schema/design.schema.json``, draft 2020-12).
@@ -29,7 +30,8 @@ This tool:
        - ``traces_from`` entries are requirement-SHAPED (FR/NFR/CON/BR/UC…);
          their existence in .sdlc/requirements/ is the cross-artifact
          validator's job (STO-102), not this one.
-  5. Gates the project-level ``assumptions.md`` (presence + three headings).
+  5. Gates the project-level ``assumptions.md`` and ``drivers.md`` (presence +
+     required headings).
   6. Prints a readable per-file + summary report and exits non-zero on any
      violation.
 
@@ -86,7 +88,7 @@ from artifact_core import (  # noqa: E402  (re-exported for tests)
 # Whole subtrees another stage owns in a non-artifact format.
 SKIP_DIRNAMES = {"adr", "diagrams"}
 # Companions that live in the design dir but are not atomic artifacts.
-SKIP_FILENAMES = {"assumptions.md", "index.yaml"}
+SKIP_FILENAMES = {"assumptions.md", "drivers.md", "index.yaml"}
 
 # ID prefix -> expected `type`. Mirrors the schema contract.
 PREFIX_TO_TYPE = {
@@ -96,9 +98,20 @@ PREFIX_TO_TYPE = {
 
 # Project-level assumptions artifact (design analogue of M1's context artifact).
 # Design does NOT get its own glossary — it inherits requirements/glossary.md
-# (STO-135), and this validator never reaches into the requirements set.
+# (STO-197 A.2), and this validator never reaches into the requirements set.
 ASSUMPTIONS_ARTIFACT = "assumptions.md"
 REQUIRED_ASSUMPTIONS_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
+
+# Project-level drivers artifact (STO-99). Persists the orchestrator's ASR
+# analysis alongside the tradeoffs and sensitivity points the critic produces,
+# so the reasoning behind the decomposition survives the conversation that
+# produced it (design spec A.6).
+DRIVERS_ARTIFACT = "drivers.md"
+REQUIRED_DRIVERS_HEADINGS = [
+    "## Architecturally Significant Requirements",
+    "## Tradeoffs",
+    "## Sensitivity Points",
+]
 
 # traces_from points at requirement IDs. We check the SHAPE only; resolution is
 # STO-102's job. This mirrors the requirement schema's id pattern.
@@ -265,6 +278,22 @@ def check_assumptions_artifact(design_dir: str) -> List[str]:
     )
 
 
+def check_drivers_artifact(design_dir: str) -> List[str]:
+    """Architectural-drivers artifact (hard gate).
+
+    Presence plus the three headings, gated by the shared core. As with the
+    assumptions artifact, content is never gated — an honest 'None identified'
+    section is legal and passes.
+    """
+    return core._check_project_artifact(
+        design_dir,
+        DRIVERS_ARTIFACT,
+        REQUIRED_DRIVERS_HEADINGS,
+        "drivers artifact",
+        "Architecturally Significant Requirements / Tradeoffs / Sensitivity Points",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -294,6 +323,7 @@ def validate(design_dir: str, schema_path: str) -> Tuple[List[DesignFile], List[
 
     global_errors = cross_file_checks(files)
     global_errors.extend(check_assumptions_artifact(design_dir))
+    global_errors.extend(check_drivers_artifact(design_dir))
     return files, global_errors
 
 

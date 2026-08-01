@@ -1,0 +1,571 @@
+# agents/design-critic.md Stage 8 output — focused re-review.
+# Re-review of two re-dispatched artifacts (CMP-004, IF-008) after revision to make the
+# BR-001 reconciliation explicit. The other 21 per_artifact verdicts, all of asr_coverage,
+# tradeoffs, and sensitivity_points are carried forward unchanged from the critic's first
+# full-set report earlier in the same run. That report was a working file and is not
+# committed; everything it contributed is reproduced verbatim below, so this file is
+# self-contained. What it is NOT is a fresh critique of the whole set.
+#
+# Hand-added exhibit. The critique_report is an in-flight hand-off between the critic and
+# the orchestrator — no agent writes it to disk, and it is in no declared output layout.
+# It was serialised here so the findings could be published. See the example README
+# ("How this set was produced"), which also records that writing this artifact set on a
+# gate: fail required a deliberate human override of the formatter's precondition.
+critique_report:
+  gate: fail   # 7 revise verdicts remain (CMP-001, CMP-003, CMP-006, CMP-008, IF-002, IF-006,
+               # IF-012), all carried forward unchanged and none re-dispatched this round.
+               # Gate arithmetic (per agents/design-critic.md): pass requires (1) no per_artifact
+               # revise and (2) no asr_coverage unaddressed. Condition (2) holds (0 unaddressed,
+               # unchanged from prior report). Condition (1) fails: 7 of 23 artifacts still carry
+               # verdict: revise. 7 > 0, so gate: fail. This is expected — those seven were
+               # deliberately left out of this dispatch and are documented as known output, not
+               # newly discovered.
+
+  validator: null
+  # Left null/unset per agents/design-critic.md ("Where the structural gate lives"): the
+  # gate is owned by the formatter's validate_design.py re-run, not by the critic, and this
+  # critic never ran the command. The prior report's populated `validator` block reflected an earlier version of
+  # this pipeline stage's practice and is not reproduced here.
+
+  per_artifact:
+    - id: CMP-001
+      verdict: revise
+      findings:
+        - "traces_from plausibility: cites NFR-002 (idle CPU/resident-memory budget), but
+           neither the responsibility nor any sentence of the body Rationale connects this
+           component to the idle path. The Rationale argues FR-001, FR-010, NFR-004, NFR-005,
+           NFR-006, CON-002 and CON-003 and is silent on NFR-002. Either argue it (a
+           synchronous commit fires on every stat change and does charge the idle budget) or
+           drop the trace."
+        - "traces_from plausibility, and it cuts the other way: the body states that NFR-006
+           and CON-003 are why 'the platform-specific parts of this job — app-data path
+           resolution and atomic rename semantics — [stay] inside this component'. NFR-006's
+           asr_analysis significance demands the opposite: 'every OS-specific capability —
+           app-data path resolution, atomic rename semantics, notification delivery,
+           accessibility tree — behind a narrow platform port. The core simulation must depend
+           on those ports and never on an OS API directly.' Notification delivery got its port
+           (IF-012 -> CMP-010). These two did not. The component cites the requirement whose
+           structural demand it declines."
+        - "Granularity note (single responsibility): this is one component providing two
+           contracts with different lifetimes and different failure consequences — IF-003
+           (pet state, quarantinable per FR-010) and IF-011 (reminder preference, which
+           IF-011's own Rationale says must survive that quarantine). IF-011's body argues the
+           split at the interface level; nothing argues why the provider is not also split.
+           Nothing in the specialist instructions defines how finely to slice, and this is
+           where that shows."
+
+    - id: CMP-002
+      verdict: pass
+      findings: []
+
+    - id: CMP-003
+      verdict: revise
+      findings:
+        - "Single responsibility: the stated responsibility — 'Owns the pet's current Stat
+           values as the single in-session authority over them' — names one duty, but the
+           component's own Rationale assigns it a second: 'where FR-001's save trigger fires'.
+           Triggering a durable commit is not a consequence of owning in-memory values, and it
+           collides with CMP-007, whose responsibility claims the pet is 'committed at
+           shutdown'. Two components hold overlapping ownership of commit timing and both
+           consume IF-003; at least one responsibility statement is not the single truth it
+           claims. The responsibility field also does not mention applying in-session decay
+           (IF-004), which the same Rationale assigns here."
+        - "Granularity note: this component provides three interfaces (IF-005 observation,
+           IF-008 mutation, IF-009 seeding) and consumes five. That may well be right, but no
+           instruction told the specialist where the ceiling is, so nothing in the artifact
+           argues that three contracts on one provider is a decomposition rather than a hub."
+
+    - id: CMP-004
+      verdict: pass
+      findings:
+        - "Resolved from the prior report's revise. The body's Rationale now makes the BR-001
+           reconciliation explicit rather than silent: it states plainly that BR-001's
+           statement clause ('upon death the pet is reset to a new pet') is superseded by the
+           Q-2 resolution, names why that is not the design overruling a must-priority rule
+           (BR-001's own Rationale — verified directly against
+           docs/requirements/examples/tamagotchi/requirements/business-rules/BR-001-death-only-after-sustained-neglect.md
+           — defers exactly this clause to Q-2 and holds the rule at low confidence pending
+           it), and records that the statement needs upstream amendment via Q-5. This is an
+           accurate characterization of BR-001, not a rewrite of what BR-001 actually says:
+           the rule's Rationale does say the permanence-vs-reset question is 'still open
+           (Q-2), which is why this rule is held at low confidence' — the artifact does not
+           overstate what BR-001 concedes."
+        - "traces_from: [BR-001] is now defensible. The component's own Rationale connects to
+           BR-001 on two axes — the fit criterion's sustained-neglect threshold (unchanged
+           from the prior review, not previously in question) and the reset clause, now
+           explicitly reconciled rather than contradicted without comment."
+        - "No new Phase 1 problem introduced by the revision. Responsibility field still
+           states one duty ('Owns the pet's lifecycle state and every transition between its
+           values'); the added Rationale prose does not smuggle in a second responsibility.
+           depends_on and traces_from are otherwise unchanged from the prior version."
+
+    - id: CMP-005
+      verdict: pass
+      findings: []
+
+    - id: CMP-006
+      verdict: revise
+      findings:
+        - "Single responsibility: 'Presents the pet to the owner AND turns the owner's input
+           into care actions' joins two duties with an 'and' — the explicit Phase 1 revise
+           trigger. (Recorded per the rule as written, but flagged: this is a textbook
+           cohesive UI responsibility and the rule has no exception for it, which is a defect
+           in the rule as much as in the artifact.)"
+        - "The same coarseness is visible structurally: CMP-006 is the only component that
+           consumes five interfaces and provides none, and it is the one component CON-001's
+           process boundary actually cuts through — every one of its five edges is an IPC hop
+           that the in-process consumers of the same contracts do not pay. If the split into a
+           render side and an input side is wrong, the artifact should say why."
+
+    - id: CMP-007
+      verdict: pass
+      findings: []
+
+    - id: CMP-008
+      verdict: revise
+      findings:
+        - "Single responsibility: the responsibility field states one duty — 'Decides when a
+           care reminder is due for the owner' — but the component demonstrably has a second,
+           which its own description names with an 'and': 'the holder of whether the owner
+           wants reminders at all'. The second duty is not an inference: CMP-008 provides
+           IF-010 (reminders_enabled / set_reminders_enabled) and consumes IF-011 for exactly
+           the capability_map row 'CMP-008 / remember whether the owner wants care reminders'.
+           The responsibility understates the component, so the field is not usable as the
+           single-purpose statement 42010 asks it to be."
+
+    - id: CMP-009
+      verdict: pass
+      findings: []
+
+    - id: CMP-010
+      verdict: pass
+      findings: []
+
+    - id: CMP-011
+      verdict: pass
+      findings: []
+
+    - id: IF-001
+      verdict: pass
+      findings: []
+
+    - id: IF-002
+      verdict: revise
+      findings:
+        - "Interaction does not match the described wait. `interaction: asynchronous`, but the
+           contract's second operation is `flush` — 'Make every previously accepted entry
+           durable, so a shutdown or a lifecycle transition is not lost to buffering' — and the
+           body names it as the mechanism by which NFR-007's '24-hour session has 0 missing
+           transition entries' is met, called by CMP-007 on the shutdown path. A flush the
+           caller does not block on cannot establish durability before process exit, which is
+           the only thing flush exists to do. The prose describes a blocking wait and the field
+           says asynchronous; one of the two is wrong and the artifact does not say which.
+           (The body carefully argues the asynchrony of `record` and never addresses `flush`.)"
+
+    - id: IF-003
+      verdict: pass
+      findings: []
+
+    - id: IF-004
+      verdict: pass
+      findings: []
+
+    - id: IF-005
+      verdict: pass
+      findings: []
+
+    - id: IF-006
+      verdict: revise
+      findings:
+        - "Interaction does not match the described wait, by the interface's own admission. The
+           body states: 'the three consumers want opposite things from one contract. CMP-003
+           must know the lifecycle state *before* it mutates a Stat ... that is a blocking read
+           ... CMP-005 and CMP-006 want the opposite: a push ... Both are on the contract, and
+           the interaction is recorded as synchronous because the correctness-critical use is
+           the blocking one.' So `subscribe_to_transitions` is a push operation on a contract
+           declared synchronous, and the artifact says so in plain text. Phase 1 does not permit
+           silently picking which of the prose and the field is wrong. The honest resolution is
+           to split the contract into a synchronous lifecycle query and an asynchronous
+           transition subscription — which is precisely the interface-granularity decision
+           nothing in the specialist instructions covers."
+
+    - id: IF-007
+      verdict: pass
+      findings: []
+
+    - id: IF-008
+      verdict: pass
+      findings:
+        - "Resolved from the prior report's revise. Both the error_modes list and the body's
+           Error Modes section now read consistently with the body's Rationale: the first error
+           mode ('death is permanent per the Q-2 resolution, so no care action may restore a
+           Stat') is no longer left to silently contradict BR-001's statement text. The
+           Rationale explicitly names the clash — BR-001's statement says death resets to a new
+           pet, this contract offers refusal and no reset operation — and explains, correctly
+           against BR-001's own Rationale text, that this is the design resolving a question
+           BR-001 itself marked open (Q-2) rather than an unrecorded override of a must rule.
+           The characterization matches BR-001's actual wording: I read
+           BR-001-death-only-after-sustained-neglect.md directly and its Rationale does say the
+           permanence-vs-reset question is still open pending Q-2, at low confidence — the
+           artifact does not overclaim BR-001's own hedge."
+        - "traces_from: [BR-001] is now defensible: the contract enforces BR-001's fit
+           criterion (refusal past the sustained-neglect threshold) and now explicitly
+           reconciles rather than silently contradicts the statement's reset clause."
+        - "No new Phase 1 problem: interaction remains `synchronous` and the body's Interaction
+           section still correctly justifies that choice on its own terms (a refusal needs a
+           caller waiting to hear it) — unrelated to and unaffected by the BR-001 revision. No
+           new duty was introduced into the operations or error_modes list; the four error
+           modes are unchanged apart from the reconciliation prose."
+
+    - id: IF-009
+      verdict: pass
+      findings: []
+
+    - id: IF-010
+      verdict: pass
+      findings: []
+
+    - id: IF-011
+      verdict: pass
+      findings: []
+
+    - id: IF-012
+      verdict: revise
+      findings:
+        - "Interaction does not match the described wait. `interaction: asynchronous`, but
+           `delivery_available` — 'Report whether this platform can deliver a notification at
+           all, including whether the owner has granted permission, SO THE CALLER CAN DECIDE
+           BEFORE IT TRIES' — is a blocking query by its own summary; a caller cannot decide
+           before trying on an answer that has not arrived. The body's Interaction section
+           argues only `show_reminder` ('Nothing in the system waits on a reminder') and never
+           mentions the second operation. Third instance of the same shape in this set
+           (IF-002, IF-006, IF-012)."
+
+  # asr_coverage, tradeoffs, and sensitivity_points are unchanged from the first full-set
+  # report of this run and are reproduced verbatim — this re-review did not touch Phase 2.
+  asr_coverage:
+    - requirement_id: FR-001
+      addressed_by: [CMP-001, CMP-003, CMP-007, IF-003]
+      verdict: addressed
+      note: >-
+        CMP-001's responsibility owns the durable record and the last-saved timestamp;
+        IF-003's `commit` operation is the transactional write; CMP-003 fires the save on a
+        stat change and CMP-007 on shutdown. (The overlap between those last two is the
+        CMP-003 Phase 1 finding, not a coverage gap.)
+
+    - requirement_id: FR-002
+      addressed_by: [CMP-002, CMP-007, CMP-011, IF-001, IF-004, IF-009]
+      verdict: addressed
+      note: >-
+        IF-001's `elapsed_since` supplies the interval, IF-004's `apply_decay` evaluates the
+        model as a pure function of (stats, interval), CMP-007's responsibility owns the
+        launch ordering that runs them before anything is shown, IF-009's `seed_from_snapshot`
+        installs the caught-up values.
+
+    - requirement_id: FR-008
+      addressed_by: [CMP-004, IF-006, IF-008]
+      verdict: addressed
+      note: >-
+        CMP-004's responsibility is the transitions themselves; IF-006's
+        `current_lifecycle_state` exposes the terminal state; IF-008's first error mode is the
+        gate that makes it terminal. Threshold values are Q-1-blocked, but that is tuning
+        inside a settled structure (recorded as a sensitivity point, not a deferral).
+
+    - requirement_id: FR-009
+      addressed_by: [CMP-008, CMP-010, IF-010, IF-011, IF-012]
+      verdict: addressed
+      note: >-
+        CMP-008 decides when a reminder is due off IF-005's threshold crossings; IF-012's
+        `show_reminder` delivers it through the external CMP-010; IF-010 is the on/off control
+        and IF-011 makes the preference durable. The decision/delivery split that the ASR's
+        significance calls for is present and explicit.
+
+    - requirement_id: NFR-001
+      addressed_by: [CMP-002, CMP-011, IF-001, IF-004]
+      verdict: addressed
+      note: >-
+        The structural demand — a clock that is an injected dependency rather than an ambient
+        call, and a decay computation reachable without real elapsed time — is met exactly:
+        CMP-011 is the clock modelled as a substitutable external component, CMP-002 holds no
+        clock and takes the interval as an argument, IF-004 is stateless. NFR-001's *measure*
+        cannot be evaluated until Q-1 fixes the reference curve; that is a sensitivity point
+        below, not a coverage gap.
+
+    - requirement_id: NFR-002
+      addressed_by: [CMP-003, CMP-006, CMP-008, IF-005]
+      verdict: addressed
+      note: >-
+        The polling loop the budget forbids is structurally absent: IF-005's
+        `subscribe_to_stat_changes` is push, its fourth error mode discards stale
+        subscriptions specifically so 'the idle process [does not keep] doing work NFR-002 has
+        no budget for', CMP-006's Rationale commits to a quiescent unfocused window, CMP-008
+        watches rather than polls. The 150 MB ceiling is served by CMP-001's single small file
+        plus CMP-003 holding only the live stat set.
+
+    - requirement_id: NFR-003
+      addressed_by: [CMP-005, CMP-006, IF-007, IF-008, IF-010]
+      verdict: addressed
+      note: >-
+        The split the significance demands is real: CMP-005's responsibility derives Mood as a
+        named semantic value, IF-007's `current_mood` carries 'no colour, sprite, or other
+        presentation choice', and CMP-006 consumes the token it did not compute. IF-007's
+        second error mode refuses to invent a nearby band precisely because the value is
+        announced by name. IF-008's second error mode exists so a keyboard control can
+        announce an outcome.
+
+    - requirement_id: NFR-004
+      addressed_by: [CMP-001, IF-003]
+      verdict: addressed
+      note: >-
+        'No caller may write the state file directly' is enforced structurally: IF-003 is the
+        only contract that reaches the file, CMP-001 is its only provider, and IF-003's fourth
+        error mode is the timeout/unknown-commit-state case the 200 fault-injection trials
+        target. The synchronous-commit choice is argued against exactly this measure.
+
+    - requirement_id: NFR-005
+      addressed_by: [CMP-009, IF-002, IF-012]
+      verdict: addressed
+      note: >-
+        A whole-graph negative property, and the graph satisfies it: the only two external
+        components are CMP-011 (OS clock) and CMP-010 (OS notification), both OS-local; no
+        component or interface holds a network client; CMP-009's responsibility makes the
+        local log the only diagnostic channel, which is exactly what the significance says
+        NFR-005 forces. Caveat recorded as a tradeoff: the architecture forecloses NFR-005's
+        own explicit opt-in telemetry branch rather than providing a seam for it.
+
+    - requirement_id: NFR-006
+      addressed_by: [CMP-006, CMP-010, IF-012]
+      verdict: addressed
+      note: >-
+        WEAKEST 'addressed' ROW IN THE SET, and the verdict vocabulary has no way to say so.
+        Of the four OS-specific capabilities the significance names as needing a narrow
+        platform port, exactly one has one: notification delivery, via IF-012 -> CMP-010, with
+        `delivery_available` on the contract for platforms staged after v1. App-data path
+        resolution and atomic rename semantics are deliberately absorbed inside CMP-001 with
+        no port (see the CMP-001 finding); the accessibility tree has no port either, and
+        NFR-003 depends on the webview's tree on three OS families. CMP-006's single shared
+        surface serves 'one codebase' honestly. Marked `addressed` because named elements
+        demonstrably serve the requirement, but adding macOS/Linux will change component
+        internals, not adapters, which is what the ASR exists to prevent.
+
+    - requirement_id: NFR-007
+      addressed_by: [CMP-009, CMP-002, CMP-004, IF-002, IF-004]
+      verdict: addressed
+      note: >-
+        CMP-009's responsibility is the sink that would not otherwise exist; IF-002's `record`
+        takes the structured entry and `flush` is called after each lifecycle transition;
+        IF-004's second error mode exists specifically so a capped decay result is 'visible to
+        NFR-007's log rather than silent'. The measure's '0 missing transition entries' is at
+        risk from the IF-002 interaction defect — recorded as a Phase 1 finding and a
+        sensitivity point.
+
+    - requirement_id: CON-001
+      addressed_by: [CMP-006, CMP-007]
+      verdict: addressed
+      note: >-
+        The topology the constraint forces is present as a real seam, not a layering
+        preference: CMP-006 is an OS-supplied webview surface and CMP-007's Rationale places
+        the composition root and the simulation on the native side of the process boundary.
+        IF-005's and IF-008's bodies both price the resulting IPC hop explicitly.
+
+    - requirement_id: CON-002
+      addressed_by: [CMP-009, CMP-010, IF-012]
+      verdict: addressed
+      note: >-
+        Same graph property as NFR-005 from the constraint side. Every external element is an
+        OS service and every interface is in-process or OS-local; IF-012's first error mode
+        states that no core feature may depend on delivery, which is what keeps CON-002's
+        '100% of core features function with networking disabled' true by construction.
+
+  tradeoffs:
+    - decision: >-
+        IF-002 accepts diagnostic entries asynchronously and makes durability an explicit,
+        separate `flush` rather than writing synchronously on the decay path.
+      gains: >-
+        No disk write inside the stat-mutation or decay path, which fires on a timer for the
+        life of the process — the single largest recurring charge against NFR-002's <=1% idle
+        CPU budget.
+      costs: >-
+        Every entry between acceptance and flush is lost to an abrupt exit, and that is exactly
+        the set NFR-007's '24-hour session has 0 missing transition entries' measures. The
+        interface's own second error mode names this as the price.
+      affected: [NFR-002, NFR-007]
+
+    - decision: >-
+        IF-003 commits synchronously on every stat change rather than accepting the write and
+        settling it later.
+      gains: >-
+        No queued write can be in flight at kill time, which is the precise window NFR-004's
+        200 randomized fault-injection trials are designed to find.
+      costs: >-
+        Disk latency inside every care action and every in-session decay tick, charged against
+        NFR-002's idle budget and against the responsiveness of FR-003 to FR-006.
+      affected: [NFR-004, NFR-002, FR-001]
+
+    - decision: >-
+        IF-006 is recorded as synchronous, resolving in favour of CMP-003's blocking
+        death-gate read over CMP-005's and CMP-006's need for a push.
+      gains: >-
+        No care action can run against a stale terminal flag — 'a missed gate revives a dead
+        pet' — which is what makes FR-008's terminal state actually terminal under Q-2.
+      costs: >-
+        Half the contract is misdescribed by its own declared interaction, and the two push
+        consumers get a notification stream the field denies. Mood and window updates can lag
+        a transition, which FR-007's one-second bound has to absorb.
+      affected: [FR-008, BR-001, FR-007, NFR-002]
+
+    - decision: >-
+        CMP-001 contains platform-specific behaviour (app-data path resolution, atomic rename
+        semantics) inside the component rather than exposing it as a platform port.
+      gains: >-
+        Exactly one component changes per OS and the simulation never touches an OS API
+        directly, which is the letter of what CON-003 and NFR-006 ask of the core.
+      costs: >-
+        The two OS-specific behaviours most likely to differ (and most likely to break
+        NFR-004's atomicity guarantee on a filesystem that renames differently) are neither
+        substitutable nor testable in isolation, which is the structure NFR-006's significance
+        explicitly demands.
+      affected: [NFR-006, CON-003, NFR-004]
+
+    - decision: >-
+        The architecture has no network surface at all — no telemetry component, no consent
+        record, no remote-config path.
+      gains: >-
+        NFR-005's '0 outbound connections' and CON-002's 'networking disabled at the OS level'
+        measures hold by construction rather than by discipline; there is no code path to audit.
+      costs: >-
+        NFR-005's own opt-in clause ('unless the owner grants explicit opt-in consent',
+        'telemetry endpoints are contacted only after an explicit opt-in flag is set') has no
+        seam to grow into. And with no remote config, Q-1's decay-curve tuning can only ever
+        reach an owner as a full client update.
+      affected: [NFR-005, CON-002, NFR-007]
+
+    - decision: >-
+        IF-007 pulls the Mood on edges CMP-006 already observes, instead of pushing a
+        mood-changed notification.
+      gains: >-
+        One derived value with one timing. A third independently-timed stream could deliver a
+        Mood that disagrees with the stat values drawn beside it, which under NFR-003 would
+        mean the announced accessible name and the rendered sprite disagreeing.
+      costs: >-
+        One extra synchronous call per observed change, and FR-007's one-second
+        threshold-crossing budget now depends on CMP-006 re-deriving promptly on every edge
+        rather than on the mood source deciding when to speak.
+      affected: [NFR-003, FR-007]
+
+    - decision: >-
+        One shared webview surface (CMP-006) rather than a native view per platform.
+      gains: >-
+        NFR-006's 'single codebase, no platform-specific feature loss' with a solo or small
+        team and no platform specialists.
+      costs: >-
+        NFR-003's accessibility now rests on the webview's accessibility tree across three OS
+        families, with no port isolating it, and CON-001's footprint rests on whatever engine
+        the OS supplies.
+      affected: [NFR-006, NFR-003, CON-001]
+
+  sensitivity_points:
+    - point: >-
+        The arity of IF-004's `apply_decay` — whether the decay model is a function of
+        (stats, elapsed_interval) alone.
+      affected_requirements: [FR-002, NFR-001, BR-002]
+      note: >-
+        IF-004's own body states it: 'If Q-1 resolves to a curve that depends on more than
+        elapsed time — a neglect streak, or a per-Stat schedule that varies with lifecycle
+        state — this contract grows an input and both consumers change with it.' Q-1 is the
+        only still_open question, and the single most load-bearing contract in the set is the
+        one it can reshape. CMP-002, CMP-003 and CMP-007 all move with it. Nothing else in the
+        design is one unanswered question away from a signature change.
+
+    - point: >-
+        Where IF-002's `flush` sits relative to process exit.
+      affected_requirements: [NFR-007, NFR-002]
+      note: >-
+        NFR-007 permits zero missing transition entries in 24 hours, and the entire margin is
+        the accept-to-flush window. Move the shutdown flush one step later in CMP-007's
+        sequence, or lose it on an abrupt exit, and NFR-007 fails with no other change to the
+        design. Tipping it the other way — synchronous recording — puts a disk write inside
+        every stat mutation and moves the failure to NFR-002.
+
+    - point: >-
+        The in-session decay tick interval, which is simultaneously a Q-1 tuning value and the
+        commit frequency.
+      affected_requirements: [NFR-002, NFR-004, FR-001]
+      note: >-
+        FR-001 commits on every stat change and IF-003 commits synchronously, so the tick rate
+        chosen for decay fidelity is also the disk-write rate charged to NFR-002's <=1% idle
+        budget. IF-003's body already names the escape ('coalescing commits, not ... making
+        them asynchronous') but coalescing reopens NFR-004's in-flight-write window. One
+        untuned number decides whether NFR-002 and NFR-004 can both hold.
+
+    - point: >-
+        Whether the lifecycle death gate stays in CMP-004 behind IF-006 or is cached in CMP-003.
+      affected_requirements: [FR-008, BR-001]
+      note: >-
+        IF-006's body names this as what would flip its interaction to asynchronous. Caching
+        the terminal flag in CMP-003 buys the push the other two consumers want, at the cost of
+        two components holding the same terminal flag with a window in which they disagree —
+        and that window is precisely the one in which a care action revives a dead pet. A
+        change made for a presentation reason would silently move a correctness boundary.
+
+    - point: >-
+        Whether NFR-006's platform port is one seam or four.
+      affected_requirements: [NFR-006, CON-003, NFR-003]
+      note: >-
+        Only notification delivery has a port today. If app-data path resolution, atomic rename
+        semantics and the accessibility tree do not grow ports before the second platform
+        ships, NFR-006's measure ('the suite passes on a supported version of each OS; 0
+        platform-exclusive features') is met by editing CMP-001 and CMP-006 internals instead of
+        substituting adapters — which is the failure mode the ASR exists to prevent, arriving
+        as maintenance cost rather than as a test failure.
+
+    - point: >-
+        The IPC latency asymmetry on IF-005's notification path to CMP-006.
+      affected_requirements: [FR-007, NFR-002, CON-001]
+      note: >-
+        IF-005's body concedes that CMP-006 receives stat notifications over an IPC hop the
+        in-process consumers do not pay, and FR-007's one-second threshold-crossing budget must
+        absorb it — while IF-007's pull adds a second hop on the same edge. IF-005's second
+        error mode also permits notifications to be coalesced or dropped under load; a
+        coalesced notification that spans a mood-band boundary makes FR-007's 'verified for
+        every band boundary' measure unprovable. Nothing in the set budgets the hop.
+
+  # Additional dispositions the report shape has no field for, recorded here so they
+  # do not evaporate. "The prior report" throughout means the critic's first full-set
+  # report from earlier in the same run — a working file that was not committed, so
+  # everything it said that still matters is restated here rather than cited.
+  notes:
+    re_review_scope: >-
+      This report is a focused re-review of CMP-004 and IF-008 only, per this run's
+      dispatch. The other 21 per_artifact entries, and all of asr_coverage, tradeoffs, and
+      sensitivity_points, are reproduced verbatim from the prior report and were not
+      re-examined here.
+    open_questions_forced:
+      - "Q-5 (new, this round): forced by this finding and carried into the design set's
+         assumptions.md, where it is the entry of record.
+         Verified against BR-001-death-only-after-sustained-neglect.md directly: the
+         statement asserts a reset, the rationale defers exactly that clause to Q-2 and holds
+         the rule at low confidence for that reason. Q-5's ask — strike the reset clause from
+         BR-001's statement/description, record the Q-2 resolution in its rationale, and
+         re-assess confidence — matches what BR-001 actually says and is the correct upstream
+         fix. This supersedes the placeholder 'Q- (new)' entry the prior report recorded
+         for the same finding."
+      - "Q-1 (inherited, still_open): unchanged from the prior report — named as a
+         sensitivity point rather than a `deferred_to_decision` coverage row, because the
+         structural seams Q-1 touches are all present; only their parameters are undecided."
+    deferred_to_decision_count: 0
+    granularity: >-
+      Unchanged from the prior report. Both specialists reported that granularity is
+      undocumented. It is visible in the artifacts: CMP-003 provides three contracts and
+      CMP-001 two, with nothing arguing the ceiling; and three interfaces (IF-002, IF-006,
+      IF-012) each bundle a blocking operation with a non-blocking one under a single
+      `interaction` field, which is the interface-side form of the same missing rule. IF-006's
+      body says outright that the field cannot describe its own contract. This is the single
+      highest-yield gap to close in the specialist instructions.
+    br001_finding_disposition: >-
+      The prior report's CMP-004 and IF-008 findings (both keyed to BR-001's silently
+      contradicted reset clause) are resolved this round on independent verification against
+      BR-001's actual file content, not merely because a resolution was described as decided.
+      Both artifacts now state the reconciliation explicitly, attribute it correctly to
+      BR-001's own rationale rather than to an external overrule, and point to Q-5 as the
+      upstream fix. verdict: pass on both.

@@ -25,4 +25,14 @@ The groundwork plugin provides structured SDLC workflows. Each workflow is a ski
 
 ---
 
+### design
+
+**Trigger:** A validated requirement set exists under `.sdlc/requirements/` and you're ready to turn it into an architecture ("design this", "let's do the architecture", "turn the requirements into components").
+
+**Purpose:** Runs an architecture interview covering what requirements deliberately cannot carry — runtime and stack, persistence, deployment target, integration points, operational and team constraints — opening with any open questions the requirements stage left for architecture to decide. Then runs a multi-agent pipeline (orchestrator → component/interface specialists → critic → formatter) that emits **atomic Markdown+YAML design files** with categorical IDs (CMP/IF) under `.sdlc/design/`, plus `assumptions.md` and `drivers.md`. Components declare a single responsibility; interfaces declare provider, operations, interaction style, and error modes. A critic gates on ISO/IEC/IEEE 42010 and ATAM before anything is written, and a structural validator gates after. No files are written until you sign off.
+
+**Why it matters:** The architecture stage is where technology decisions get made silently if nobody forces them into the open. This one asks, records the drivers and tradeoffs behind the decomposition, and hands the next stage a traceable component graph instead of a diagram.
+
+---
+
 *More workflows will be added as groundwork matures. Run `/groundwork` after updating the plugin to see new additions.*

@@ -45,6 +45,7 @@ def test_skip_files_and_subtrees_are_ignored(capsys):
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
+    assert "drivers.md" not in out
     assert "index.yaml" not in out
     assert "ADR-001" not in out
     assert "c4-container" not in out
@@ -63,6 +64,8 @@ INVALID_CASES = {
     "traces_from_bad_format": "traces_from",
     "missing_assumptions": "assumptions",
     "assumptions_missing_heading": "missing required heading",
+    "missing_drivers": "drivers artifact",
+    "drivers_missing_heading": "missing required heading",
 }
 
 
@@ -178,6 +181,36 @@ def test_assumptions_h3_heading_is_rejected(tmp_path):
     )
     errors = vd.check_assumptions_artifact(str(tmp_path))
     assert any("missing required heading" in e and "Assumptions" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Drivers artifact (STO-99): ASRs / Tradeoffs / Sensitivity Points
+# ---------------------------------------------------------------------------
+DRIVERS_OK = (
+    "# Design Drivers\n\n"
+    "## Architecturally Significant Requirements\n- None identified.\n\n"
+    "## Tradeoffs\n- None identified.\n\n"
+    "## Sensitivity Points\n- None identified.\n"
+)
+
+
+def test_drivers_artifact_ok(tmp_path):
+    (tmp_path / "drivers.md").write_text(DRIVERS_OK, encoding="utf-8")
+    assert vd.check_drivers_artifact(str(tmp_path)) == []
+
+
+def test_missing_drivers_is_flagged(tmp_path):
+    errors = vd.check_drivers_artifact(str(tmp_path))
+    assert any("drivers artifact" in e for e in errors)
+
+
+def test_drivers_missing_heading_is_flagged(tmp_path):
+    truncated = DRIVERS_OK.split("## Sensitivity Points")[0]
+    (tmp_path / "drivers.md").write_text(truncated, encoding="utf-8")
+    errors = vd.check_drivers_artifact(str(tmp_path))
+    assert any(
+        "missing required heading" in e and "Sensitivity Points" in e for e in errors
+    )
 
 
 # ---------------------------------------------------------------------------

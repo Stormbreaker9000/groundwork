@@ -1,0 +1,149 @@
+artifacts:
+- id: CMP-001
+  type: component
+  title: Local State Store
+  status: draft
+  confidence: high
+  path: components/CMP-001-local-state-store.md
+- id: CMP-002
+  type: component
+  title: Decay Engine
+  status: draft
+  confidence: low
+  path: components/CMP-002-decay-engine.md
+- id: CMP-003
+  type: component
+  title: Pet State Manager
+  status: draft
+  confidence: high
+  path: components/CMP-003-pet-state-manager.md
+- id: CMP-004
+  type: component
+  title: Pet Lifecycle Manager
+  status: draft
+  confidence: low
+  path: components/CMP-004-pet-lifecycle-manager.md
+- id: CMP-005
+  type: component
+  title: Mood Evaluator
+  status: draft
+  confidence: medium
+  path: components/CMP-005-mood-evaluator.md
+- id: CMP-006
+  type: component
+  title: Pet Window
+  status: draft
+  confidence: high
+  path: components/CMP-006-pet-window.md
+- id: CMP-007
+  type: component
+  title: Session Coordinator
+  status: draft
+  confidence: medium
+  path: components/CMP-007-session-coordinator.md
+- id: CMP-008
+  type: component
+  title: Care Reminder Scheduler
+  status: draft
+  confidence: medium
+  path: components/CMP-008-care-reminder-scheduler.md
+- id: CMP-009
+  type: component
+  title: Diagnostic Log
+  status: draft
+  confidence: medium
+  path: components/CMP-009-diagnostic-log.md
+- id: CMP-010
+  type: component
+  title: OS Notification Service
+  status: draft
+  confidence: high
+  path: components/CMP-010-os-notification-service.md
+- id: CMP-011
+  type: component
+  title: System Clock
+  status: draft
+  confidence: high
+  path: components/CMP-011-system-clock.md
+- id: IF-001
+  type: interface
+  title: Wall-Clock Time Source
+  status: draft
+  confidence: high
+  path: interfaces/IF-001-wall-clock-time-source.md
+- id: IF-002
+  type: interface
+  title: Diagnostic Log Recording
+  status: draft
+  confidence: high
+  path: interfaces/IF-002-diagnostic-log-recording.md
+- id: IF-003
+  type: interface
+  title: Durable Pet State Persistence
+  status: draft
+  confidence: high
+  path: interfaces/IF-003-durable-pet-state-persistence.md
+- id: IF-004
+  type: interface
+  title: Decay Computation
+  status: draft
+  confidence: low
+  path: interfaces/IF-004-decay-computation.md
+- id: IF-005
+  type: interface
+  title: Pet Stat Observation
+  status: draft
+  confidence: medium
+  path: interfaces/IF-005-pet-stat-observation.md
+- id: IF-006
+  type: interface
+  title: Pet Lifecycle State
+  status: draft
+  confidence: medium
+  path: interfaces/IF-006-pet-lifecycle-state.md
+- id: IF-007
+  type: interface
+  title: Mood Evaluation
+  status: draft
+  confidence: medium
+  path: interfaces/IF-007-mood-evaluation.md
+- id: IF-008
+  type: interface
+  title: Care Action Application
+  status: draft
+  confidence: high
+  path: interfaces/IF-008-care-action-application.md
+- id: IF-009
+  type: interface
+  title: Session State Seeding
+  status: draft
+  confidence: high
+  path: interfaces/IF-009-session-state-seeding.md
+- id: IF-010
+  type: interface
+  title: Care Reminder Preference Control
+  status: draft
+  confidence: medium
+  path: interfaces/IF-010-care-reminder-preference-control.md
+- id: IF-011
+  type: interface
+  title: Reminder Preference Persistence
+  status: draft
+  confidence: medium
+  path: interfaces/IF-011-reminder-preference-persistence.md
+- id: IF-012
+  type: interface
+  title: Desktop Notification Delivery
+  status: draft
+  confidence: high
+  path: interfaces/IF-012-desktop-notification-delivery.md
+review_queue:
+- id: CMP-002
+  confidence: low
+  reason: the decay curve this component evaluates is open question Q-1; the seam is settled, the model is not, and nothing here is verifiable against NFR-001's tolerance until Q-1 is answered
+- id: CMP-004
+  confidence: low
+  reason: the sustained-neglect, sickness and death thresholds are exactly the values open question Q-1 leaves untuned, so FR-008's boundary timings cannot yet be evaluated
+- id: IF-004
+  confidence: low
+  reason: open question Q-1 may change apply_decay's arity — a path-dependent curve adds an input and moves both consumers (design sensitivity point 1)
