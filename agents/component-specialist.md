@@ -197,11 +197,21 @@ the local store — offers it as one coherent service, and it becomes one interf
 carrying both a load and a commit. Never split a capability because satisfying it
 takes more than one operation. The test counts *providers*, never operations.
 
-Whether that contract is later split into two interfaces is not your call and not
-your concern: the interface specialist decides it on consumer sets you cannot
-see, having run first precisely so it can. A well-phrased capability sometimes
-becomes two interfaces. That is the pipeline working, not an error in your
-carving.
+**When in doubt, split.** The band leaves genuine ties — `"preserve the pet's
+state across restarts"` and the pair `"load saved state"` / `"commit state on
+change"` each name one provider, so both pass. Break the tie by splitting, because
+the pipeline can recover from one error and not the other:
+
+- **Too many capabilities is recoverable.** Two capabilities from one provider
+  whose consumers turn out to coincide are merged into a single interface by the
+  interface specialist. The design self-corrects.
+- **Too few is not.** Every capability you declare becomes exactly one interface,
+  and nothing downstream can split one into two. A bundled capability is a merge
+  decision you made early, silently, and permanently — on consumer sets you
+  cannot see.
+
+So declare the narrower capabilities and leave the merge to the stage that has
+the information to judge it.
 
 **The consequence, stated plainly:** every capability you declare becomes
 **exactly one** interface. The interface specialist must satisfy each of yours
