@@ -102,9 +102,10 @@ PREFIX_TO_TYPE = {
 ASSUMPTIONS_ARTIFACT = "assumptions.md"
 REQUIRED_ASSUMPTIONS_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Questions"]
 
-# Project-level drivers artifact (STO-99). Persists the ASR analysis, tradeoffs,
-# and sensitivity points the critic produces, so the reasoning behind the
-# decomposition survives the conversation that produced it (design spec A.6).
+# Project-level drivers artifact (STO-99). Persists the orchestrator's ASR
+# analysis alongside the tradeoffs and sensitivity points the critic produces,
+# so the reasoning behind the decomposition survives the conversation that
+# produced it (design spec A.6).
 DRIVERS_ARTIFACT = "drivers.md"
 REQUIRED_DRIVERS_HEADINGS = [
     "## Architecturally Significant Requirements",
