@@ -27,8 +27,9 @@ Do NOT invoke for:
   the user to the `requirements` workflow first
 
 **Do not write any application code at any point during this skill.** This
-skill produces design artifacts only — component and interface specs, plus
-`assumptions.md` and `drivers.md`. Nothing under `.sdlc/design/` is executable.
+skill produces design artifacts only — component and interface specs, ADRs,
+plus `assumptions.md` and `drivers.md`. Nothing under `.sdlc/design/` is
+executable.
 
 ## Phase 1 — Locate and Read the Input
 
