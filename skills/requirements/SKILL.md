@@ -155,12 +155,19 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 2. **fr-specialist** — functional requirements in EARS notation, each with rationale, fit criterion, and Gherkin acceptance criteria.
 3. **nfr-specialist** — walks all nine ISO 25010:2023 quality characteristics (plus observability, deployability, compliance, cost) and emits each applicable NFR as a six-part quality attribute scenario.
 4. **constraint-specialist** — constraints (CON) and business rules (BR), kept distinct from NFRs and traced to what they bound.
-5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010 coverage check + anti-pattern flags, and runs the structural validator as a hard gate.
+5. **requirements-critic** — two-phase INCOSE/ISO 29148 quality gate + ISO 25010
+   coverage check + anti-pattern flags, judgment only. It does not run
+   `validate_requirements.py` — nothing is on disk yet at this stage, and
+   `assumptions.md`/`glossary.md`, which that validator hard-gates, are not
+   assembled until after this gate passes — so the structural check belongs
+   downstream, at the formatter.
 6. **requirements-formatter** — writes the atomic files plus the project-level
    `assumptions.md` (Assumptions / Dependencies / Open Questions), `glossary.md`
    (the domain vocabulary that anchors the hand-off to architecture and QA), and an
    `index.yaml` carrying a `review_queue` of every `confidence: low` requirement,
-   running only after the critic returns `gate: pass`.
+   then re-runs `validate_requirements.py` against what it just wrote — the
+   pipeline's single structural gate (see the critic, above). Runs only after
+   the critic returns `gate: pass`.
 
 Do not advance to the formatter until the critic reports a passing gate.
 
@@ -204,14 +211,20 @@ Do NOT write the artifact files until the user confirms. If corrections are need
 
 **Step 4 — Write atomic files, then validate (hard gate):**
 
-On confirmation, run the formatter to write the files, then run the structural validator:
+On confirmation, run the formatter. The formatter writes the files and, as part
+of its own contract, immediately re-runs the structural validator against them
+(`agents/requirements-formatter.md`'s "Verify, then report" section) — this is
+the pipeline's single structural gate, and it is the first point at which
+structure *can* be checked, since nothing was on disk before now. The critic's
+earlier `gate: pass` was judgment only (per-requirement quality, ISO 25010
+coverage, content lint by inspection); it never ran this command.
 
 ```bash
 mkdir -p .sdlc/requirements/{functional,non-functional,constraints,business-rules,use-cases}
 python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
 ```
 
-The validator MUST exit 0. If it exits non-zero, fix the flagged files (re-dispatch to the owning specialist) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
+The validator MUST exit 0. If it exits non-zero, do not treat the write as done: fix the flagged files (re-dispatch to the owning specialist through the critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
 
 The formatter also writes `.sdlc/requirements/assumptions.md` and
 `.sdlc/requirements/glossary.md`. The structural validator hard-gates both: the
@@ -222,7 +235,10 @@ is legal, and an honest empty glossary beats invented entries.
 
 Then run the advisory content-quality linter and address any `warn`-severity
 findings (the structural validator is the hard gate; the content linter guides
-prose quality):
+prose quality). This is the only script-backed lint run in the pipeline — the
+critic applied the same checks by inspection at gate time, because the files
+did not exist yet. Route anything it turns up back through the critique loop to
+the owning specialist rather than editing the written files by hand:
 
 ```bash
 python3 skills/requirements/scripts/lint_requirements_content.py .sdlc/requirements
