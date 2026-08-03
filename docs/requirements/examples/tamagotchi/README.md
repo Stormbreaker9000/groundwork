@@ -139,3 +139,33 @@ Seven findings remain open and are deliberately preserved as genuine critic outp
 
 They are left in place because a worked example showing a critic that found nothing would
 teach nothing about whether the critic works.
+
+### Two granularity artifacts, recorded rather than fixed
+
+This set was generated before the capability and interface granularity heuristics
+existed. Two divergences from what the pipeline now teaches are left in place, for
+the same reason the critic findings above are.
+
+- **`IF-003` should have been two interfaces.** *Durable Pet State Persistence*
+  carries `load` and `commit`. `CMP-007` needs both — it restores at launch and
+  commits at shutdown — but `CMP-003` needs only `commit`, since `FR-001`'s save
+  trigger is all it uses the store for and its launch state arrives through
+  `IF-009` instead. The consumer sets are nested, not identical, so under the
+  Interface Segregation rule they do not coincide: the single contract makes
+  `CMP-003` depend on a `load` it never calls. Note where the fault actually
+  sits: one capability can only ever become one interface, so the interface
+  specialist had no split available to it. The capability was carved too
+  coarsely upstream, and the split-when-unsure tiebreaker the component
+  specialist now carries is what would have prevented it. This is the
+  unrecoverable direction of that asymmetry, caught in the wild.
+- **Operation counts are suspiciously uniform.** Eleven of the twelve interfaces
+  carry exactly two operations; only `IF-007` carries one. Twelve independent
+  contracts over a clock, a log, a store, a decay calculator, a mood evaluator and
+  a notifier do not converge on two operations each by coincidence. This is the
+  specialist matching a shape it inferred from the examples in its own
+  instructions and then carving granularity to fit — the clearest evidence in this
+  set for why the heuristics were needed at all.
+
+Regenerating this set against the corrected pipeline is tracked separately, and
+waits on the other in-flight changes so the examples are re-run once rather than
+after every fix.

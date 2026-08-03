@@ -103,7 +103,7 @@ completeness check is the only thing that notices — so before you return, walk
 `component_set` capability by capability and confirm each one appears in exactly
 one of your `satisfies_capabilities` entries.
 
-Two corollaries decide when to merge and when to split:
+Three corollaries decide when to merge and when to split:
 
 - **Two components needing the same capability from the same provider share one
   interface.** Write one `IF-`, list both components in `consumed_by`, and list
@@ -115,6 +115,45 @@ Two corollaries decide when to merge and when to split:
   component needs "store and retrieve order records" from the primary store and
   another needs it from an archival system, those are different contracts with
   different providers, and each satisfies its own consumer's capability.
+- **Different capabilities from the same provider are one interface only when
+  their consumers coincide.** This is the Interface Segregation Principle: no
+  consumer should be made to depend on a contract it does not need. Group two
+  capabilities from one provider into a single interface when every component
+  consuming either also consumes the other, and emit separate interfaces
+  otherwise. "Consumer" means a component that declared the capability in its
+  `required_capabilities`; the test is over capabilities, not operations — a
+  consumer is never expected to call every operation of a contract it depends on,
+  only to genuinely need the capability that contract satisfies.
+
+  This rule can only **merge**. It decides whether several capabilities from one
+  provider share an interface; it can never split one capability across two,
+  because the exactly-once check forbids that. If you find a capability that
+  plainly should be two contracts, say so plainly in your return as a too-coarse
+  carving upstream — do not emit two interfaces for it.
+
+Worked example — one provider, three interfaces. A pet state manager provides
+observation, care-action application, and session seeding:
+
+| Capability it satisfies | Components consuming it |
+| --- | --- |
+| observe the pet's stat values | lifecycle manager, mood evaluator, pet window, reminder scheduler |
+| apply a care action to the pet | pet window |
+| seed the session's starting state | session coordinator |
+
+Three interfaces, not one. Three of the four components that observe never apply a
+care action, and the one that seeds does neither. Folding these into a single
+contract would make the mood evaluator depend on care-action operations it never
+calls. Had all three rows listed the same components, one interface would have
+been right — that is the merge case in the first corollary, reached from a
+different direction.
+
+The test is exact-set equality, not overlap, so a strict subset fails it too, not
+just the fully-disjoint case above. If "commit state on change" is consumed by
+`{CMP-003, CMP-007}` and "load saved state" only by `{CMP-007}`, the second set is
+a strict subset of the first, not identical to it — and folding both into one
+interface would make `CMP-003` depend on a `load` operation it never calls. Split
+them, on the same reasoning: a consumer should never be made to depend on an
+operation its own capability doesn't need.
 
 ## Assigning `provider`
 
