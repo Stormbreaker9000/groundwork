@@ -68,6 +68,37 @@ This replaces the old fallback in which a deferred ASR became only a `Q-` open
 question. Emit the ADR; the orchestrator keeps the `Q-` too, so the question
 stays visible in `assumptions.md`.
 
+These arrive as `asr_coverage` rows in the orchestrator's dispatch:
+
+```yaml
+asr_coverage:
+  - requirement_id: NFR-002
+    addressed_by: [ CMP-001, IF-001 ]
+    verdict: deferred_to_decision
+    note: string          # the evidence for the verdict
+```
+
+Derive a proposed ADR from it like this — and from nothing else:
+
+| ADR field | Source |
+| --- | --- |
+| `traces_from` | `[row.requirement_id]` |
+| `body.context` | `row.note` |
+| `decision_status` | always `proposed` |
+| `confidence` | always `low` |
+| `chosen_option` | **omitted** |
+| `considered_options` | only options `row.note` actually names; omitted otherwise |
+| `body.consequences` | **omitted** — nothing has been decided, so nothing has consequences yet |
+| `affects` | `row.addressed_by` when non-empty; omit `affects` otherwise |
+| owner (prose only) | the `owner` of the paired `Q-` entry in `design_context_artifact.open_questions` |
+
+The orchestrator mints one `Q-` open question for every `deferred_to_decision`
+ASR, and that entry — `{ id, statement, owner }` — is where the owner comes
+from. **If you cannot find the paired `Q-` entry, do not name an owner.** An
+invented owner is the same failure as an invented option: it reads as a record
+of a real assignment nobody made. Write the `## Decision Outcome` section to
+say the decision is pending, and name the owner only when you have one.
+
 ## Parsing a resolved decision
 
 The `decision` field carries the chosen option and the rejected ones in prose.
@@ -102,6 +133,11 @@ implies an alternative at all, skip the entry.
 | `body.consequences.good` | the entry's `gains` |
 | `body.consequences.bad` | the entry's `costs` |
 | `affects` | the CMP/IF IDs the decision shaped |
+
+**This table describes source 1 only** — a resolved `Q-` arriving as a
+`drivers.tradeoffs` entry. A deferred ASR arrives in a different shape and has
+its own derivation table, above. Do not read `gains`, `costs`, or `affected`
+off an `asr_coverage` row; those fields do not exist there.
 
 `status` is always `draft`. It is the artifact lifecycle, not the decision
 status, and every artifact this pipeline generates starts at `draft`.
@@ -166,6 +202,20 @@ draft_adrs:
           good: [string]
           bad: [string]
       affects: [CMP-006]
+
+    # A deferred ASR (source 2). No chosen_option, no consequences.
+    - id: ADR-002
+      title: Retention policy for diagnostic logs
+      description: How long local diagnostic entries are kept before rotation.
+      traces_from: [NFR-007]
+      decision_status: proposed
+      confidence: low
+      body:
+        context: string          # from the asr_coverage row's `note`
+        decision_drivers: [NFR-007]
+        decision_outcome: >
+          Pending. Owned by product (Q-6).
+      affects: [CMP-002]
   skipped:
     - source: "IF-002 async flush"
       reason: "structural tradeoff, no Q- ID"
@@ -185,6 +235,8 @@ Stop and report to the orchestrator rather than guessing when:
 
 - a `drivers.tradeoffs` entry is malformed — missing `decision`, `gains`,
   `costs`, or `affected`
+- an `asr_coverage` row marked `deferred_to_decision` is malformed — missing
+  `requirement_id`, or carrying no `note` to build a context from
 - an `affected` list names a requirement ID in no recognised form
 - `affects` would name a component or interface absent from the artifact set
 
