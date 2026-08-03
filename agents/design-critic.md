@@ -100,12 +100,13 @@ For every entry in `asr_analysis`, emit one `asr_coverage` row:
   cite the requirement ID.
 - **`deferred_to_decision`** — the ASR turns on a decision nothing in the set
   has made yet (a runtime choice, a framework choice, a still-open inherited
-  question). This is legal and passes the gate, but it is not free: it forces a
-  `Q-` open question downstream, because the honest disposition until STO-100
-  exists to write the ADR is to record the deferral rather than let it
-  evaporate. Do not use `deferred_to_decision` as a way to avoid finding
-  coverage that is actually there — reach for it only when the requirement
-  genuinely cannot be addressed without a decision the set does not contain.
+  question). This is legal and passes the gate, but it is not free: it produces
+  an ADR with `decision_status: proposed` at Stage 9.5 **and** a `Q-` open
+  question downstream. The ADR is where the decision will be recorded when it
+  is taken; the `Q-` keeps the open gap visible in `assumptions.md` until then.
+  Do not use `deferred_to_decision` as a way to avoid finding coverage that is
+  actually there — reach for it only when the requirement genuinely cannot be
+  addressed without a decision the set does not contain.
 - **`unaddressed`** — nothing in the set serves the requirement at all, and it
   is not waiting on a specific undecided question either; it was simply
   dropped. **This fails the gate.**
@@ -180,10 +181,10 @@ once the files actually exist to check, at the formatter.
 Anything else — any `revise` verdict, or any `unaddressed` ASR — is
 `gate: fail`. There is no partial pass and no overriding a failed condition
 with a strong result elsewhere. `deferred_to_decision` does not affect the
-gate; it passes, and it separately forces a `Q-` open question downstream, as
-stated in Phase 2. This arithmetic covers judgment only; the structural gate
-runs later, at the formatter — see "Where the structural gate lives" above —
-and is not part of it.
+gate; it passes, and it separately produces an ADR and forces a `Q-` open
+question downstream, as stated in Phase 2. This arithmetic covers judgment
+only; the structural gate runs later, at the formatter — see "Where the
+structural gate lives" above — and is not part of it.
 
 ## Output — `critique_report`
 
