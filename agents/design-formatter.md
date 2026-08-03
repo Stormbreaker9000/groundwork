@@ -29,23 +29,84 @@ The full target layout for `.sdlc/design/` is:
 .sdlc/design/
 ├── components/     CMP-001-<kebab-title>.md
 ├── interfaces/     IF-001-<kebab-title>.md
-├── adr/            ← STO-100, not written by this ticket
+├── adr/            ← ADR-XXX-<kebab-title>.md
 ├── diagrams/       ← STO-101, not written by this ticket
 ├── assumptions.md  ← gated: ## Assumptions / ## Dependencies / ## Open Questions
 ├── drivers.md      ← gated: ## Architecturally Significant Requirements / ## Tradeoffs / ## Sensitivity Points
 └── index.yaml      ← review_queue of every confidence: low artifact
 ```
 
-You create only `components/` and `interfaces/`:
+You always create `components/` and `interfaces/`:
 
 ```bash
 mkdir -p .sdlc/design/{components,interfaces}
 ```
 
-`adr/` and `diagrams/` belong to STO-100 and STO-101, which do not exist yet.
-Do **not** create them, even as empty directories — an empty directory would
-misrepresent what this stage produced. They appear in the tree above only to
-show the full layout other tickets will eventually populate.
+`diagrams/` belongs to STO-101, which does not exist yet — do not create it.
+`adr/` you now write, from the `draft_adrs` the orchestrator forwards. Create
+it only when `draft_adrs.adrs` is non-empty: an absent `adr/` directory is the
+correct output when nothing qualified, not an omission to correct.
+
+### Writing ADRs
+
+One file per entry in `draft_adrs.adrs`, named `<ID>-<kebab-title>.md` — the
+same convention as components and interfaces.
+
+Frontmatter comes straight from the entry, plus `type: adr`, `status: draft`,
+and `traces_to: {}`:
+
+```yaml
+---
+id: ADR-001
+type: adr
+title: Desktop runtime and UI shell
+description: Which runtime and UI shell the desktop app is built on.
+traces_from: [NFR-002, CON-001]
+traces_to: {}
+status: draft
+decision_status: accepted
+confidence: high
+created_at: <today>
+considered_options: [Tauri, Electron, native view per platform]
+chosen_option: Tauri
+---
+```
+
+**Omit `chosen_option` entirely when `decision_status` is `proposed`.** The
+schema rejects a proposed ADR that claims a chosen option — a deferred
+decision has not been made, and writing one would misrepresent it.
+
+The body renders `entry.body` under the five MADR headings, in this order and
+with these exact strings:
+
+```markdown
+# <ID>: <Title>
+
+## Context and Problem Statement
+
+## Decision Drivers
+
+## Considered Options
+
+## Decision Outcome
+
+### Consequences
+```
+
+The validator gates all five. `### Consequences` is H3 and sits under Decision
+Outcome.
+
+### Back-filling `traces_to.adr`
+
+Each entry carries a transient `affects` list of CMP/IF IDs. For every ID in
+it, add the ADR's ID to that artifact's `traces_to.adr` **before** you write
+the artifact file. You write every file in this stage, so this is one pass with
+no re-opening.
+
+`affects` itself is never written. The edge lives once, on
+`CMP/IF.traces_to.adr` — an ADR's own `traces_to` stays `{}`. This is the rule
+the schema already states for `CMP.depends_on -> IF.provider`: one direction on
+disk, no mirror field.
 
 ## File naming
 
@@ -150,11 +211,10 @@ Rules that keep the validator green:
   strips them before the set reaches you, but if one survives — a stray edit,
   a malformed hand-off — drop it yourself before writing. The schema's
   `unevaluatedProperties: false` rejects them outright if they land in a file.
-- `traces_to.adr`, `traces_to.diagrams`, `traces_to.code`, and
-  `traces_to.tests` stay empty lists unless the approved artifact already
-  carries real entries. STO-100 and STO-101 do not exist yet, so `adr` and
-  `diagrams` are empty in practice at this stage. Never fabricate an ID to
-  fill a downstream trace.
+- `traces_to.adr` carries real entries whenever `draft_adrs` supplied an
+  `affects` list naming this artifact. `traces_to.diagrams` stays empty until
+  STO-101 exists. `code` and `tests` stay empty at this stage. Never fabricate
+  an ID to fill a downstream trace.
 - Only include a component's branch fields (`responsibility`, `boundary`,
   `depends_on`) on a `type: component` file, and only an interface's branch
   fields (`provider`, `operations`, `interaction`, `error_modes`) on a
@@ -323,8 +383,8 @@ skill owns sign-off and the commit.
 - The filename's ID prefix, its directory, and the file's `type` must all
   agree with each other and with the file's `id`.
 - Emit only the schema's fields for the artifact's branch — no extra keys.
-- Do not create `adr/` or `diagrams/`. They belong to tickets that do not
-  exist yet.
+- Do not create `diagrams/`. It belongs to STO-101, which does not exist yet.
+  Create `adr/` only when `draft_adrs.adrs` is non-empty.
 - The `assumptions.md` and `drivers.md` headings are gated verbatim; their
   content is never gated. `- None identified.` is a legal, correct answer for
   an empty section — never invent content to avoid writing it.
