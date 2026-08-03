@@ -1,6 +1,6 @@
 # M2 Capability & Interface Granularity Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Give the M2 specialists a stated rule for how finely to slice a capability and when two capabilities from one provider become one interface, so the artifact count is a design decision rather than a coin-flip.
 
@@ -42,7 +42,7 @@ Three tasks, one per file. Each is independently reviewable: a reviewer could ac
 - Consumes: nothing from earlier tasks
 - Produces: `"keep the pet alive while the app is closed"` as the canonical too-broad example, and `"preserve the pet's state across restarts"` as the canonical *genuine tie* — a capability that passes the band (one provider) yet is resolved by the split-when-unsure tiebreaker. Task 3 refers to the tie case; keep the strings identical. The several-operations example is deliberately `"take card payments"` rather than the persistence phrase: using the latter would affirmatively endorse the exact carving Task 3's README calls the defect, deciding the ticket's motivating case both ways in one section.
 
-- [ ] **Step 1: Add the fourth Bad row to the existing table**
+- [x] **Step 1: Add the fourth Bad row to the existing table**
 
 Find this table (lines 138-143):
 
@@ -56,7 +56,7 @@ Append one row directly after it:
 | **Bad** | `capability: "keep the pet alive while the app is closed"` | Names an *outcome spanning providers*. Satisfying it takes the clock, the decay engine, and the store — three components, so no single interface can carry it. |
 ```
 
-- [ ] **Step 2: Verify the table still has five rows and one header**
+- [x] **Step 2: Verify the table still has five rows and one header**
 
 Run:
 
@@ -66,7 +66,7 @@ grep -c '^| \*\*' agents/component-specialist.md
 
 Expected: `5` (one Good, four Bad).
 
-- [ ] **Step 3: Insert the granularity subsection**
+- [x] **Step 3: Insert the granularity subsection**
 
 Insert this immediately before the line beginning `**The consequence, stated plainly:**`:
 
@@ -113,7 +113,7 @@ So declare the narrower capabilities and leave the merge to the stage that has
 the information to judge it.
 ```
 
-- [ ] **Step 4: Verify the subsection landed inside the right section**
+- [x] **Step 4: Verify the subsection landed inside the right section**
 
 Run:
 
@@ -123,7 +123,7 @@ awk '/^## Declaring capabilities/,/^## Output/' agents/component-specialist.md |
 
 Expected: `1` — confirming the new `###` is nested inside `## Declaring capabilities` and not orphaned after `## Output`.
 
-- [ ] **Step 5: Verify no new top-level section was introduced**
+- [x] **Step 5: Verify no new top-level section was introduced**
 
 Run:
 
@@ -139,7 +139,7 @@ diff <(git show HEAD:agents/component-specialist.md | grep '^## ') <(grep '^## '
 
 Expected: no output. Any line here means a top-level section was added, removed, or renamed, which the global constraints forbid.
 
-- [ ] **Step 6: Verify frontmatter still parses**
+- [x] **Step 6: Verify frontmatter still parses**
 
 Run:
 
@@ -157,7 +157,7 @@ print('OK', keys)
 
 Expected: `OK ['description']`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add agents/component-specialist.md
@@ -183,7 +183,7 @@ operations — so 'preserve the pet's state across restarts' stays legal while
 - Consumes: nothing from Task 1 at runtime. The two files are read by different agents and share no literal strings that must match.
 - Produces: the consumer-coincidence test that Task 3's README note refers to when explaining why `IF-003` should have been two interfaces.
 
-- [ ] **Step 1: Change the list's introducing line**
+- [x] **Step 1: Change the list's introducing line**
 
 Find (line 106):
 
@@ -197,7 +197,7 @@ Replace with:
 Three corollaries decide when to merge and when to split:
 ```
 
-- [ ] **Step 2: Append the third corollary**
+- [x] **Step 2: Append the third corollary**
 
 Add after the existing second bullet (the one beginning `**The same capability from different providers is two interfaces.**`, ending `...each satisfies its own consumer's capability.`):
 
@@ -213,7 +213,7 @@ Add after the existing second bullet (the one beginning `**The same capability f
   only to genuinely need the capability that contract satisfies.
 ```
 
-- [ ] **Step 3: Add the worked example**
+- [x] **Step 3: Add the worked example**
 
 Add directly after the third corollary, before the next `##` heading (the one that opens the `provider` assignment rules):
 
@@ -235,7 +235,7 @@ been right — that is the merge case in the first corollary, reached from a
 different direction.
 ```
 
-- [ ] **Step 4: Verify the corollary count matches the prose**
+- [x] **Step 4: Verify the corollary count matches the prose**
 
 Run:
 
@@ -245,7 +245,7 @@ awk '/^Three corollaries decide/,/^## Assigning/' agents/interface-specialist.md
 
 Expected: `3`
 
-- [ ] **Step 5: Verify the ISP citation is present and the rule sits in the right section**
+- [x] **Step 5: Verify the ISP citation is present and the rule sits in the right section**
 
 Run:
 
@@ -255,7 +255,7 @@ awk '/^## The core rule/,/^## Assigning/' agents/interface-specialist.md | grep 
 
 Expected: `1`
 
-- [ ] **Step 6: Verify frontmatter still parses**
+- [x] **Step 6: Verify frontmatter still parses**
 
 Run:
 
@@ -273,7 +273,7 @@ print('OK', keys)
 
 Expected: `OK ['description']`
 
-- [ ] **Step 7: Verify the capability hand-off vocabulary still agrees across all three agents**
+- [x] **Step 7: Verify the capability hand-off vocabulary still agrees across all three agents**
 
 The same cross-file check STO-99's plan used. Run:
 
@@ -289,7 +289,7 @@ done
 
 Expected: every term appears at least once in the files that own it — `required_capabilities` in all three, `satisfies_capabilities` and `consumed_by` in the interface specialist and orchestrator. A zero where there was a non-zero before means an edit clobbered a contract reference.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add agents/interface-specialist.md
@@ -314,7 +314,7 @@ where the rule reproduces the three-way split the specialist already made."
 - Consumes: the granularity band from Task 1 and the ISP rule from Task 2. Both must be committed first so the README's claim that the pipeline "now teaches" these rules is true.
 - Produces: nothing consumed downstream.
 
-- [ ] **Step 1: Confirm the two claims against the example before writing them down**
+- [x] **Step 1: Confirm the two claims against the example before writing them down**
 
 Do not take these on faith from the plan — verify, then write.
 
@@ -334,7 +334,7 @@ cd -
 
 Expected: IF-003 reports `2` operations and exactly two consuming components (`CMP-003`, `CMP-007`); the loop reports `ops=2` for every interface except `IF-007`, which reports `ops=1`. If any number differs, stop and reconcile the README text with reality rather than writing the plan's numbers.
 
-- [ ] **Step 2: Append the subsection**
+- [x] **Step 2: Append the subsection**
 
 Add at the end of `docs/requirements/examples/tamagotchi/README.md`:
 
@@ -367,7 +367,7 @@ waits on the other in-flight changes so the examples are re-run once rather than
 after every fix.
 ```
 
-- [ ] **Step 3: Verify the example artifacts were not touched**
+- [x] **Step 3: Verify the example artifacts were not touched**
 
 Run:
 
@@ -377,7 +377,7 @@ git status --short docs/requirements/examples/tamagotchi/design/
 
 Expected: empty output. Any file listed here violates the global constraint against regenerating the example.
 
-- [ ] **Step 4: Verify the design set still validates**
+- [x] **Step 4: Verify the design set still validates**
 
 Run:
 
@@ -387,7 +387,7 @@ python3 skills/design/scripts/validate_design.py docs/requirements/examples/tama
 
 Expected: exit 0, `23/23 file(s) passed`. The README lives at the example root, not under `design/`, so it is not discovered as an artifact — this run confirms that is still true.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run:
 
@@ -397,7 +397,7 @@ python3 -m pytest skills/design/scripts/tests skills/requirements/scripts/tests 
 
 Expected: `95 passed`. No script changed, so a failure here means something unintended was touched.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/requirements/examples/tamagotchi/README.md
@@ -417,15 +417,15 @@ are. Regeneration is tracked separately so the examples are re-run once."
 
 Run after all three tasks:
 
-- [ ] `python3 -m pytest skills/design/scripts/tests skills/requirements/scripts/tests -q` — 95 passed
-- [ ] `python3 skills/design/scripts/validate_design.py docs/requirements/examples/tamagotchi/design` — exit 0, 23/23
-- [ ] `python3 skills/requirements/scripts/validate_requirements.py docs/requirements/examples/tamagotchi/requirements` — exit 0, 22/22
-- [ ] All 13 files in `agents/` parse to single-key `description` frontmatter
-- [ ] `git status --short docs/requirements/examples/tamagotchi/design/` — empty
-- [ ] `git diff --stat main...HEAD` lists exactly three files besides the spec and this plan
-- [ ] `grep -rn "operations" agents/component-specialist.md agents/interface-specialist.md` shows no instruction about how many operations an interface should have
-- [ ] `grep -c "granularity" agents/design-critic.md` returns 0 — no critic check was added
-- [ ] Both new capability example strings appear identically in the component specialist and, where quoted, the README
+- [x] `python3 -m pytest skills/design/scripts/tests skills/requirements/scripts/tests -q` — 95 passed
+- [x] `python3 skills/design/scripts/validate_design.py docs/requirements/examples/tamagotchi/design` — exit 0, 23/23
+- [x] `python3 skills/requirements/scripts/validate_requirements.py docs/requirements/examples/tamagotchi/requirements` — exit 0, 22/22
+- [x] All 13 files in `agents/` parse to single-key `description` frontmatter
+- [x] `git status --short docs/requirements/examples/tamagotchi/design/` — empty
+- [x] `git diff --stat main...HEAD` lists exactly three files besides the spec and this plan
+- [x] `grep -rn "operations" agents/component-specialist.md agents/interface-specialist.md` shows no instruction about how many operations an interface should have
+- [x] `grep -c "granularity" agents/design-critic.md` returns 0 — no critic check was added
+- [x] Both new capability example strings appear identically in the component specialist and, where quoted, the README
 
 Full-set frontmatter check:
 
