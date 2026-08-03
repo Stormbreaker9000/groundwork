@@ -7,7 +7,7 @@ YAML frontmatter, organized under a design directory::
     .sdlc/design/
       components/    CMP-XXX-*.md
       interfaces/    IF-XXX-*.md
-      adr/           ADR-XXX-*.md   (skipped — STO-100 owns the format)
+      adr/           ADR-XXX-*.md
       diagrams/      *.md           (skipped — STO-101 owns the format)
       assumptions.md                (gated: Assumptions/Dependencies/Open Questions)
       drivers.md                    (gated: ASRs/Tradeoffs/Sensitivity Points)
@@ -15,14 +15,15 @@ YAML frontmatter, organized under a design directory::
 
 This tool:
   1. Discovers every ``*.md`` under the design dir (recursively), skipping the
-     ``adr/`` and ``diagrams/`` subtrees and the
+     ``diagrams/`` subtree and the
      ``assumptions.md``/``drivers.md``/``index.yaml`` companions.
   2. Parses the YAML frontmatter from each file.
   3. Validates each artifact against the JSON Schema
      (``skills/design/schema/design.schema.json``, draft 2020-12).
   4. Runs cross-file (set-level) checks:
        - IDs are globally unique.
-       - The ID prefix matches ``type`` (CMP->component, IF->interface).
+       - The ID prefix matches ``type`` (CMP->component, IF->interface,
+         ADR->adr).
        - ``depends_on`` resolves: every interface a component consumes exists
          in this set.
        - ``provider`` resolves: every interface's provider is a known component
@@ -32,7 +33,8 @@ This tool:
          validator's job (STO-102), not this one.
   5. Gates the project-level ``assumptions.md`` and ``drivers.md`` (presence +
      required headings).
-  6. Prints a readable per-file + summary report and exits non-zero on any
+  6. Gates each ADR body's MADR 4.0 headings.
+  7. Prints a readable per-file + summary report and exits non-zero on any
      violation.
 
 The stage-agnostic machinery (frontmatter parsing, stdlib fallback, schema
@@ -86,7 +88,7 @@ from artifact_core import (  # noqa: E402  (re-exported for tests)
 
 
 # Whole subtrees another stage owns in a non-artifact format.
-SKIP_DIRNAMES = {"adr", "diagrams"}
+SKIP_DIRNAMES = {"diagrams"}
 # Companions that live in the design dir but are not atomic artifacts.
 SKIP_FILENAMES = {"assumptions.md", "drivers.md", "index.yaml"}
 
@@ -94,6 +96,7 @@ SKIP_FILENAMES = {"assumptions.md", "drivers.md", "index.yaml"}
 PREFIX_TO_TYPE = {
     "CMP": "component",
     "IF": "interface",
+    "ADR": "adr",
 }
 
 # Project-level assumptions artifact (design analogue of M1's context artifact).
@@ -113,6 +116,17 @@ REQUIRED_DRIVERS_HEADINGS = [
     "## Sensitivity Points",
 ]
 
+# MADR 4.0 body headings, gated per ADR file (STO-100). Presence only —
+# content is never gated, exactly as for assumptions.md and drivers.md.
+# `### Consequences` is H3 by MADR convention: it sits under Decision Outcome.
+REQUIRED_ADR_HEADINGS = [
+    "## Context and Problem Statement",
+    "## Decision Drivers",
+    "## Considered Options",
+    "## Decision Outcome",
+    "### Consequences",
+]
+
 # traces_from points at requirement IDs. We check the SHAPE only; resolution is
 # STO-102's job. This mirrors the requirement schema's id pattern.
 REQUIREMENT_ID_RE = re.compile(r"^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$")
@@ -128,13 +142,19 @@ _FALLBACK_REQUIRED_BASE = [
 _FALLBACK_REQUIRED_BY_TYPE = {
     "component": ["responsibility", "boundary", "depends_on"],
     "interface": ["provider", "operations", "interaction", "error_modes"],
+    # `chosen_option`/`considered_options` are conditional on decision_status,
+    # which this path cannot express — the schema is the source of truth.
+    "adr": ["decision_status"],
 }
 _FALLBACK_ENUMS = {
-    "type": {"component", "interface"},
+    "type": {"component", "interface", "adr"},
     "boundary": {"internal", "external"},
     "interaction": {"synchronous", "asynchronous"},
     "confidence": {"high", "medium", "low"},
     "status": {"draft", "reviewed", "approved", "implemented", "verified", "obsolete"},
+    "decision_status": {
+        "proposed", "rejected", "accepted", "deprecated", "superseded",
+    },
     "scope": {"project", "epic", "story"},
 }
 
@@ -294,6 +314,28 @@ def check_drivers_artifact(design_dir: str) -> List[str]:
     )
 
 
+def check_adr_headings(path: str) -> List[str]:
+    """Gate one ADR body's MADR 4.0 headings.
+
+    Presence only; content is never gated. Unlike assumptions.md and drivers.md
+    this is per-file rather than per-directory, so it does not go through
+    ``core._check_project_artifact`` (which resolves a fixed filename inside a
+    root). The heading-anchoring regex is the same: a full-line match, so an
+    H3 '### Considered Options' does not satisfy the H2 requirement.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        return [f"could not read ADR body: {exc}"]
+
+    errors: List[str] = []
+    for heading in REQUIRED_ADR_HEADINGS:
+        if not re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE):
+            errors.append(f"missing required MADR heading '{heading}'")
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -319,6 +361,8 @@ def validate(design_dir: str, schema_path: str) -> Tuple[List[DesignFile], List[
             df.errors.extend(core.validate_against_schema(data, validator))
         else:
             df.errors.extend(_fallback_validate(data))
+        if data.get("type") == "adr":
+            df.errors.extend(check_adr_headings(path))
         files.append(df)
 
     global_errors = cross_file_checks(files)

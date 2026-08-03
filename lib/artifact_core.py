@@ -330,7 +330,7 @@ def discover_files(
     ``skip_filenames`` are project-level companions (assumptions, glossary,
     index) that live alongside artifacts but are not themselves atomic.
     ``skip_dirnames`` are whole subtrees a stage owns in another format (M2's
-    ``adr/`` and ``diagrams/``); they are pruned in-place from the walk. A stray
+    ``diagrams/``); they are pruned in-place from the walk. A stray
     file that is neither skipped nor a valid artifact is surfaced by the caller,
     not silently ignored.
     """

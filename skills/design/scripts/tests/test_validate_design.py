@@ -40,15 +40,15 @@ def test_valid_set_passes(capsys):
 
 
 def test_skip_files_and_subtrees_are_ignored(capsys):
-    """assumptions.md, index.yaml, and the adr/ + diagrams/ subtrees must not be
-    validated as artifacts."""
+    """assumptions.md, index.yaml and the diagrams/ subtree must not be
+    validated as artifacts. adr/ IS validated as of STO-100."""
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
     assert "drivers.md" not in out
     assert "index.yaml" not in out
-    assert "ADR-001" not in out
     assert "c4-container" not in out
+    assert "ADR-001" in out
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +66,10 @@ INVALID_CASES = {
     "assumptions_missing_heading": "missing required heading",
     "missing_drivers": "drivers artifact",
     "drivers_missing_heading": "missing required heading",
+    "adr_missing_heading": "missing required MADR heading",
+    "adr_bad_decision_status": "decision_status",
+    "adr_one_considered_option": "considered_options",
+    "adr_proposed_with_chosen_option": "chosen_option",
 }
 
 
@@ -84,7 +88,11 @@ def test_invalid_case_fails(case, needle, capsys):
 # Unit-level checks of the building blocks.
 # ---------------------------------------------------------------------------
 def test_prefix_to_type_mapping():
-    assert vd.PREFIX_TO_TYPE == {"CMP": "component", "IF": "interface"}
+    assert vd.PREFIX_TO_TYPE == {
+        "CMP": "component",
+        "IF": "interface",
+        "ADR": "adr",
+    }
 
 
 def test_extract_frontmatter_block():
@@ -413,3 +421,48 @@ def test_adr_id_pattern_accepted_by_schema():
     raw = json.load(open(SCHEMA, encoding="utf-8"))
     assert "ADR" in raw["properties"]["id"]["pattern"]
     assert "adr" in raw["properties"]["type"]["enum"]
+
+
+# ---------------------------------------------------------------------------
+# MADR heading gate (STO-100)
+# ---------------------------------------------------------------------------
+def test_adr_headings_all_present_passes(tmp_path):
+    body = (
+        "# ADR-001: X\n\n"
+        "## Context and Problem Statement\nc\n\n"
+        "## Decision Drivers\n- NFR-002\n\n"
+        "## Considered Options\n- A\n- B\n\n"
+        "## Decision Outcome\nA\n\n"
+        "### Consequences\n- good: g\n- bad: b\n"
+    )
+    path = tmp_path / "ADR-001-x.md"
+    path.write_text(body, encoding="utf-8")
+    assert vd.check_adr_headings(str(path)) == []
+
+
+def test_adr_missing_heading_is_flagged(tmp_path):
+    body = (
+        "# ADR-001: X\n\n"
+        "## Context and Problem Statement\nc\n\n"
+        "## Decision Drivers\n- NFR-002\n\n"
+        "## Considered Options\n- A\n- B\n\n"
+        "## Decision Outcome\nA\n"
+    )
+    path = tmp_path / "ADR-001-x.md"
+    path.write_text(body, encoding="utf-8")
+    errors = vd.check_adr_headings(str(path))
+    assert any("Consequences" in e for e in errors)
+
+
+def test_adr_non_utf8_is_reported_not_raised(tmp_path):
+    path = tmp_path / "ADR-001-x.md"
+    path.write_bytes(b"\xff\xfe## Decision Outcome\n")
+    errors = vd.check_adr_headings(str(path))
+    assert errors and any("could not read" in e for e in errors)
+
+
+def test_adr_prefix_type_mismatch_is_flagged():
+    df = vd.DesignFile("mem://a")
+    df.frontmatter = {"id": "ADR-001", "type": "component"}
+    vd.cross_file_checks([df])
+    assert any("implies type" in e for e in df.errors)
