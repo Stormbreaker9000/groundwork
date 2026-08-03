@@ -330,3 +330,86 @@ def core_validator():
 
 def _schema_errors(validator, data):
     return vd.core.validate_against_schema(data, validator)
+
+
+# ---------------------------------------------------------------------------
+# ADR schema branch (STO-100)
+# ---------------------------------------------------------------------------
+import json  # `pytest` is already imported at the top of this file
+
+
+def _adr(**overrides):
+    """A minimal valid accepted-ADR frontmatter dict, with overrides applied."""
+    data = {
+        "id": "ADR-001",
+        "type": "adr",
+        "title": "Desktop runtime and UI shell",
+        "description": "Which runtime and UI shell the desktop app is built on.",
+        "traces_from": ["NFR-002", "CON-001"],
+        "traces_to": {},
+        "status": "draft",
+        "decision_status": "accepted",
+        "confidence": "high",
+        "created_at": "2026-08-03",
+        "considered_options": ["Tauri", "Electron", "native view per platform"],
+        "chosen_option": "Tauri",
+    }
+    data.update(overrides)
+    for key, value in list(overrides.items()):
+        if value is None:
+            del data[key]
+    return data
+
+
+def _schema_errors_adr(data):
+    """Validate a frontmatter dict against the real schema; return error strings."""
+    validator = vd.core.make_validator(SCHEMA)
+    assert validator is not None, "jsonschema is required for these tests"
+    return vd.core.validate_against_schema(data, validator)
+
+
+def test_accepted_adr_is_valid():
+    assert _schema_errors_adr(_adr()) == []
+
+
+def test_proposed_adr_without_chosen_option_is_valid():
+    """A deferred ASR has no chosen option yet — that is the honest record."""
+    data = _adr(decision_status="proposed", chosen_option=None,
+                considered_options=None)
+    assert _schema_errors_adr(data) == []
+
+
+def test_accepted_adr_with_one_considered_option_is_rejected():
+    """The D1 guard: never a fabricated single-option decision record."""
+    assert _schema_errors_adr(_adr(considered_options=["Tauri"])) != []
+
+
+def test_accepted_adr_without_chosen_option_is_rejected():
+    assert _schema_errors_adr(_adr(chosen_option=None)) != []
+
+
+def test_proposed_adr_with_chosen_option_is_rejected():
+    """'Proposed' means undecided; a chosen option contradicts it."""
+    assert _schema_errors_adr(_adr(decision_status="proposed")) != []
+
+
+def test_adr_bad_decision_status_is_rejected():
+    assert _schema_errors_adr(_adr(decision_status="pending")) != []
+
+
+def test_component_carrying_decision_status_is_rejected():
+    """Branch isolation: decision_status is meaningless on a component."""
+    data = {
+        "id": "CMP-001", "type": "component", "title": "t", "description": "d",
+        "traces_from": [], "traces_to": {}, "status": "draft",
+        "confidence": "high", "created_at": "2026-08-03",
+        "responsibility": "r", "boundary": "internal", "depends_on": [],
+        "decision_status": "accepted",
+    }
+    assert _schema_errors_adr(data) != []
+
+
+def test_adr_id_pattern_accepted_by_schema():
+    raw = json.load(open(SCHEMA, encoding="utf-8"))
+    assert "ADR" in raw["properties"]["id"]["pattern"]
+    assert "adr" in raw["properties"]["type"]["enum"]
