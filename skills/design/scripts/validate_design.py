@@ -280,6 +280,21 @@ def cross_file_checks(files: List[DesignFile]) -> List[str]:
                         f"(expected FR/NFR/CON/BR/UC-###)"
                     )
 
+        # ADR invariant (D5a / D1): an accepted decision's chosen_option must
+        # be one of its own considered_options. agents/adr-generator.md
+        # asserts this but nothing previously enforced it.
+        chosen_option = fm.get("chosen_option")
+        considered_options = fm.get("considered_options")
+        if (
+            chosen_option is not None
+            and isinstance(considered_options, list)
+            and chosen_option not in considered_options
+        ):
+            f.errors.append(
+                f"chosen_option '{chosen_option}' is not in considered_options "
+                f"{considered_options}"
+            )
+
     return global_errors
 
 

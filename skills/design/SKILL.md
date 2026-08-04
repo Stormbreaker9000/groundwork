@@ -250,6 +250,12 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **Interfaces:**
 - IF-001 <title> — provider: CMP-XXX, interaction: synchronous | asynchronous
 
+**ADRs:**
+- ADR-001 <title> — decision_status: accepted | proposed
+
+**Decisions not recorded:**
+- <source> — <reason>, or "None"
+
 **Drivers:**
 - ASRs: [requirement ID → why it shapes structure]
 - Tradeoffs: [decision → gains vs. costs]
@@ -259,13 +265,25 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **Open Questions:** [Q-# items still open, or "None"]
 
 **⚠️ Triage before sign-off — review these specifically:**
-- **Low-confidence artifacts:** [each `confidence: low` CMP/IF ID with its one-line reason — or "None"]
+- **Low-confidence artifacts:** [each `confidence: low` CMP/IF/ADR ID with its one-line reason — or "None"]
 - **Open questions:** the items listed under **Open Questions** above.
 
   These are the uncertain items; confirm or correct *these* rather than re-scanning the whole set. The same low-confidence list is persisted as `review_queue` in `index.yaml`.
 
 **Next Step:** Implementation
 ```
+
+Render **ADRs** from `draft_adrs.adrs` — every ADR the generator emitted, with
+its `decision_status` so the user can see at a glance which decisions were
+actually recorded versus left pending. Render **Decisions not recorded** from
+`draft_adrs.skipped` — each entry's `source` and `reason`, or "None" when
+`skipped` is empty. This is the one point in the pipeline where `skipped`
+reaches a human: it is produced at Stage 9.5 and otherwise carried only as
+far as the formatter hand-off, so without this block a decision that did not
+become an ADR is visible nowhere the user will ever look. Surfacing it here,
+before any file is written, is also the only point at which it is actually
+actionable — the user can ask for it to be revisited before sign-off, not
+after.
 
 **Step 3 — Sign-off gate:**
 

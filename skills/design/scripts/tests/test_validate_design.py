@@ -9,6 +9,7 @@ and FAILS (non-zero exit) with a targeted message on each invalid fixture case,
 mirroring the M1 requirements suite.
 """
 import os
+import shutil
 
 import pytest
 
@@ -37,6 +38,19 @@ def test_valid_set_passes(capsys):
     assert "CMP-001" in out
     assert "CMP-002" in out
     assert "IF-001" in out
+
+
+def test_zero_adr_run_passes(tmp_path):
+    """Absent adr/ is a legal, complete result (STO-100 D1/spec 'Error
+    handling'): zero qualifying decisions must still exit 0, not just when
+    jsonschema/pyyaml are unavailable. Pinned because removing 'adr' from
+    SKIP_DIRNAMES is exactly the change that could regress every existing
+    design set, none of which has an adr/ directory."""
+    design_dir = tmp_path / "design"
+    shutil.copytree(VALID_DIR, design_dir)
+    shutil.rmtree(design_dir / "adr")
+    code = run(str(design_dir))
+    assert code == 0
 
 
 def test_skip_files_and_subtrees_are_ignored(capsys):
@@ -131,6 +145,30 @@ def test_dangling_provider_is_flagged():
     iface.frontmatter = {"id": "IF-001", "type": "interface", "provider": "CMP-404"}
     vd.cross_file_checks([iface])
     assert any("provider" in e and "CMP-404" in e for e in iface.errors)
+
+
+def test_chosen_option_not_in_considered_options_is_flagged():
+    """The D1/D5a invariant agents/adr-generator.md asserts ('chosen_option is
+    always also a member of considered_options') but does not itself enforce."""
+    adr = vd.DesignFile("mem://a")
+    adr.frontmatter = {
+        "id": "ADR-001", "type": "adr",
+        "considered_options": ["A", "B"], "chosen_option": "C",
+    }
+    vd.cross_file_checks([adr])
+    assert any(
+        "chosen_option" in e and "considered_options" in e for e in adr.errors
+    )
+
+
+def test_chosen_option_in_considered_options_is_not_flagged():
+    adr = vd.DesignFile("mem://a")
+    adr.frontmatter = {
+        "id": "ADR-001", "type": "adr",
+        "considered_options": ["A", "B"], "chosen_option": "A",
+    }
+    vd.cross_file_checks([adr])
+    assert not any("chosen_option" in e for e in adr.errors)
 
 
 def test_traces_from_bad_shape_is_flagged():

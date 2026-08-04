@@ -250,6 +250,7 @@ Headings are gated; content never is.
 | `### Consequences` good | `tradeoffs[].gains` |
 | `### Consequences` bad | `tradeoffs[].costs` |
 | `confidence` | `low` when the source ASR was `deferred_to_decision`, else `high` |
+| `affects` | for every requirement ID in the ADR's `traces_from`, look up the `critique_report.asr_coverage` row whose `requirement_id` matches, and take its `addressed_by`; union those lists across all of `traces_from` |
 
 ## Hand-off shapes
 
@@ -278,11 +279,21 @@ draft_adrs:
     - { source: "IF-002 async flush", reason: "structural tradeoff, no Q- ID" }
 ```
 
+`affects` is derived, not judged, and it uses only data Stage 9.5 already
+receives — no dispatch-contract change. For every requirement ID in the ADR's
+`traces_from`, look up the `critique_report.asr_coverage` row whose
+`requirement_id` matches, and take that row's `addressed_by` list; the union
+of those lists across every ID in `traces_from` is `affects`. Semantically,
+this names the artifacts that address the requirements the decision drove.
+The rule is the same for both sources: a deferred ASR's `traces_from` is a
+single ID (`[row.requirement_id]`), so its `affects` reduces to that one row's
+own `addressed_by` directly.
+
 `affects` is transient in exactly the way `consumed_by` already is in
 `draft_interfaces`: the orchestrator/formatter consumes it to back-fill the edge
 on the other side and it never reaches disk. This is what keeps D6 true while
-still letting the generator, which is the only agent that knows which artifacts
-a decision touched, communicate it.
+still letting the generator, which is the only agent that carries this value
+forward, communicate it.
 
 `skipped` exists so a decision that did not become an ADR is visible rather than
 silently dropped — the same honesty the example READMEs already practise.

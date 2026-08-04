@@ -992,7 +992,7 @@ implies an alternative at all, skip the entry.
 | `body.decision_drivers` | the `traces_from` IDs |
 | `body.consequences.good` | the entry's `gains` |
 | `body.consequences.bad` | the entry's `costs` |
-| `affects` | the CMP/IF IDs the decision shaped |
+| `affects` | the union of `critique_report.asr_coverage[].addressed_by` for every row whose `requirement_id` is in this ADR's `traces_from` — the artifacts that address the requirements this decision drove, not a field the generator fills from its own judgment |
 
 **This table describes source 1 only** — a resolved `Q-` arriving as a
 `drivers.tradeoffs` entry. A deferred ASR arrives in a different shape and has

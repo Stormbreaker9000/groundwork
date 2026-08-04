@@ -1,5 +1,5 @@
 ---
-description: Design artifact formatter. Takes the critic-approved design set and writes one atomic Markdown+YAML file per component and interface into the correct .sdlc/design subdirectory, named <ID>-<kebab-title>.md, plus the project-level assumptions.md, drivers.md, and index.yaml. Returns a formatter_result.
+description: Design artifact formatter. Takes the critic-approved design set and writes one atomic Markdown+YAML file per component, interface, and ADR into the correct .sdlc/design subdirectory, named <ID>-<kebab-title>.md, plus the project-level assumptions.md, drivers.md, and index.yaml, back-filling traces_to.adr on the artifacts each ADR affects. Returns a formatter_result.
 ---
 
 # Design Formatter
@@ -78,7 +78,16 @@ schema rejects a proposed ADR that claims a chosen option — a deferred
 decision has not been made, and writing one would misrepresent it.
 
 The body renders `entry.body` under the five MADR headings, in this order and
-with these exact strings:
+with these exact strings. Each heading's content comes from one `entry.body`
+key:
+
+| `entry.body` key | Heading |
+| --- | --- |
+| `context` | `## Context and Problem Statement` |
+| `decision_drivers` | `## Decision Drivers` |
+| `considered_options_detail` | `## Considered Options` |
+| `decision_outcome` | `## Decision Outcome` |
+| `consequences.good` / `consequences.bad` | `### Consequences` (rendered as Good/Bad sub-bullets under the one heading) |
 
 ```markdown
 # <ID>: <Title>
@@ -94,8 +103,27 @@ with these exact strings:
 ### Consequences
 ```
 
-The validator gates all five. `### Consequences` is H3 and sits under Decision
-Outcome.
+The validator gates all five headings **on every ADR, unconditionally** —
+`decision_status: proposed` exempts none of them. `### Consequences` is H3 and
+sits under Decision Outcome.
+
+**Write every heading even when its source key is absent.** A `proposed` ADR
+from a deferred ASR omits `chosen_option`, `considered_options_detail`, and
+`consequences` from `entry.body` entirely (D5a — nothing has been decided, so
+there are no alternatives or consequences to record yet). Writing the file
+without those headings would fail the structural gate and reopen the critique
+loop with no artifact left to revise. Instead, write the heading with a
+single honest placeholder line under it, in the same voice this repo already
+uses for `- None identified.` in empty `assumptions.md`/`drivers.md` sections:
+
+- `## Considered Options` with no `considered_options_detail` → `- None — no
+  alternatives are recorded yet.`
+- `### Consequences` with no `consequences` → `- None — the decision is
+  pending.`
+
+`## Decision Outcome` always has `decision_outcome` to render — a proposed
+ADR's `decision_outcome` states that the decision is pending — so this
+heading does not need a placeholder in practice, but never drop it either.
 
 ### Back-filling `traces_to.adr`
 

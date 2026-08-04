@@ -1,5 +1,5 @@
 ---
-description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF IDs, dispatches to the component and interface specialists, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
+description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF/ADR IDs, dispatches to the component and interface specialists and to the adr-generator, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
 ---
 
 # Design Orchestrator
@@ -474,14 +474,28 @@ section beats invented entries. The formatter writes `.sdlc/design/assumptions.m
 
 Dispatch `adr-generator` with the `design_context_artifact` you just assembled
 and the `critique_report` from Stage 8. It needs `drivers.tradeoffs` (which
-carries every resolved `Q-` decision) and `asr_coverage` (which carries the
-`deferred_to_decision` rows).
+carries every resolved `Q-` decision) and the full `asr_coverage` list — not
+only the `deferred_to_decision` rows. Every ADR, regardless of source, derives
+its `affects` by matching its `traces_from` IDs against each row's
+`requirement_id` in `asr_coverage` and taking the matching rows'
+`addressed_by`, so the generator needs the whole list to do that lookup, not
+just the deferred rows.
 
-**Allocate the ADR IDs before dispatching**, the same way you allocate CMP and
-IF blocks at Stage 4: zero-padded, categorical, starting at `ADR-001`. The
-generator never mints its own. Count the qualifying entries first — resolved
-`Q-` tradeoffs plus `deferred_to_decision` ASRs — and hand down a block that
-size.
+**Allocate the ADR IDs before dispatching**, zero-padded and categorical,
+starting at `ADR-001` — the same ID *format* CMP and IF blocks at Stage 4 use.
+The allocation mechanics differ: Stage 4's blocks are open-ended
+(`id_block: {prefix, start}`, and the specialist draws upward as it authors),
+while the ADR block is closed and pre-counted, because you size it before the
+generator runs. The generator never mints its own ID.
+
+Count the qualifying entries first — resolved `Q-` tradeoffs plus
+`deferred_to_decision` ASRs — and hand down a block that size. This count is
+necessarily an upper bound, not an exact size: the generator additionally
+skips an entry whose alternatives cannot be recovered (per D1), a test you
+cannot apply while counting, since it depends on parsing the entry's prose.
+Assign IDs in order to the ADRs the generator actually emits; unused IDs in
+the block are simply unused and leave no gap in the emitted sequence — do not
+renumber to close one.
 
 It returns:
 
@@ -502,7 +516,11 @@ lives once. This is the same transient-field handling as `consumed_by` in
 Validate before advancing:
 
 - Every `affects` entry names an artifact in the approved set. A dangling one
-  means re-dispatch, not a silent drop.
+  means re-dispatch, not a silent drop — but only once: if the re-dispatched
+  generator returns a dangling `affects` a second time, drop the offending
+  IDs from that ADR's `affects` and proceed rather than re-dispatching again.
+  An ADR with an incomplete edge is recoverable; an unbounded re-dispatch loop
+  is not.
 - Every `id` is one you allocated.
 - `adrs: []` is a legal, complete result. Nothing qualified; the formatter
   writes no `adr/` directory and the run proceeds normally. Do not treat an
@@ -517,8 +535,10 @@ decided, and the record that will hold the decision.
 
 ## Stage 10 — Format: the `formatter_result` hand-off
 
-Hand the approved artifact set and the `design_context_artifact` to
-`design-formatter`. It returns:
+Hand the approved artifact set, the `design_context_artifact`, and
+`draft_adrs` to `design-formatter` — all three. Omitting `draft_adrs` leaves
+the formatter with no ADRs to write and no `affects` data to back-fill
+`traces_to.adr` from. It returns:
 
 ```yaml
 formatter_result:
