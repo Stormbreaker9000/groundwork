@@ -1004,9 +1004,15 @@ status, and every artifact this pipeline generates starts at `draft`.
 
 ## The `affects` field is transient
 
-You are the only agent that knows which components and interfaces a decision
-shaped. Report them in `affects` so the formatter can populate
-`traces_to.adr` on those artifacts.
+`affects` is derived, not judged. For each requirement ID in the ADR's
+`traces_from`, find the `critique_report.asr_coverage` row with that
+`requirement_id` and take its `addressed_by` list; the union across all of them
+is `affects`. Semantically: the artifacts that address the requirements this
+decision drove. Report it so the formatter can populate `traces_to.adr` on those
+artifacts.
+
+Deriving it by judgment instead — naming the components you believe a decision
+shaped — is the same failure as inventing an option. The join is the rule.
 
 `affects` never reaches disk. The ADR↔artifact edge lives once, on
 `CMP/IF.traces_to.adr` — the same rule the schema already applies to
@@ -1096,7 +1102,12 @@ Stop and report to the orchestrator rather than guessing when:
 - a `drivers.tradeoffs` entry is malformed — missing `decision`, `gains`,
   `costs`, or `affected`
 - an `asr_coverage` row marked `deferred_to_decision` is malformed — missing
-  `requirement_id`, or carrying no `note` to build a context from
+  `requirement_id`
+
+A missing `note` is **not** a stopping condition: `design-critic.md` declares
+`note` optional, so a conforming critic can legally omit it. Fall back to the
+paired `Q-` entry's `statement` in `design_context_artifact.open_questions`, and
+skip the entry with a reason if that is missing too.
 - an `affected` list names a requirement ID in no recognised form
 - `affects` would name a component or interface absent from the artifact set
 
