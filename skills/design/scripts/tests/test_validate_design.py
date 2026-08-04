@@ -9,6 +9,7 @@ and FAILS (non-zero exit) with a targeted message on each invalid fixture case,
 mirroring the M1 requirements suite.
 """
 import os
+import shutil
 
 import pytest
 
@@ -39,16 +40,29 @@ def test_valid_set_passes(capsys):
     assert "IF-001" in out
 
 
+def test_zero_adr_run_passes(tmp_path):
+    """Absent adr/ is a legal, complete result (STO-100 D1/spec 'Error
+    handling'): zero qualifying decisions must still exit 0, not just when
+    jsonschema/pyyaml are unavailable. Pinned because removing 'adr' from
+    SKIP_DIRNAMES is exactly the change that could regress every existing
+    design set, none of which has an adr/ directory."""
+    design_dir = tmp_path / "design"
+    shutil.copytree(VALID_DIR, design_dir)
+    shutil.rmtree(design_dir / "adr")
+    code = run(str(design_dir))
+    assert code == 0
+
+
 def test_skip_files_and_subtrees_are_ignored(capsys):
-    """assumptions.md, index.yaml, and the adr/ + diagrams/ subtrees must not be
-    validated as artifacts."""
+    """assumptions.md, index.yaml and the diagrams/ subtree must not be
+    validated as artifacts. adr/ IS validated as of STO-100."""
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
     assert "drivers.md" not in out
     assert "index.yaml" not in out
-    assert "ADR-001" not in out
     assert "c4-container" not in out
+    assert "ADR-001" in out
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +80,10 @@ INVALID_CASES = {
     "assumptions_missing_heading": "missing required heading",
     "missing_drivers": "drivers artifact",
     "drivers_missing_heading": "missing required heading",
+    "adr_missing_heading": "missing required MADR heading",
+    "adr_bad_decision_status": "decision_status",
+    "adr_one_considered_option": "considered_options",
+    "adr_proposed_with_chosen_option": "chosen_option",
 }
 
 
@@ -84,7 +102,11 @@ def test_invalid_case_fails(case, needle, capsys):
 # Unit-level checks of the building blocks.
 # ---------------------------------------------------------------------------
 def test_prefix_to_type_mapping():
-    assert vd.PREFIX_TO_TYPE == {"CMP": "component", "IF": "interface"}
+    assert vd.PREFIX_TO_TYPE == {
+        "CMP": "component",
+        "IF": "interface",
+        "ADR": "adr",
+    }
 
 
 def test_extract_frontmatter_block():
@@ -123,6 +145,30 @@ def test_dangling_provider_is_flagged():
     iface.frontmatter = {"id": "IF-001", "type": "interface", "provider": "CMP-404"}
     vd.cross_file_checks([iface])
     assert any("provider" in e and "CMP-404" in e for e in iface.errors)
+
+
+def test_chosen_option_not_in_considered_options_is_flagged():
+    """The D1/D5a invariant agents/adr-generator.md asserts ('chosen_option is
+    always also a member of considered_options') but does not itself enforce."""
+    adr = vd.DesignFile("mem://a")
+    adr.frontmatter = {
+        "id": "ADR-001", "type": "adr",
+        "considered_options": ["A", "B"], "chosen_option": "C",
+    }
+    vd.cross_file_checks([adr])
+    assert any(
+        "chosen_option" in e and "considered_options" in e for e in adr.errors
+    )
+
+
+def test_chosen_option_in_considered_options_is_not_flagged():
+    adr = vd.DesignFile("mem://a")
+    adr.frontmatter = {
+        "id": "ADR-001", "type": "adr",
+        "considered_options": ["A", "B"], "chosen_option": "A",
+    }
+    vd.cross_file_checks([adr])
+    assert not any("chosen_option" in e for e in adr.errors)
 
 
 def test_traces_from_bad_shape_is_flagged():
@@ -330,3 +376,131 @@ def core_validator():
 
 def _schema_errors(validator, data):
     return vd.core.validate_against_schema(data, validator)
+
+
+# ---------------------------------------------------------------------------
+# ADR schema branch (STO-100)
+# ---------------------------------------------------------------------------
+import json  # `pytest` is already imported at the top of this file
+
+
+def _adr(**overrides):
+    """A minimal valid accepted-ADR frontmatter dict, with overrides applied."""
+    data = {
+        "id": "ADR-001",
+        "type": "adr",
+        "title": "Desktop runtime and UI shell",
+        "description": "Which runtime and UI shell the desktop app is built on.",
+        "traces_from": ["NFR-002", "CON-001"],
+        "traces_to": {},
+        "status": "draft",
+        "decision_status": "accepted",
+        "confidence": "high",
+        "created_at": "2026-08-03",
+        "considered_options": ["Tauri", "Electron", "native view per platform"],
+        "chosen_option": "Tauri",
+    }
+    data.update(overrides)
+    for key, value in list(overrides.items()):
+        if value is None:
+            del data[key]
+    return data
+
+
+def _schema_errors_adr(data):
+    """Validate a frontmatter dict against the real schema; return error strings."""
+    validator = vd.core.make_validator(SCHEMA)
+    assert validator is not None, "jsonschema is required for these tests"
+    return vd.core.validate_against_schema(data, validator)
+
+
+def test_accepted_adr_is_valid():
+    assert _schema_errors_adr(_adr()) == []
+
+
+def test_proposed_adr_without_chosen_option_is_valid():
+    """A deferred ASR has no chosen option yet — that is the honest record."""
+    data = _adr(decision_status="proposed", chosen_option=None,
+                considered_options=None)
+    assert _schema_errors_adr(data) == []
+
+
+def test_accepted_adr_with_one_considered_option_is_rejected():
+    """The D1 guard: never a fabricated single-option decision record."""
+    assert _schema_errors_adr(_adr(considered_options=["Tauri"])) != []
+
+
+def test_accepted_adr_without_chosen_option_is_rejected():
+    assert _schema_errors_adr(_adr(chosen_option=None)) != []
+
+
+def test_proposed_adr_with_chosen_option_is_rejected():
+    """'Proposed' means undecided; a chosen option contradicts it."""
+    assert _schema_errors_adr(_adr(decision_status="proposed")) != []
+
+
+def test_adr_bad_decision_status_is_rejected():
+    assert _schema_errors_adr(_adr(decision_status="pending")) != []
+
+
+def test_component_carrying_decision_status_is_rejected():
+    """Branch isolation: decision_status is meaningless on a component."""
+    data = {
+        "id": "CMP-001", "type": "component", "title": "t", "description": "d",
+        "traces_from": [], "traces_to": {}, "status": "draft",
+        "confidence": "high", "created_at": "2026-08-03",
+        "responsibility": "r", "boundary": "internal", "depends_on": [],
+        "decision_status": "accepted",
+    }
+    assert _schema_errors_adr(data) != []
+
+
+def test_adr_id_pattern_accepted_by_schema():
+    raw = json.load(open(SCHEMA, encoding="utf-8"))
+    assert "ADR" in raw["properties"]["id"]["pattern"]
+    assert "adr" in raw["properties"]["type"]["enum"]
+
+
+# ---------------------------------------------------------------------------
+# MADR heading gate (STO-100)
+# ---------------------------------------------------------------------------
+def test_adr_headings_all_present_passes(tmp_path):
+    body = (
+        "# ADR-001: X\n\n"
+        "## Context and Problem Statement\nc\n\n"
+        "## Decision Drivers\n- NFR-002\n\n"
+        "## Considered Options\n- A\n- B\n\n"
+        "## Decision Outcome\nA\n\n"
+        "### Consequences\n- good: g\n- bad: b\n"
+    )
+    path = tmp_path / "ADR-001-x.md"
+    path.write_text(body, encoding="utf-8")
+    assert vd.check_adr_headings(str(path)) == []
+
+
+def test_adr_missing_heading_is_flagged(tmp_path):
+    body = (
+        "# ADR-001: X\n\n"
+        "## Context and Problem Statement\nc\n\n"
+        "## Decision Drivers\n- NFR-002\n\n"
+        "## Considered Options\n- A\n- B\n\n"
+        "## Decision Outcome\nA\n"
+    )
+    path = tmp_path / "ADR-001-x.md"
+    path.write_text(body, encoding="utf-8")
+    errors = vd.check_adr_headings(str(path))
+    assert any("Consequences" in e for e in errors)
+
+
+def test_adr_non_utf8_is_reported_not_raised(tmp_path):
+    path = tmp_path / "ADR-001-x.md"
+    path.write_bytes(b"\xff\xfe## Decision Outcome\n")
+    errors = vd.check_adr_headings(str(path))
+    assert errors and any("could not read" in e for e in errors)
+
+
+def test_adr_prefix_type_mismatch_is_flagged():
+    df = vd.DesignFile("mem://a")
+    df.frontmatter = {"id": "ADR-001", "type": "component"}
+    vd.cross_file_checks([df])
+    assert any("implies type" in e for e in df.errors)

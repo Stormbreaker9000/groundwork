@@ -18,15 +18,16 @@
   "properties": {
     "id": {
       "type": "string",
-      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: CMP->component, IF->interface. An optional uppercase category infix is allowed (e.g. CMP-AUTH-004).",
-      "pattern": "^(CMP|IF)(-[A-Z0-9]+)*-[0-9]{3,}$"
+      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: CMP->component, IF->interface, ADR->adr. An optional uppercase category infix is allowed (e.g. CMP-AUTH-004).",
+      "pattern": "^(CMP|IF|ADR)(-[A-Z0-9]+)*-[0-9]{3,}$"
     },
     "type": {
       "type": "string",
       "description": "Design-artifact category.",
       "enum": [
         "component",
-        "interface"
+        "interface",
+        "adr"
       ]
     },
     "title": {
@@ -238,6 +239,103 @@
             "uniqueItems": true
           }
         }
+      }
+    }
+    ,
+    {
+      "$comment": "ADR branch (STO-100). decision_status is separate from status because a JSON Schema branch can only NARROW an enum: MADR's 'accepted' is absent from the base status enum, so it could never validate there, and widening the base would put decision vocabulary on every component and interface. The nested allOf then splits on decision_status itself — an accepted decision must name what it chose and what it beat; a proposed one (a deferred ASR) must not claim a choice it has not made.",
+      "if": {
+        "properties": {
+          "type": {
+            "const": "adr"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "decision_status"
+        ],
+        "properties": {
+          "decision_status": {
+            "type": "string",
+            "description": "MADR decision status. Distinct from `status`, which is the artifact lifecycle.",
+            "enum": [
+              "proposed",
+              "rejected",
+              "accepted",
+              "deprecated",
+              "superseded"
+            ]
+          },
+          "considered_options": {
+            "type": "array",
+            "description": "The options weighed. Never fabricated: when a second option cannot be recovered from the recorded decision, no ADR is emitted at all.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "chosen_option": {
+            "type": "string",
+            "description": "The option taken. Absent while the decision is still proposed.",
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "$comment": "A settled decision names what it chose and at least one alternative it beat.",
+            "if": {
+              "properties": {
+                "decision_status": {
+                  "enum": [
+                    "accepted",
+                    "rejected",
+                    "deprecated",
+                    "superseded"
+                  ]
+                }
+              },
+              "required": [
+                "decision_status"
+              ]
+            },
+            "then": {
+              "required": [
+                "chosen_option",
+                "considered_options"
+              ],
+              "properties": {
+                "considered_options": {
+                  "minItems": 2
+                }
+              }
+            }
+          },
+          {
+            "$comment": "A proposed decision has not been taken; claiming a chosen option would misrepresent it.",
+            "if": {
+              "properties": {
+                "decision_status": {
+                  "const": "proposed"
+                }
+              },
+              "required": [
+                "decision_status"
+              ]
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "chosen_option"
+                ]
+              }
+            }
+          }
+        ]
       }
     }
   ],

@@ -1,5 +1,5 @@
 ---
-description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF IDs, dispatches to the component and interface specialists, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
+description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF/ADR IDs, dispatches to the component and interface specialists and to the adr-generator, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
 ---
 
 # Design Orchestrator
@@ -37,16 +37,20 @@ design_context  (from the interview)
                     (judgment only) → critique_report
         │
         ▼  on pass: orchestrator synthesises assumptions + drivers
-[ design-formatter ]   CMP/IF files + assumptions.md + drivers.md + index.yaml
+   [ adr-generator ]   resolved Q- decisions + deferred ASRs → draft_adrs
+        │
+        ▼
+[ design-formatter ]   CMP/IF/ADR files + assumptions.md + drivers.md + index.yaml
+                    + traces_to.adr back-fill
                     + validate_design.py hard gate (the structural gate)
         │
         ▼
-   [adr-generator]  ← STO-100 slot        [c4-generator]  ← STO-101 slot
+   [c4-generator]  ← STO-101 slot
 ```
 
-`component-specialist`, `interface-specialist`, `design-critic`, and
-`design-formatter` are the agents you dispatch to. `adr-generator` and
-`c4-generator` do not exist yet; Stages 11 and 12 declare their slots.
+`component-specialist`, `interface-specialist`, `design-critic`,
+`adr-generator`, and `design-formatter` are the agents you dispatch to.
+`c4-generator` does not exist yet; Stage 12 declares its slot.
 
 ## Stage 1 — Consume the design context
 
@@ -379,8 +383,9 @@ Gate handling:
 - Any ASR marked **`unaddressed`** fails the gate. Re-dispatch to the owning
   specialist with the finding attached.
 - **`deferred_to_decision`** passes the gate but forces a `Q-` open question in the
-  `design_context_artifact` — the honest disposition until STO-100 exists to write
-  the ADR, and it means the deferral is recorded rather than lost.
+  `design_context_artifact`, so the deferral is recorded rather than lost. It also
+  feeds Stage 9.5: every `deferred_to_decision` ASR gets an ADR (`decision_status:
+  proposed`) in addition to its `Q-`, not instead of it.
 - `gate: fail`, or any `per_artifact` verdict of `revise`, means re-dispatch **only
   the affected artifacts** to their owning specialist with the critic's findings
   attached, then re-run the critic on the full set.
@@ -465,10 +470,75 @@ section beats invented entries. The formatter writes `.sdlc/design/assumptions.m
 `.sdlc/design/drivers.md` (gated on `## Architecturally Significant Requirements` /
 `## Tradeoffs` / `## Sensitivity Points`). Headings are gated; content never is.
 
+## Stage 9.5 — ADR generation
+
+Dispatch `adr-generator` with the `design_context_artifact` you just assembled
+and the `critique_report` from Stage 8. It needs `drivers.tradeoffs` (which
+carries every resolved `Q-` decision) and the full `asr_coverage` list — not
+only the `deferred_to_decision` rows. Every ADR, regardless of source, derives
+its `affects` by matching its `traces_from` IDs against each row's
+`requirement_id` in `asr_coverage` and taking the matching rows'
+`addressed_by`, so the generator needs the whole list to do that lookup, not
+just the deferred rows.
+
+**Allocate the ADR IDs before dispatching**, zero-padded and categorical,
+starting at `ADR-001` — the same ID *format* CMP and IF blocks at Stage 4 use.
+The allocation mechanics differ: Stage 4's blocks are open-ended
+(`id_block: {prefix, start}`, and the specialist draws upward as it authors),
+while the ADR block is closed and pre-counted, because you size it before the
+generator runs. The generator never mints its own ID.
+
+Count the qualifying entries first — resolved `Q-` tradeoffs plus
+`deferred_to_decision` ASRs — and hand down a block that size. This count is
+necessarily an upper bound, not an exact size: the generator additionally
+skips an entry whose alternatives cannot be recovered (per D1), a test you
+cannot apply while counting, since it depends on parsing the entry's prose.
+Assign IDs in order to the ADRs the generator actually emits; unused IDs in
+the block are simply unused and leave no gap in the emitted sequence — do not
+renumber to close one.
+
+It returns:
+
+```yaml
+draft_adrs:
+  adrs: [ { id, title, description, traces_from, decision_status,
+            confidence, considered_options, chosen_option, body, affects } ]
+  skipped: [ { source, reason } ]
+```
+
+**`affects` is transient.** Carry it to the formatter, which uses it to
+populate `traces_to.adr` on the named components and interfaces, then drops it.
+It never reaches disk: the ADR↔artifact edge lives once, on
+`CMP/IF.traces_to.adr`, exactly as the `CMP.depends_on -> IF.provider` edge
+lives once. This is the same transient-field handling as `consumed_by` in
+`draft_interfaces` at Stage 6.
+
+Validate before advancing:
+
+- Every `affects` entry names an artifact in the approved set. A dangling one
+  means re-dispatch, not a silent drop — but only once: if the re-dispatched
+  generator returns a dangling `affects` a second time, drop the offending
+  IDs from that ADR's `affects` and proceed rather than re-dispatching again.
+  An ADR with an incomplete edge is recoverable; an unbounded re-dispatch loop
+  is not.
+- Every `id` is one you allocated.
+- `adrs: []` is a legal, complete result. Nothing qualified; the formatter
+  writes no `adr/` directory and the run proceeds normally. Do not treat an
+  empty set as a failure and do not re-dispatch to get a bigger one.
+
+**A `deferred_to_decision` ASR now produces both an ADR and its `Q-` open
+question.** The ADR records the decision as `proposed`; the `Q-` keeps the
+question visible in `assumptions.md`. Stage 9's rule that a
+`deferred_to_decision` ASR forces a `Q-` entry is unchanged — the ADR is
+additional, not a replacement. They are two views of one gap: what must be
+decided, and the record that will hold the decision.
+
 ## Stage 10 — Format: the `formatter_result` hand-off
 
-Hand the approved artifact set and the `design_context_artifact` to
-`design-formatter`. It returns:
+Hand the approved artifact set, the `design_context_artifact`, and
+`draft_adrs` to `design-formatter` — all three. Omitting `draft_adrs` leaves
+the formatter with no ADRs to write and no `affects` data to back-fill
+`traces_to.adr` from. It returns:
 
 ```yaml
 formatter_result:
@@ -486,13 +556,18 @@ sign-off and the commit. **You never commit.** This is conditional on
 failure that re-opens the critique loop instead of reaching sign-off, so
 nothing here reports to the skill until a clean re-run confirms the write.
 
-## Stage 11 — ADR generation (SLOT — owned by STO-100)
+## Stage 11 — (retired)
 
-Not implemented. When STO-100 lands, this stage runs after the formatter and
-receives the written artifact set plus `design_context_artifact.drivers`, and
-returns the ADR files it wrote for `traces_to.adr` back-population. Until then,
-a `deferred_to_decision` ASR is recorded as a `Q-` open question in
-`assumptions.md` instead of an ADR. Do not invent ADR files.
+ADR generation was originally slotted here, after the formatter. It runs at
+Stage 9.5 instead, before the formatter.
+
+The reason is the structural gate. At Stage 11 the generator would be a second
+writer: it would re-open CMP/IF files the formatter had already written and the
+validator had already passed, patch `traces_to.adr` into them, and re-run the
+gate. STO-99 and STO-215 both landed fixes whose entire point was to make the
+formatter the single writer and the single structural gate. Everything the
+generator needs exists at Stage 9, and nothing it produces is needed before
+Stage 10, so the earlier placement costs nothing and keeps one writer.
 
 ## Stage 12 — C4 diagram generation (SLOT — owned by STO-101)
 
