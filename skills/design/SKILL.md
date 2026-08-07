@@ -333,8 +333,14 @@ addresses, and an ADR body driver missing from its own frontmatter.
 Those warnings arrive **after** the write, not at the Step 3 sign-off. That
 ordering is inherent — nothing is on disk before the formatter runs, and
 computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
-Surface them to the user with the post-write report; they are advisory, and
-acting on them is the user's call.
+
+**Step 4b — Report traceability warnings:**
+
+Read `formatter_result.traceability_rerun.warnings` (empty if the sweep was
+clean, not skipped) and surface them to the user before committing: each
+`uncovered-fr` or `adr-driver-untraced` line, as returned. They are advisory
+and do not block the commit — acting on them is the user's call, not a
+condition of Step 5.
 
 **Step 5 — Commit:**
 

@@ -548,13 +548,21 @@ formatter_result:
   context_artifact: ".sdlc/design/assumptions.md"
   drivers: ".sdlc/design/drivers.md"
   validator_rerun: { exit_code: 0 }
+  traceability_rerun: { exit_code: 0, warnings: [] }
 ```
 
 Report the `formatter_result` back to the caller (the skill), which owns the
-sign-off and the commit. **You never commit.** This is conditional on
-`validator_rerun.exit_code` being `0` — see Stage 8: a non-zero exit is a hard
-failure that re-opens the critique loop instead of reaching sign-off, so
-nothing here reports to the skill until a clean re-run confirms the write.
+sign-off and the commit. **You never commit.** This is conditional on BOTH
+`validator_rerun.exit_code` AND `traceability_rerun.exit_code` being `0` — see
+Stage 8: a non-zero `validator_rerun` is a hard failure that re-opens the
+critique loop instead of reaching sign-off. A non-zero `traceability_rerun` is
+the same kind of hard failure, for the same reason — the formatter only runs
+it after `validator_rerun.exit_code` is `0`, so a non-zero `traceability_rerun`
+means the write is structurally valid but cites requirements or ADR drivers
+that do not resolve, or leaves a requirement's `traces_to.design` dangling.
+Neither one reaches sign-off until a clean re-run confirms the write.
+`traceability_rerun.warnings` (`uncovered-fr`, `adr-driver-untraced`) do not
+block sign-off; report them to the skill for the user, per Stage 8.
 
 ## Stage 11 — (retired)
 

@@ -24,7 +24,13 @@ only needs frontmatter parsing — the same fallback applies.
 ## Structural validator — `validate_design.py`
 
 ```bash
+# Validate the default location (.sdlc/design):
+python3 validate_design.py
+
+# Validate a specific directory:
 python3 validate_design.py .sdlc/design
+
+# Only print failures + summary:
 python3 validate_design.py --quiet .sdlc/design
 ```
 
@@ -38,10 +44,19 @@ Reads both stage directories at once and resolves the edge between them.
 the requirement exists; `validate_requirements.py` excludes `traces_to` from
 its dangling-reference sweep. This tool is what closes that gap.
 
+`design_dir` defaults to `.sdlc/design` and `--requirements` defaults to
+`.sdlc/requirements`, both resolved relative to the current working
+directory (project root, in normal use) — same defaulting convention as
+`validate_design.py` above.
+
 ```bash
+# Validate the default locations (.sdlc/design <-> .sdlc/requirements):
+python3 validate_traceability.py
+
 python3 validate_traceability.py .sdlc/design                      # human report
 python3 validate_traceability.py --json .sdlc/design               # machine-readable
 python3 validate_traceability.py --strict .sdlc/design             # warnings block too
+python3 validate_traceability.py --quiet .sdlc/design              # only the summary line
 python3 validate_traceability.py .sdlc/design --requirements other/reqs
 ```
 

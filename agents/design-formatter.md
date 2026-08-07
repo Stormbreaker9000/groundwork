@@ -400,23 +400,9 @@ report it and do not treat the write as done. Warnings (`uncovered-fr`,
 `adr-driver-untraced`) do not exit non-zero; carry them forward so the skill
 can surface them.
 
-Report both outcomes in `formatter_result`:
-
-```yaml
-formatter_result:
-  validation:
-    structural:
-      command: "python3 skills/design/scripts/validate_design.py .sdlc/design"
-      exit_code: 0
-    traceability:
-      command: "python3 skills/design/scripts/validate_traceability.py .sdlc/design --requirements .sdlc/requirements"
-      exit_code: 0
-      warnings:
-        - "uncovered-fr FR-007 — no component traces_from this functional requirement"
-```
-
-`warnings` is a list of the warning-severity lines the run reported, or empty.
-An empty list means the sweep was clean, not that it was skipped.
+Record its exit code and any warning lines in `formatter_result.traceability_rerun`
+— sibling to `validator_rerun`, same failure handling. See `## Output` for the
+full shape.
 
 ## Output
 
@@ -430,12 +416,23 @@ formatter_result:
   context_artifact: ".sdlc/design/assumptions.md"
   drivers: ".sdlc/design/drivers.md"
   validator_rerun: { exit_code: 0 }
+  traceability_rerun:
+    exit_code: 0
+    warnings:
+      - "uncovered-fr FR-007 — no component traces_from this functional requirement"
 ```
 
 `review_queue_count` is the number of `confidence: low` entries in
 `index.yaml`'s `review_queue` — it must equal what you actually wrote there.
 Report this back to the orchestrator, which forwards it to the skill. The
 skill owns sign-off and the commit.
+
+`traceability_rerun.exit_code` is `validate_traceability.py`'s exit code —
+run only after `validator_rerun.exit_code` is `0` — and is a hard failure the
+same as `validator_rerun` if non-zero. `traceability_rerun.warnings` is the
+list of warning-severity lines the run reported (`uncovered-fr`,
+`adr-driver-untraced`), or empty; an empty list means the sweep was clean,
+not that it was skipped.
 
 ## Gotchas
 
@@ -464,3 +461,7 @@ skill owns sign-off and the commit.
   pipeline's structural gate — the critic never ran it, so a clean
   `critique_report` does not mean the set is structurally valid until this
   re-run says so.
+- Only run `validate_traceability.py` after `validate_design.py` exits 0, and
+  if it exits non-zero, report the failure in `traceability_rerun` the same
+  way — do not patch around it. Its warnings do not block, but do not drop
+  them either; carry them into `traceability_rerun.warnings`.
