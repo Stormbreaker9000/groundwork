@@ -159,3 +159,49 @@ def test_interface_only_coverage_still_warns(capsys):
     assert "uncovered-fr" in out
     assert "FR-001" in out
     assert "Summary: 0 error(s), 1 warning(s)." in out
+
+
+# ---------------------------------------------------------------------------
+# adr-driver-unresolved (error) / adr-driver-untraced (warn)
+# ---------------------------------------------------------------------------
+def test_unresolved_adr_driver_is_an_error(capsys):
+    code = run("adr_driver_unresolved")
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "adr-driver-unresolved" in out
+    assert "NFR-404" in out
+    assert "Summary: 1 error(s), 0 warning(s)." in out
+
+
+def test_nfr_prefix_is_not_scanned_as_an_fr(capsys):
+    """'NFR-001' must not also match as 'FR-001'. If it did, the clean driver
+    would produce a phantom finding for a requirement nobody named."""
+    run("adr_driver_unresolved")
+    out = capsys.readouterr().out
+    assert "FR-001'" not in out
+
+
+def test_untraced_adr_driver_is_a_warning(capsys):
+    code = run("adr_driver_untraced")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "adr-driver-untraced" in out
+    assert "CON-001" in out
+    assert "Summary: 0 error(s), 1 warning(s)." in out
+
+
+def test_adr_driver_check_accepts_any_requirement_type(capsys):
+    """CON-001 resolves, so it is a warning about drift -- not an error about
+    being the wrong type. agents/adr-generator.md emits [NFR-002, CON-001]
+    (spec D5)."""
+    run("adr_driver_untraced")
+    out = capsys.readouterr().out
+    assert "adr-driver-unresolved" not in out
+
+
+def test_decision_drivers_section_stops_at_the_next_h2():
+    """IDs under later headings are not decision drivers."""
+    path = os.path.join(
+        FIXTURES, "adr_driver_untraced", "design", "adr", "ADR-001-single-writer-db.md"
+    )
+    assert vt.extract_decision_drivers(path) == ["NFR-001", "CON-001"]

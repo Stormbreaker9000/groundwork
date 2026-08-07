@@ -212,6 +212,97 @@ def rule_uncovered_fr(
     return findings
 
 
+# vd.REQUIREMENT_ID_RE is anchored with ^...$ and cannot scan a line, so the
+# body scan needs its own pattern. The (?<!\w) guard is what stops 'NFR-001'
+# also matching as 'FR-001'. 'ADR' is deliberately absent from the
+# alternation: an ADR cross-reference in the prose is not a requirement.
+REQUIREMENT_ID_SCAN_RE = re.compile(
+    r"(?<!\w)(?:FR|NFR|CON|BR|UC)(?:-[A-Z0-9]+)*-[0-9]{3,}(?!\w)"
+)
+
+DECISION_DRIVERS_HEADING = "## Decision Drivers"
+
+
+def extract_decision_drivers(path: str) -> List[str]:
+    """Return the requirement IDs named under '## Decision Drivers', in order.
+
+    The section runs from the heading line to the next '## ' line or EOF. An
+    H3 such as '### Consequences' does not terminate it, because '^## ' needs
+    a space as the third character.
+
+    Returns [] when the heading is absent: validate_design.py gates the five
+    MADR headings, so a missing one is that tool's finding, not ours.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    match = re.search(
+        rf"^{re.escape(DECISION_DRIVERS_HEADING)}\s*$", text, re.MULTILINE
+    )
+    if not match:
+        return []
+    rest = text[match.end():]
+    nxt = re.search(r"^## ", rest, re.MULTILINE)
+    section = rest[: nxt.start()] if nxt else rest
+
+    ordered: List[str] = []
+    seen: set = set()
+    for m in REQUIREMENT_ID_SCAN_RE.finditer(section):
+        if m.group(0) not in seen:
+            seen.add(m.group(0))
+            ordered.append(m.group(0))
+    return ordered
+
+
+def rule_adr_drivers(
+    design_index: Dict[str, DesignArtifact],
+    req_index: Dict[str, Requirement],
+    design_dir: str,
+) -> List[Finding]:
+    """Check the IDs an ADR names under '## Decision Drivers'.
+
+    agents/adr-generator.md derives body.decision_drivers as 'the traces_from
+    IDs', so the two are the same list written twice. An unresolvable ID is an
+    error; a resolving one absent from frontmatter means they have drifted.
+
+    Deliberately one-directional: an ID in frontmatter but missing from the
+    body is a rendering gap the formatter owns, not a traceability defect
+    (spec D5).
+    """
+    findings: List[Finding] = []
+    for art in sorted(design_index.values(), key=lambda a: a.design_id):
+        if art.type != "adr":
+            continue
+        traced = set(art.traces_from)
+        for driver in extract_decision_drivers(os.path.join(design_dir, art.path)):
+            if driver not in req_index:
+                findings.append(Finding(
+                    rule="adr-driver-unresolved",
+                    severity=ERROR,
+                    artifact_id=art.design_id,
+                    path=art.path,
+                    message=(
+                        f"'{DECISION_DRIVERS_HEADING}' names '{driver}', "
+                        f"which is not a known requirement id"
+                    ),
+                ))
+            elif driver not in traced:
+                findings.append(Finding(
+                    rule="adr-driver-untraced",
+                    severity=WARN,
+                    artifact_id=art.design_id,
+                    path=art.path,
+                    message=(
+                        f"'{DECISION_DRIVERS_HEADING}' names '{driver}', "
+                        f"which is absent from frontmatter traces_from"
+                    ),
+                ))
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -225,6 +316,7 @@ def collect_findings(
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
     findings.extend(rule_uncovered_fr(design_index, req_index))
+    findings.extend(rule_adr_drivers(design_index, req_index, design_dir))
 
     return (
         findings,
