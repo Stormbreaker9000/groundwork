@@ -171,6 +171,47 @@ def rule_dangling_trace(
     return findings
 
 
+# A `wont` requirement having no component is the correct outcome, and an
+# obsolete one is not part of the system. Both are excluded from the sweep
+# entirely rather than warned about — warning trains the reader to ignore the
+# rule (spec D4).
+COVERAGE_EXCLUDED_PRIORITIES = {"wont"}
+COVERAGE_EXCLUDED_STATUSES = {"obsolete"}
+
+
+def rule_uncovered_fr(
+    design_index: Dict[str, DesignArtifact], req_index: Dict[str, Requirement]
+) -> List[Finding]:
+    """Every functional requirement must be cited by at least one component.
+
+    Components only. An FR is behaviour and behaviour is owned by a component,
+    so an interface or ADR citing it is not coverage (spec D4).
+    """
+    covered: set = set()
+    for art in design_index.values():
+        if art.type == "component":
+            covered.update(art.traces_from)
+
+    findings: List[Finding] = []
+    for req in sorted(req_index.values(), key=lambda r: r.req_id):
+        if req.type != "functional":
+            continue
+        if req.priority in COVERAGE_EXCLUDED_PRIORITIES:
+            continue
+        if req.status in COVERAGE_EXCLUDED_STATUSES:
+            continue
+        if req.req_id in covered:
+            continue
+        findings.append(Finding(
+            rule="uncovered-fr",
+            severity=WARN,
+            artifact_id=req.req_id,
+            path=req.path,
+            message="no component traces_from this functional requirement",
+        ))
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -183,6 +224,7 @@ def collect_findings(
 
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
+    findings.extend(rule_uncovered_fr(design_index, req_index))
 
     return (
         findings,

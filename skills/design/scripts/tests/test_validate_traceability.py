@@ -112,3 +112,50 @@ def test_unparseable_file_is_skipped_with_a_header_note(capsys):
     assert code == 0, out
     assert "1 file(s) skipped (unparseable frontmatter)" in out
     assert "Indexed 0 design artifact(s), 1 requirement(s)." in out
+
+
+# ---------------------------------------------------------------------------
+# uncovered-fr (warn)
+# ---------------------------------------------------------------------------
+def test_uncovered_fr_is_a_warning_and_does_not_block(capsys):
+    code = run("uncovered_fr")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "WARN" in out
+    assert "uncovered-fr" in out
+    assert "FR-002" in out
+    assert "Summary: 0 error(s), 1 warning(s)." in out
+
+
+def test_uncovered_fr_blocks_under_strict(capsys):
+    code = run("uncovered_fr", "--strict")
+    assert code == 1, capsys.readouterr().out
+
+
+def test_covered_fr_is_not_flagged(capsys):
+    run("uncovered_fr")
+    out = capsys.readouterr().out
+    assert "FR-001" not in out
+
+
+def test_wont_and_obsolete_frs_are_excluded_entirely(capsys):
+    """Not warned about, not counted. A `wont` requirement having no component
+    is the correct outcome, and warning about it trains the reader to ignore
+    the rule (spec D4)."""
+    code = run("excluded_fr")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "Summary: 0 error(s), 0 warning(s)." in out
+    assert "FR-002" not in out
+    assert "FR-003" not in out
+
+
+def test_interface_only_coverage_still_warns(capsys):
+    """An FR is behaviour, and behaviour is owned by a component. An interface
+    citing it is not coverage (spec D4)."""
+    code = run("fr_covered_by_interface_only")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "uncovered-fr" in out
+    assert "FR-001" in out
+    assert "Summary: 0 error(s), 1 warning(s)." in out
