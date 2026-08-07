@@ -316,6 +316,49 @@ critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema`
 for the install and fallback details (the design validator shares the same
 dependency story).
 
+The formatter then runs the cross-artifact validator, which resolves the
+requirement↔design edge neither structural validator checks:
+
+```bash
+python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+  --requirements .sdlc/requirements
+```
+
+It must also exit 0. Three of its rules are errors — a design artifact citing
+a requirement that does not exist, an ADR naming an unresolvable decision
+driver, and a requirement whose `traces_to.design` names a design artifact
+that does not exist. Two are warnings that do not block: an FR no component
+addresses, and an ADR body driver missing from its own frontmatter.
+
+The three errors do not share one fix:
+
+- `dangling-trace` and `adr-driver-unresolved` flag a **design artifact**.
+  Fix them the same way a `validate_design.py` failure is fixed: re-dispatch
+  the named artifacts to their owning specialist through the critique loop,
+  then re-run until clean.
+- `dangling-reverse-trace` flags a **requirement** file, and this stage never
+  writes into `.sdlc/requirements/` — the requirement→design edge is stored
+  once, on `design.traces_from`. So there is nothing to re-dispatch and no
+  loop to run. **Report it to the user and stop**, naming the requirement ID
+  and its file path: the fix is to clear or correct that requirement's
+  `traces_to.design`, which holds design-artifact IDs (`CMP-`/`IF-`/`ADR-`)
+  only, and then re-run the design stage. Requirement sets written before
+  this rule existed can carry *requirement* IDs there, which is precisely
+  what it catches — so on an older project, expect this one and expect the
+  fix to belong to the requirements stage, not this one.
+
+Those warnings arrive **after** the write, not at the Step 3 sign-off. That
+ordering is inherent — nothing is on disk before the formatter runs, and
+computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
+
+**Step 4b — Report traceability warnings:**
+
+Read `formatter_result.traceability_rerun.warnings` (empty if the sweep was
+clean, not skipped) and surface them to the user before committing: each
+`uncovered-fr` or `adr-driver-untraced` line, as returned. They are advisory
+and do not block the commit — acting on them is the user's call, not a
+condition of Step 5.
+
 **Step 5 — Commit:**
 
 ```bash
@@ -345,6 +388,11 @@ This stage does not write C4 diagrams. `.sdlc/design/diagrams/` is a declared
 dispatch slot owned by STO-101 — an absent `diagrams/` directory after this
 skill runs is expected, not a bug.
 
-This stage also does not resolve cross-artifact traceability (`traces_from`
-resolution, dependency-cycle detection, orphan-interface detection) — that is
-STO-102's and STO-208's territory, not this skill's.
+Cross-artifact traceability *is* resolved, but not by this skill's judgment —
+`validate_traceability.py` runs at Step 4 as a second hard gate and owns
+`traces_from` resolution, FR coverage, ADR decision-driver resolution, and
+`traces_to.design` resolution.
+
+What is still not produced here: dependency-cycle detection, orphan-interface
+detection, and prose-quality sweeps over design artifacts. Those are STO-208's
+content linter, per `agents/design-critic.md`'s *Scope boundaries*.

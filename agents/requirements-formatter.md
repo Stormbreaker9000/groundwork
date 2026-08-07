@@ -78,13 +78,29 @@ Rules that keep the validator green:
   optional keys `design`/`tests`/`code`, each a list of strings.
 - Do not add `source`, `owner`, `version`, `nfr_links`, `history`, or `risk` —
   these are not in the locked schema.
+- Do not add `applies_to` either — it is the constraint/business-rule
+  specialist's transient back-fill signal (see "Populate traceability" below),
+  never a schema field.
 
 ## Populate traceability
 
 Before writing, reconcile traceability so the matrix is derivable and the
 validator's dangling-reference check passes:
-- Keep links bidirectional: if `BR-001` lists `FR-002` under its `traces_to`,
-  ensure `FR-002` lists `BR-001` in `traces_from` (and vice versa).
+- **Back-fill from `applies_to`.** Constraints and business rules arrive from
+  the constraint specialist carrying a transient `applies_to` field (see
+  `constraint-specialist.md`, "Tracing — mandatory") listing the requirement
+  IDs they bound or implement. For every item that carries `applies_to`,
+  append that item's own ID to the `traces_from` of each requirement named in
+  it, then delete `applies_to` from the item before you write its file. This is
+  the only bidirectional-link mechanism for these edges — do not additionally
+  look for requirement IDs under any item's `traces_to` for this purpose;
+  `traces_to.design`/`tests`/`code` never hold requirement IDs, only
+  design-artifact IDs, test references, and code references respectively.
+  **Stripping `applies_to` matters, not just tidiness**: `requirement.schema.json`
+  sets `additionalProperties: false`, so a leaked `applies_to` fails
+  `validate_requirements.py` outright — that hard failure is the safety net if
+  this step is skipped, and it is far cheaper to strip the field here than to
+  chase the resulting non-zero exit back to its source.
 - Drop or repair any reference whose target ID is not in the approved set —
   dangling references fail the validator.
 - Leave `traces_to.design`/`tests`/`code` empty when no downstream artifact yet
@@ -219,6 +235,8 @@ formatter_result:
 - Never write `body_markdown` into the frontmatter; it is the file body.
 - The filename ID prefix and the directory must agree with `type` and `id`.
 - Emit only schema fields — unknown keys fail `additionalProperties: false`.
+  This includes `applies_to`: consume it during the back-fill, then strip it —
+  never write it.
 - If `validate_requirements.py` exits non-zero after your write, report the
   failure; do not patch around it or leave the invalid files in place. This is
   the pipeline's structural gate — the critic never ran it, so a clean

@@ -548,13 +548,48 @@ formatter_result:
   context_artifact: ".sdlc/design/assumptions.md"
   drivers: ".sdlc/design/drivers.md"
   validator_rerun: { exit_code: 0 }
+  traceability_rerun: { exit_code: 0, warnings: [] }
 ```
 
 Report the `formatter_result` back to the caller (the skill), which owns the
-sign-off and the commit. **You never commit.** This is conditional on
-`validator_rerun.exit_code` being `0` — see Stage 8: a non-zero exit is a hard
-failure that re-opens the critique loop instead of reaching sign-off, so
-nothing here reports to the skill until a clean re-run confirms the write.
+sign-off and the commit. **You never commit.** This is conditional on BOTH
+`validator_rerun.exit_code` AND `traceability_rerun.exit_code` being `0` — see
+Stage 8: a non-zero `validator_rerun` is a hard failure that re-opens the
+critique loop instead of reaching sign-off. A non-zero `traceability_rerun` is
+the same kind of hard failure, for the same reason — the formatter only runs
+it after `validator_rerun.exit_code` is `0`, so a non-zero `traceability_rerun`
+means the write is structurally valid but cites requirements or ADR drivers
+that do not resolve, or leaves a requirement's `traces_to.design` dangling.
+Neither one reaches sign-off until a clean re-run confirms the write. An
+**absent** `validator_rerun` or `traceability_rerun` key is a failure, not a
+pass: the formatter's contract is to run both and report both, so a missing
+key means the gate did not run. Treat it exactly as a non-zero exit code —
+never infer success from silence.
+
+`traceability_rerun.warnings` (`uncovered-fr`, `adr-driver-untraced`) do not
+block sign-off; report them to the skill for the user, which surfaces them at
+`skills/design/SKILL.md` Step 4b.
+
+**Which error rule takes which path.** `validate_traceability.py` has three
+error rules, and they do not share one remedy:
+
+- `dangling-trace` and `adr-driver-unresolved` name a **design artifact**
+  (`CMP-`/`IF-`/`ADR-`). Both are re-dispatches: attach the validator's error
+  lines, send the named artifacts back to their owning specialist, then re-run
+  the critic and the formatter on the corrected set — the same loop a
+  `validator_rerun` failure opens.
+- `dangling-reverse-trace` names a **requirement** file. It is **not** a
+  re-dispatch, and there is no specialist to send it to. The design stage never
+  writes into `.sdlc/requirements/` — the requirement→design edge lives once, on
+  `design.traces_from` (spec D3), and that one-writer discipline is not relaxed
+  to close a gate. **Report it to the skill and stop:** name the requirement ID
+  and its file path, and state that the fix is to clear or correct that
+  requirement's `traces_to.design`, which holds design-artifact IDs
+  (`CMP-`/`IF-`/`ADR-`) only, and then re-run the design stage. Requirement sets
+  generated before STO-102 may carry *requirement* IDs in that slot, which is
+  exactly what this rule flags — expect it on older projects. Do not edit the
+  requirement yourself, do not re-dispatch to a specialist, and do not loop:
+  re-dispatching here converges on nothing, because no design artifact is wrong.
 
 ## Stage 11 — (retired)
 
