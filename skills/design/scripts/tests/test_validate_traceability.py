@@ -205,3 +205,25 @@ def test_decision_drivers_section_stops_at_the_next_h2():
         FIXTURES, "adr_driver_untraced", "design", "adr", "ADR-001-single-writer-db.md"
     )
     assert vt.extract_decision_drivers(path) == ["NFR-001", "CON-001"]
+
+
+# ---------------------------------------------------------------------------
+# dangling-reverse-trace (error)
+# ---------------------------------------------------------------------------
+def test_dangling_reverse_trace_is_an_error(capsys):
+    code = run("dangling_reverse_trace")
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "dangling-reverse-trace" in out
+    assert "CMP-999" in out
+    assert "FR-001" in out
+
+
+def test_empty_reverse_trace_and_asymmetry_are_never_findings(capsys):
+    """The edge lives once, on design.traces_from. A requirement whose
+    traces_to.design omits a component that traces to it is correct, not
+    incomplete (spec D3)."""
+    code = run("empty_reverse_trace")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "Summary: 0 error(s), 0 warning(s)." in out

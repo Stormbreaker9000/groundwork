@@ -303,6 +303,32 @@ def rule_adr_drivers(
     return findings
 
 
+def rule_dangling_reverse_trace(
+    req_index: Dict[str, Requirement], design_index: Dict[str, DesignArtifact]
+) -> List[Finding]:
+    """A non-empty traces_to.design must resolve to a real design artifact.
+
+    Presence is never required and asymmetry is never a finding: the
+    requirement->design edge lives once, on design.traces_from (spec D3). This
+    rule only says that if the slot is populated, its contents must be real.
+    """
+    findings: List[Finding] = []
+    for req in sorted(req_index.values(), key=lambda r: r.req_id):
+        for target in req.traces_to_design:
+            if target not in design_index:
+                findings.append(Finding(
+                    rule="dangling-reverse-trace",
+                    severity=ERROR,
+                    artifact_id=req.req_id,
+                    path=req.path,
+                    message=(
+                        f"traces_to.design -> '{target}' is not a known "
+                        f"design artifact id"
+                    ),
+                ))
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -317,6 +343,7 @@ def collect_findings(
     findings.extend(rule_dangling_trace(design_index, req_index))
     findings.extend(rule_uncovered_fr(design_index, req_index))
     findings.extend(rule_adr_drivers(design_index, req_index, design_dir))
+    findings.extend(rule_dangling_reverse_trace(req_index, design_index))
 
     return (
         findings,
