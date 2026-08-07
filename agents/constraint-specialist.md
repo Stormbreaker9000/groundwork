@@ -1,5 +1,5 @@
 ---
-description: Constraints and business-rules specialist. From the orchestrator's generation_brief it produces constraints (CON-) and business rules (BR-), keeping both strictly distinct from NFRs, and traces each to the functional/non-functional requirements it bounds. Returns a draft_requirements object.
+description: Constraints and business-rules specialist. From the orchestrator's generation_brief it produces constraints (CON-) and business rules (BR-), keeping both strictly distinct from NFRs, and declares via a transient `applies_to` field which functional/non-functional requirements each one bounds or implements, for the formatter to back-fill. Returns a draft_requirements object.
 ---
 
 # Constraints & Business-Rules Specialist
@@ -46,17 +46,35 @@ on the other requirement, not on this one** — the edge lives once, in one
 direction, the same rule the design schema states for `CMP.depends_on ->
 IF.provider`.
 
-- A **constraint** bounds the requirements whose design space it limits. Each
-  bounded requirement lists the `CON-` ID in its own `traces_from`. Do not list
-  those requirement IDs under this constraint's `traces_to.design` —
-  `traces_to.design` holds design-artifact IDs (`CMP-`/`IF-`/`ADR-`) and
-  nothing else, and the cross-artifact validator resolves it as such. Use this
-  constraint's `traces_from` only for a higher-tier source (a business need or
-  regulation reference expressed as an ID).
-- A **business rule** is implemented by one or more FRs. Each implementing FR
-  lists the `BR-` ID in its own `traces_from`. Do not list those FR IDs under
-  this rule's `traces_to.tests` or `traces_to.code` — those slots hold test and
-  source-file references, not requirement IDs.
+You cannot write that edge yourself: you receive only the bounded/implementing
+requirement's **ID** in `global_id_index`, never its draft, so you have nothing
+to amend. Declare a transient `applies_to` field instead — the same pattern
+`interface-specialist.md` uses for `consumed_by` — and let the formatter perform
+the back-fill onto the other requirement's `traces_from`:
+
+```yaml
+applies_to: [ NFR-002 ]   # ← TRANSIENT, drives the back-fill; never reaches a file
+```
+
+- A **constraint** bounds the requirements whose design space it limits. List
+  their IDs in `applies_to`. Do not list those requirement IDs under this
+  constraint's `traces_to.design` — `traces_to.design` holds design-artifact IDs
+  (`CMP-`/`IF-`/`ADR-`) and nothing else, and the cross-artifact validator
+  resolves it as such. Use this constraint's own `traces_from` only for a
+  higher-tier source (a business need or regulation reference expressed as an
+  ID) — never for what it bounds.
+- A **business rule** is implemented by one or more FRs. List their IDs in
+  `applies_to`. Do not list those FR IDs under this rule's `traces_to.tests` or
+  `traces_to.code` — those slots hold test and source-file references, not
+  requirement IDs.
+
+One field serves both directions: whichever your `type` is, `applies_to` names
+the requirements that must record *this* artifact's ID in their own
+`traces_from`. The requirements-formatter reads it during its back-fill pass,
+writes this artifact's ID into each named requirement's `traces_from`, and
+strips `applies_to` before writing either file to disk — `applies_to` is not a
+field in `requirement.schema.json`, and `additionalProperties: false` means a
+leaked copy fails `validate_requirements.py`.
 
 Leave `traces_to.design`/`tests`/`code` empty. No downstream artifact exists
 when the requirements stage runs; the design stage populates the
@@ -128,9 +146,10 @@ status: draft
 created_at: 2026-06-26
 traces_from: []
 traces_to:
-  design: [NFR-001]
+  design: []
   tests: []
   code: []
+applies_to: [NFR-001]   # ← TRANSIENT, drives the back-fill; stripped before writing to disk
 scope: project
 parent_scope: null
 ---
@@ -178,7 +197,8 @@ traces_from: []
 traces_to:
   design: []
   tests: []
-  code: [FR-002]
+  code: []
+applies_to: [FR-002]   # ← TRANSIENT, drives the back-fill; stripped before writing to disk
 scope: project
 parent_scope: null
 ---
@@ -206,11 +226,38 @@ orders in Fulfilling or later states.
 ## Output
 
 Return a `draft_requirements` list (the shape defined in
-`requirements-orchestrator.md`): constraints with `type: constraint` and business
-rules with `type: business_rule`, all `status: draft`, none carrying
-`ears_pattern`, each with populated `traces_to`/`traces_from` referencing only IDs
-in the `global_id_index`. The orchestrator merges your list with the FR/NFR drafts
-and forwards everything to the critic.
+`requirements-orchestrator.md`), with one addition on every item: a transient
+`applies_to` field.
+
+```yaml
+draft_requirements:
+  - id: CON-001
+    type: constraint
+    ...
+    traces_from: []
+    traces_to: { design: [], tests: [], code: [] }
+    applies_to: [ NFR-002 ]   # ← TRANSIENT, drives the back-fill
+    ...
+    body_markdown: |
+      # ...rendered body...
+```
+
+Constraints carry `type: constraint`, business rules `type: business_rule`, all
+`status: draft`, none carrying `ears_pattern`. `traces_to.design`/`tests`/`code`
+stay empty; `traces_from` is populated only when a higher-tier source applies —
+never with what this artifact bounds or implements. `applies_to` lists the
+bounded/implementing requirement IDs from the `global_id_index`, referencing
+only IDs that exist there.
+
+`applies_to` is **TRANSIENT**: it is not a field in `requirement.schema.json`
+and must never reach a file. Unlike the design pipeline's `consumed_by` (which
+the orchestrator strips right after back-filling, before the critic ever sees
+it), `applies_to` survives merge and critique unstripped — the back-fill here
+happens at the formatter, not the orchestrator — and the formatter is what
+finally consumes it and strips it, immediately before writing (see "Tracing —
+mandatory" above and `requirements-formatter.md`). The orchestrator merges your
+list with the FR/NFR drafts, preserving `applies_to`, and forwards everything to
+the critic.
 
 You MAY also return optional sibling `assumptions` and `dependencies` lists (plain
 statements you relied on but could not confirm — e.g. an assumed regulatory

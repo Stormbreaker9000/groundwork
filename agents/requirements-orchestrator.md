@@ -129,7 +129,12 @@ generation_brief:
 
 The NFR specialist additionally receives an instruction to walk all nine ISO
 25010:2023 characteristics; the constraint specialist receives the
-`global_id_index` of FR/NFR IDs already drafted so it can populate `traces_to`.
+`global_id_index` of FR/NFR IDs already drafted so it can declare, per item, a
+transient `applies_to` field naming the requirements each constraint bounds or
+each business rule implements — see `constraint-specialist.md`, "Tracing —
+mandatory". It never populates `traces_to` with requirement IDs; the formatter
+back-fills the edge onto the *other* requirement's `traces_from` instead (Stage
+7).
 
 ## Stage 5 — Collect drafts: the `draft_requirements` hand-off
 
@@ -154,6 +159,7 @@ draft_requirements:
     created_at: "YYYY-MM-DD"
     traces_from: [ ...IDs... ]
     traces_to: { design: [], tests: [], code: [] }
+    applies_to: [ ...IDs... ]        # ← TRANSIENT, constraint/business_rule only
     scope: project | epic | story    # reserved; default project
     parent_scope: null               # reserved
     body_markdown: |
@@ -162,6 +168,17 @@ draft_requirements:
 
 Merge the three specialists' `draft_requirements` lists into one set, preserving
 ID order, before handing to the critic.
+
+`applies_to` appears only on the constraint specialist's `constraint`/
+`business_rule` items — it is how that specialist names the requirements each
+one bounds or implements without being able to edit their drafts directly (see
+`constraint-specialist.md`, "Tracing — mandatory"). Unlike the design
+pipeline's transient fields, which the design-orchestrator strips right after
+its own back-fill stage, **do not strip `applies_to` here.** The back-fill for
+this edge happens later, at the formatter (Stage 7), which is the stage that
+sees the full requirement set and can safely write into a sibling requirement's
+`traces_from`. Pass `applies_to` through the merge and through the critic
+unchanged; only the formatter consumes and strips it.
 
 Each specialist MAY additionally return sibling `assumptions` and `dependencies`
 lists (plain statements) and a `terms` list (domain-vocabulary entries) alongside
@@ -279,7 +296,11 @@ and `.sdlc/requirements/glossary.md`. The structural validator hard-gates
 
 ## Stage 7 — Format: the `formatter_result` hand-off
 
-On a passing gate, hand the approved set to `requirements-formatter`. It returns:
+On a passing gate, hand the approved set to `requirements-formatter`, `applies_to`
+still attached wherever the constraint specialist set it. The formatter performs
+the `applies_to` back-fill — writing each constraint/business-rule's ID into the
+named requirements' `traces_from` — and strips `applies_to` before writing any
+file (see `requirements-formatter.md`, "Populate traceability"). It returns:
 
 ```yaml
 formatter_result:
