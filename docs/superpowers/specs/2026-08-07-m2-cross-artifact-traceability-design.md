@@ -61,9 +61,12 @@ and code artifacts," and it contradicts the bullet immediately below it, which
 routes the analogous business-rule edge onto the requirement's own
 `traces_from` ("the FRs list the rule in their `traces_from`").
 
-The shipped data confirms which bullet is right. `FR-008` carries
-`traces_from: [BR-001]` and validates cleanly. The constraint bullet is the
-outlier.
+The shipped data confirms which bullet is right, twice. `FR-008` carries
+`traces_from: [BR-001]` and validates cleanly. And in the gdpr example the
+constraint edge is *already* recorded correctly — `FR-002` carries
+`traces_from: [BR-001, BR-002, CON-001]`, making its `traces_to.design:
+[FR-002]` a redundant second copy of an edge that already lives in the right
+place. The constraint bullet is the outlier.
 
 The bounded requirements record the constraint nowhere else, so this is lost
 information rather than duplicated information:
@@ -318,7 +321,7 @@ not mistaken for a requirement.
 | `agents/constraint-specialist.md` | Tracing section: both the constraint and business-rule bullets corrected (D6). |
 | `skills/design/scripts/README.md` | New. Documents both design-stage scripts, mirroring the M1 scripts README. |
 | `docs/requirements/examples/tamagotchi/requirements/**` | 3 constraints clear `traces_to.design`; 4 bounded requirements gain the ID in `traces_from`. |
-| `docs/requirements/examples/gdpr/requirements/**` | 1 constraint clears `traces_to.design`; `FR-002` gains `CON-001` in `traces_from`. |
+| `docs/requirements/examples/gdpr/requirements/**` | 1 constraint clears `traces_to.design`. `FR-002` already carries `CON-001` in `traces_from`, so nothing is added. |
 
 ### Documentation correction
 
@@ -374,10 +377,10 @@ rules are calibrated against a set nobody wrote to satisfy them.
 
 The gdpr example has no `design/` directory, so this tool cannot be run
 against it (exit 2, missing design dir). Its `CON-001` fix is preventive: it
-corrects data that is wrong on its own terms and would be caught the moment a
-design set is generated for it. That fix is verified by re-running
-`validate_requirements.py` over the gdpr requirements, which must still exit
-0 with `CON-001` in `FR-002`'s `traces_from`.
+deletes a redundant copy of an edge `FR-002` already records correctly, and
+would otherwise be caught the moment a design set is generated for it. That
+fix is verified by re-running `validate_requirements.py` over the gdpr
+requirements, which must still exit 0.
 
 ## Out of scope
 
