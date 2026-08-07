@@ -330,6 +330,23 @@ driver, and a requirement whose `traces_to.design` names a design artifact
 that does not exist. Two are warnings that do not block: an FR no component
 addresses, and an ADR body driver missing from its own frontmatter.
 
+The three errors do not share one fix:
+
+- `dangling-trace` and `adr-driver-unresolved` flag a **design artifact**.
+  Fix them the same way a `validate_design.py` failure is fixed: re-dispatch
+  the named artifacts to their owning specialist through the critique loop,
+  then re-run until clean.
+- `dangling-reverse-trace` flags a **requirement** file, and this stage never
+  writes into `.sdlc/requirements/` — the requirement→design edge is stored
+  once, on `design.traces_from`. So there is nothing to re-dispatch and no
+  loop to run. **Report it to the user and stop**, naming the requirement ID
+  and its file path: the fix is to clear or correct that requirement's
+  `traces_to.design`, which holds design-artifact IDs (`CMP-`/`IF-`/`ADR-`)
+  only, and then re-run the design stage. Requirement sets written before
+  this rule existed can carry *requirement* IDs there, which is precisely
+  what it catches — so on an older project, expect this one and expect the
+  fix to belong to the requirements stage, not this one.
+
 Those warnings arrive **after** the write, not at the Step 3 sign-off. That
 ordering is inherent — nothing is on disk before the formatter runs, and
 computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.

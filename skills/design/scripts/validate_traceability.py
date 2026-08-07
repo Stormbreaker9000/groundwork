@@ -105,15 +105,25 @@ def _text(value: Any) -> str:
 # ---------------------------------------------------------------------------
 # Indexes
 # ---------------------------------------------------------------------------
-def index_requirements(reqs_dir: str) -> Tuple[Dict[str, Requirement], List[str]]:
-    """Index every requirement by ID. Returns (index, unparseable_paths)."""
+def index_requirements(
+    reqs_dir: str,
+) -> Tuple[Dict[str, Requirement], List[str], List[str]]:
+    """Index every requirement by ID.
+
+    Returns (index, unparseable_paths, duplicate_ids). A duplicate ID means the
+    second file silently replaces the first in the index, so every result
+    computed over it may be wrong in either direction; the caller reports it.
+    """
     index: Dict[str, Requirement] = {}
     skipped: List[str] = []
+    duplicates: List[str] = []
     for path in vr.discover_files(reqs_dir):
         data, err = parse_frontmatter(path)
         if err or not isinstance(data, dict) or not isinstance(data.get("id"), str):
             skipped.append(path)
             continue
+        if data["id"] in index:
+            duplicates.append(data["id"])
         traces_to = data.get("traces_to")
         design = _str_list(traces_to.get("design")) if isinstance(traces_to, dict) else []
         index[data["id"]] = Requirement(
@@ -124,25 +134,34 @@ def index_requirements(reqs_dir: str) -> Tuple[Dict[str, Requirement], List[str]
             path=os.path.relpath(path, reqs_dir),
             traces_to_design=design,
         )
-    return index, skipped
+    return index, skipped, duplicates
 
 
-def index_design(design_dir: str) -> Tuple[Dict[str, DesignArtifact], List[str]]:
-    """Index every design artifact by ID. Returns (index, unparseable_paths)."""
+def index_design(
+    design_dir: str,
+) -> Tuple[Dict[str, DesignArtifact], List[str], List[str]]:
+    """Index every design artifact by ID.
+
+    Returns (index, unparseable_paths, duplicate_ids). See
+    ``index_requirements`` for why duplicates are surfaced.
+    """
     index: Dict[str, DesignArtifact] = {}
     skipped: List[str] = []
+    duplicates: List[str] = []
     for path in vd.discover_files(design_dir):
         data, err = parse_frontmatter(path)
         if err or not isinstance(data, dict) or not isinstance(data.get("id"), str):
             skipped.append(path)
             continue
+        if data["id"] in index:
+            duplicates.append(data["id"])
         index[data["id"]] = DesignArtifact(
             design_id=data["id"],
             type=_text(data.get("type")),
             path=os.path.relpath(path, design_dir),
             traces_from=_str_list(data.get("traces_from")),
         )
-    return index, skipped
+    return index, skipped, duplicates
 
 
 # ---------------------------------------------------------------------------
@@ -213,9 +232,20 @@ def rule_uncovered_fr(
 
 
 # vd.REQUIREMENT_ID_RE is anchored with ^...$ and cannot scan a line, so the
-# body scan needs its own pattern. The (?<!\w) guard is what stops 'NFR-001'
-# also matching as 'FR-001'. 'ADR' is deliberately absent from the
-# alternation: an ADR cross-reference in the prose is not a requirement.
+# body scan needs its own pattern.
+#
+# What stops 'NFR-001' also matching as 'FR-001' is the alternation, not the
+# guard: finditer is leftmost-first and 'NFR' precedes 'FR' in the group, so
+# the whole token is consumed before 'FR' is ever tried. The (?<!\w) guard
+# does something different — it rejects a *word-character* prefix, so
+# 'SUBR-004' does not yield 'BR-004' and 'ANFR-003' does not yield 'FR-003'.
+#
+# Known gap: the guard does not block a *hyphen* prefix, so prose such as
+# 'non-FR-001' still scans as 'FR-001'. Documented, not fixed — a hyphen is a
+# legal separator inside these IDs, so excluding it would break real ones.
+#
+# 'ADR' is deliberately absent from the alternation: an ADR cross-reference in
+# the prose is not a requirement.
 REQUIREMENT_ID_SCAN_RE = re.compile(
     r"(?<!\w)(?:FR|NFR|CON|BR|UC)(?:-[A-Z0-9]+)*-[0-9]{3,}(?!\w)"
 )
@@ -232,6 +262,9 @@ def extract_decision_drivers(path: str) -> List[str]:
 
     Returns [] when the heading is absent: validate_design.py gates the five
     MADR headings, so a missing one is that tool's finding, not ours.
+
+    Known limitation: the scan is not fence-aware, so a '## ' line inside a
+    fenced code block terminates the section early. Noted, not handled.
     """
     try:
         with open(path, "r", encoding="utf-8") as handle:
@@ -334,10 +367,13 @@ def rule_dangling_reverse_trace(
 # ---------------------------------------------------------------------------
 def collect_findings(
     design_dir: str, reqs_dir: str
-) -> Tuple[List[Finding], int, int, List[str]]:
-    """Run every rule. Returns (findings, design_count, req_count, skipped)."""
-    req_index, req_skipped = index_requirements(reqs_dir)
-    design_index, design_skipped = index_design(design_dir)
+) -> Tuple[List[Finding], int, int, List[str], List[str]]:
+    """Run every rule.
+
+    Returns (findings, design_count, req_count, skipped, duplicate_ids).
+    """
+    req_index, req_skipped, req_dupes = index_requirements(reqs_dir)
+    design_index, design_skipped, design_dupes = index_design(design_dir)
 
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
@@ -350,6 +386,7 @@ def collect_findings(
         len(design_index),
         len(req_index),
         req_skipped + design_skipped,
+        sorted(set(req_dupes + design_dupes)),
     )
 
 
@@ -360,6 +397,7 @@ def print_report(
     design_count: int,
     req_count: int,
     skipped: List[str],
+    duplicates: List[str],
     quiet: bool,
 ) -> None:
     print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
@@ -369,13 +407,24 @@ def print_report(
             f"WARNING: {len(skipped)} file(s) skipped (unparseable frontmatter); "
             f"results may be incomplete. Run the structural validators for details."
         )
+    if duplicates:
+        print(
+            f"WARNING: duplicate id(s) across files: {', '.join(duplicates)}; "
+            f"only the last file for each id was indexed, so results may be "
+            f"unreliable. Run the structural validators for details."
+        )
     print("-" * 60)
-    if not quiet:
-        for f in sorted(
-            findings, key=lambda f: (_SEVERITY_ORDER[f.severity], f.rule, f.artifact_id)
-        ):
-            print(f"  {f.severity.upper():<6} {f.rule:<22} {f.artifact_id:<10} {f.message}")
-        print("-" * 60)
+    # --quiet suppresses the warning listing only. Error lines always print:
+    # this is a gate, and a gate that hides what failed is useless. Matches
+    # validate_design.py and validate_requirements.py, whose --quiet drops
+    # PASS lines and keeps failures.
+    for f in sorted(
+        findings, key=lambda f: (_SEVERITY_ORDER[f.severity], f.rule, f.artifact_id)
+    ):
+        if quiet and f.severity != ERROR:
+            continue
+        print(f"  {f.severity.upper():<6} {f.rule:<22} {f.artifact_id:<10} {f.message}")
+    print("-" * 60)
     errors = sum(1 for f in findings if f.severity == ERROR)
     warns = sum(1 for f in findings if f.severity == WARN)
     print(f"Summary: {errors} error(s), {warns} warning(s).")
@@ -401,7 +450,9 @@ def main(argv=None) -> int:
         "--strict", action="store_true", help="Exit non-zero on warnings as well as errors."
     )
     parser.add_argument(
-        "--quiet", action="store_true", help="Print only the summary line."
+        "--quiet",
+        action="store_true",
+        help="Suppress warning lines; error lines and the summary always print.",
     )
     args = parser.parse_args(argv)
 
@@ -412,24 +463,29 @@ def main(argv=None) -> int:
         print(f"ERROR: requirements directory not found: {args.requirements}", file=sys.stderr)
         return 2
 
-    findings, design_count, req_count, skipped = collect_findings(
+    findings, design_count, req_count, skipped, duplicates = collect_findings(
         args.design_dir, args.requirements
     )
     errors = sum(1 for f in findings if f.severity == ERROR)
     warns = sum(1 for f in findings if f.severity == WARN)
 
     if args.json:
+        # `skipped` and `duplicate_ids` carry the same caveats the human report
+        # prints in its header: without them a consumer cannot tell that
+        # coverage was computed over an incomplete or collapsed index.
         print(json.dumps(
             {
                 "findings": [asdict(f) for f in findings],
                 "counts": {"error": errors, "warn": warns},
+                "skipped": skipped,
+                "duplicate_ids": duplicates,
             },
             indent=2,
         ))
     else:
         print_report(
             findings, args.design_dir, args.requirements,
-            design_count, req_count, skipped, args.quiet,
+            design_count, req_count, skipped, duplicates, args.quiet,
         )
 
     if errors or (args.strict and warns):

@@ -56,9 +56,20 @@ python3 validate_traceability.py
 python3 validate_traceability.py .sdlc/design                      # human report
 python3 validate_traceability.py --json .sdlc/design               # machine-readable
 python3 validate_traceability.py --strict .sdlc/design             # warnings block too
-python3 validate_traceability.py --quiet .sdlc/design              # only the summary line
+python3 validate_traceability.py --quiet .sdlc/design              # errors + summary only
 python3 validate_traceability.py .sdlc/design --requirements other/reqs
 ```
+
+`--quiet` suppresses the warning lines and keeps every error line, matching
+the flag's meaning in `validate_design.py` and `validate_requirements.py`
+(both drop PASS lines and keep failures). This is a gate; it never hides what
+failed. The summary line still counts the suppressed warnings.
+
+`--json` emits `findings`, `counts`, `skipped` (paths whose frontmatter would
+not parse, so the index is incomplete) and `duplicate_ids` (IDs claimed by
+more than one file, where only the last one read was indexed). The last two
+are the machine-readable form of the header `WARNING:` lines in the human
+report — results carrying either caveat may be incomplete or unreliable.
 
 | Rule | Severity | Check |
 | --- | --- | --- |

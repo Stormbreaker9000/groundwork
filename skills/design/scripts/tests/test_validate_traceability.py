@@ -16,6 +16,9 @@ import validate_traceability as vt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures", "traceability")
+# tests/ -> scripts/ -> design/ -> skills/ -> repo root. Resolved from this
+# file so the suite runs from any cwd, the same handling the tool itself uses.
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
 def run(case, *extra):
@@ -86,7 +89,10 @@ def test_missing_requirements_dir_exits_2(capsys):
 def test_json_shape(capsys):
     run("dangling_trace", "--json")
     payload = json.loads(capsys.readouterr().out)
+    assert set(payload) == {"findings", "counts", "skipped", "duplicate_ids"}
     assert payload["counts"] == {"error": 1, "warn": 0}
+    assert payload["skipped"] == []
+    assert payload["duplicate_ids"] == []
     finding = payload["findings"][0]
     assert set(finding) == {"rule", "severity", "artifact_id", "path", "message"}
     assert finding["rule"] == "dangling-trace"
@@ -94,11 +100,32 @@ def test_json_shape(capsys):
     assert finding["artifact_id"] == "CMP-001"
 
 
-def test_quiet_suppresses_the_listing_but_keeps_the_summary(capsys):
+def test_json_carries_the_skipped_paths(capsys):
+    """The human report warns that results may be incomplete; --json exists so
+    an agent need not parse prose to learn the same thing."""
+    run("unparseable", "--json")
+    payload = json.loads(capsys.readouterr().out)
+    assert len(payload["skipped"]) == 1
+    assert payload["skipped"][0].endswith(".md")
+
+
+def test_quiet_keeps_error_lines_and_the_summary(capsys):
+    """--quiet must match the flag's meaning in the two structural validators:
+    it drops the routine listing and keeps failures. A gate that hides what
+    failed is useless."""
     run("dangling_trace", "--quiet")
     out = capsys.readouterr().out
-    assert "dangling-trace" not in out
+    assert "dangling-trace" in out
+    assert "ERROR" in out
     assert "Summary: 1 error(s), 0 warning(s)." in out
+
+
+def test_quiet_suppresses_warning_lines_but_still_counts_them(capsys):
+    run("uncovered_fr", "--quiet")
+    out = capsys.readouterr().out
+    assert "uncovered-fr" not in out
+    assert "WARN" not in out
+    assert "Summary: 0 error(s), 1 warning(s)." in out
 
 
 # ---------------------------------------------------------------------------
@@ -173,12 +200,18 @@ def test_unresolved_adr_driver_is_an_error(capsys):
     assert "Summary: 1 error(s), 0 warning(s)." in out
 
 
-def test_nfr_prefix_is_not_scanned_as_an_fr(capsys):
-    """'NFR-001' must not also match as 'FR-001'. If it did, the clean driver
-    would produce a phantom finding for a requirement nobody named."""
-    run("adr_driver_unresolved")
-    out = capsys.readouterr().out
-    assert "FR-001'" not in out
+def test_scan_pattern_consumes_a_whole_nfr_token():
+    """'NFR-001' scans as one ID, not as a stray 'FR-001'. This is the
+    alternation doing the work -- finditer is leftmost-first and 'NFR'
+    precedes 'FR' -- so it holds with or without the (?<!\\w) guard."""
+    assert vt.REQUIREMENT_ID_SCAN_RE.findall("NFR-001") == ["NFR-001"]
+
+
+def test_scan_pattern_rejects_a_word_character_prefix():
+    """This is what the (?<!\\w) guard buys. Without it 'SUBR-004' yields
+    'BR-004' and 'ANFR-003' yields 'FR-003' -- IDs nobody wrote."""
+    assert vt.REQUIREMENT_ID_SCAN_RE.findall("SUBR-004") == []
+    assert vt.REQUIREMENT_ID_SCAN_RE.findall("ANFR-003") == []
 
 
 def test_untraced_adr_driver_is_a_warning(capsys):
@@ -224,6 +257,48 @@ def test_empty_reverse_trace_and_asymmetry_are_never_findings(capsys):
     traces_to.design omits a component that traces to it is correct, not
     incomplete (spec D3)."""
     code = run("empty_reverse_trace")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "Summary: 0 error(s), 0 warning(s)." in out
+
+
+# ---------------------------------------------------------------------------
+# Duplicate IDs
+# ---------------------------------------------------------------------------
+def test_duplicate_ids_are_reported_in_the_header(capsys):
+    """Both indexes are keyed by ID, so a repeat silently overwrites and the
+    shadowed file becomes invisible to every rule -- a false-positive
+    uncovered-fr in one file order, a missed dangling-trace in the other.
+    Not a rule and not a severity: a header caveat, like the skipped note."""
+    code = run("duplicate_ids")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "WARNING: duplicate id(s) across files: CMP-001, FR-001" in out
+    assert "results may be unreliable" in out
+
+
+def test_duplicate_ids_reach_the_json_payload(capsys):
+    run("duplicate_ids", "--json")
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["duplicate_ids"] == ["CMP-001", "FR-001"]
+
+
+# ---------------------------------------------------------------------------
+# Real-world regression: the shipped tamagotchi worked example
+# ---------------------------------------------------------------------------
+def test_shipped_tamagotchi_example_is_clean(capsys):
+    """The one non-synthetic case: a set nobody wrote to satisfy these rules.
+
+    It guards the D6 data fix in `docs/requirements/examples/tamagotchi/
+    requirements/` -- requirement IDs wrongly parked in `traces_to.design`,
+    which holds design-artifact IDs only. Re-introducing that data must fail
+    CI; every other fixture here is synthetic and would not notice.
+    """
+    example = os.path.join(REPO_ROOT, "docs", "requirements", "examples", "tamagotchi")
+    code = vt.main([
+        os.path.join(example, "design"),
+        "--requirements", os.path.join(example, "requirements"),
+    ])
     out = capsys.readouterr().out
     assert code == 0, out
     assert "Summary: 0 error(s), 0 warning(s)." in out
