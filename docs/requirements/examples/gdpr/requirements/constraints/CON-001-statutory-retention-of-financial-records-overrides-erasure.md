@@ -13,7 +13,7 @@ status: draft
 created_at: 2026-06-26
 traces_from: []
 traces_to:
-  design: [FR-002]
+  design: []
   tests: []
   code: []
 scope: project

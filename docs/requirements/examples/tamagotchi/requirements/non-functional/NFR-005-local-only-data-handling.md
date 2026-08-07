@@ -11,7 +11,7 @@ confidence: high
 verification_method: test
 status: draft
 created_at: 2026-07-10
-traces_from: [FR-001]
+traces_from: [FR-001, CON-002]
 traces_to:
   design: []
   tests: []

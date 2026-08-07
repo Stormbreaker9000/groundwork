@@ -40,16 +40,27 @@ to the orchestrator rather than recording it as a constraint.
 
 ## Tracing — mandatory
 
-Every constraint and business rule MUST record, in `traces_to`, the requirements
-it bounds or that implement it, drawn from the `global_id_index`:
+Every constraint and business rule MUST be linked to the requirements it bounds
+or that implement it, drawn from the `global_id_index`. **The link is recorded
+on the other requirement, not on this one** — the edge lives once, in one
+direction, the same rule the design schema states for `CMP.depends_on ->
+IF.provider`.
 
-- A **constraint** bounds the requirements whose design space it limits — list
-  those IDs under `traces_to.design` (and/or `traces_to.code` when it constrains
-  implementation). Use `traces_from` for any higher-tier source (e.g. a business
-  need or regulation reference expressed as an ID).
-- A **business rule** is implemented by one or more FRs — list those FR IDs under
-  `traces_to.tests`/`traces_to.code` as appropriate, and the FRs list the rule in
-  their `traces_from`. Keep the link bidirectional and consistent.
+- A **constraint** bounds the requirements whose design space it limits. Each
+  bounded requirement lists the `CON-` ID in its own `traces_from`. Do not list
+  those requirement IDs under this constraint's `traces_to.design` —
+  `traces_to.design` holds design-artifact IDs (`CMP-`/`IF-`/`ADR-`) and
+  nothing else, and the cross-artifact validator resolves it as such. Use this
+  constraint's `traces_from` only for a higher-tier source (a business need or
+  regulation reference expressed as an ID).
+- A **business rule** is implemented by one or more FRs. Each implementing FR
+  lists the `BR-` ID in its own `traces_from`. Do not list those FR IDs under
+  this rule's `traces_to.tests` or `traces_to.code` — those slots hold test and
+  source-file references, not requirement IDs.
+
+Leave `traces_to.design`/`tests`/`code` empty. No downstream artifact exists
+when the requirements stage runs; the design stage populates the
+requirement->design edge on the design artifact's `traces_from`, never here.
 
 Only reference IDs that exist in the `global_id_index`; the validator flags
 dangling references and will fail the gate.
