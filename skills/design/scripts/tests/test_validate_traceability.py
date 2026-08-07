@@ -209,7 +209,7 @@ def test_scan_pattern_consumes_a_whole_nfr_token():
 
 def test_scan_pattern_rejects_a_word_character_prefix():
     """This is what the (?<!\\w) guard buys. Without it 'SUBR-004' yields
-    'BR-004' and 'ANFR-003' yields 'FR-003' -- IDs nobody wrote."""
+    'BR-004' and 'ANFR-003' yields 'NFR-003' -- IDs nobody wrote."""
     assert vt.REQUIREMENT_ID_SCAN_RE.findall("SUBR-004") == []
     assert vt.REQUIREMENT_ID_SCAN_RE.findall("ANFR-003") == []
 

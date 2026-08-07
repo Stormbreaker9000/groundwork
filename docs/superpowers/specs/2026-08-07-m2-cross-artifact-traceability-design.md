@@ -245,9 +245,12 @@ python3 validate_traceability.py [DESIGN_DIR] [--requirements DIR]
 ```
 
 Defaults: `DESIGN_DIR` is `.sdlc/design`, `--requirements` is
-`.sdlc/requirements`. `--quiet` suppresses the per-rule listing and prints
-only the summary line, matching the flag's meaning in both existing
-validators.
+`.sdlc/requirements`. `--quiet` suppresses the **warning** listing; error
+lines and the summary always print, matching the flag's meaning in both
+existing validators, whose `--quiet` drops PASS lines and keeps failures. A
+gate whose quiet mode hides what failed is a bad default — this clause is
+what the implementation followed when the two halves of the original wording
+turned out to conflict.
 
 Exit codes, matching the two existing validators:
 
@@ -275,9 +278,13 @@ class Finding:
     message: str
 ```
 
-`--json` emits `{"findings": [...], "counts": {"error": N, "warn": N}}`,
-mirroring `lint_requirements_content.py`'s machine-readable contract so an
-agent can consume it without parsing prose.
+`--json` emits `{"findings": [...], "counts": {"error": N, "warn": N},
+"skipped": [...], "duplicate_ids": [...]}`, mirroring
+`lint_requirements_content.py`'s machine-readable contract so an agent can
+consume it without parsing prose. `skipped` and `duplicate_ids` carry the same
+caveats the human report prints in its header: without them a consumer cannot
+tell that coverage was computed over an incomplete or collapsed index, which
+is precisely the condition that manufactures false `uncovered-fr` findings.
 
 ### Human report
 

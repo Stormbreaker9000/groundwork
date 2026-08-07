@@ -238,7 +238,9 @@ def rule_uncovered_fr(
 # guard: finditer is leftmost-first and 'NFR' precedes 'FR' in the group, so
 # the whole token is consumed before 'FR' is ever tried. The (?<!\w) guard
 # does something different — it rejects a *word-character* prefix, so
-# 'SUBR-004' does not yield 'BR-004' and 'ANFR-003' does not yield 'FR-003'.
+# 'SUBR-004' does not yield 'BR-004' and 'ANFR-003' does not yield 'NFR-003'.
+# (Note 'ANFR-003' yields 'NFR-003', not 'FR-003', for the same leftmost-first
+# reason: 'NFR' is tried and consumed before 'FR' is reached.)
 #
 # Known gap: the guard does not block a *hyphen* prefix, so prose such as
 # 'non-FR-001' still scans as 'FR-001'. Documented, not fixed — a hyphen is a
