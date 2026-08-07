@@ -381,6 +381,43 @@ critique loop with the validator's findings attached — it is not a warning
 and not a terminal success, regardless of how clean Phase 1 and Phase 2 of
 the critic's report were.
 
+Then, and **only if `validate_design.py` exited 0**, run the cross-artifact
+validator:
+
+```bash
+python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+  --requirements .sdlc/requirements
+```
+
+Order is not a preference. Traceability findings computed over a structurally
+invalid set are noise: a component whose frontmatter failed to parse has an
+invisible `traces_from`, which manufactures false `uncovered-fr` warnings for
+requirements that are in fact covered. Do not run it on a non-zero structural
+exit — report the structural failure and stop.
+
+A non-zero exit here is a **hard failure**, exactly like the structural gate:
+report it and do not treat the write as done. Warnings (`uncovered-fr`,
+`adr-driver-untraced`) do not exit non-zero; carry them forward so the skill
+can surface them.
+
+Report both outcomes in `formatter_result`:
+
+```yaml
+formatter_result:
+  validation:
+    structural:
+      command: "python3 skills/design/scripts/validate_design.py .sdlc/design"
+      exit_code: 0
+    traceability:
+      command: "python3 skills/design/scripts/validate_traceability.py .sdlc/design --requirements .sdlc/requirements"
+      exit_code: 0
+      warnings:
+        - "uncovered-fr FR-007 — no component traces_from this functional requirement"
+```
+
+`warnings` is a list of the warning-severity lines the run reported, or empty.
+An empty list means the sweep was clean, not that it was skipped.
+
 ## Output
 
 Return a `formatter_result`:

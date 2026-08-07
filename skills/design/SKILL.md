@@ -316,6 +316,26 @@ critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema`
 for the install and fallback details (the design validator shares the same
 dependency story).
 
+The formatter then runs the cross-artifact validator, which resolves the
+requirement↔design edge neither structural validator checks:
+
+```bash
+python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+  --requirements .sdlc/requirements
+```
+
+It must also exit 0. Three of its rules are errors — a design artifact citing
+a requirement that does not exist, an ADR naming an unresolvable decision
+driver, and a requirement whose `traces_to.design` names a design artifact
+that does not exist. Two are warnings that do not block: an FR no component
+addresses, and an ADR body driver missing from its own frontmatter.
+
+Those warnings arrive **after** the write, not at the Step 3 sign-off. That
+ordering is inherent — nothing is on disk before the formatter runs, and
+computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
+Surface them to the user with the post-write report; they are advisory, and
+acting on them is the user's call.
+
 **Step 5 — Commit:**
 
 ```bash
@@ -345,6 +365,11 @@ This stage does not write C4 diagrams. `.sdlc/design/diagrams/` is a declared
 dispatch slot owned by STO-101 — an absent `diagrams/` directory after this
 skill runs is expected, not a bug.
 
-This stage also does not resolve cross-artifact traceability (`traces_from`
-resolution, dependency-cycle detection, orphan-interface detection) — that is
-STO-102's and STO-208's territory, not this skill's.
+Cross-artifact traceability *is* resolved, but not by this skill's judgment —
+`validate_traceability.py` runs at Step 4 as a second hard gate and owns
+`traces_from` resolution, FR coverage, ADR decision-driver resolution, and
+`traces_to.design` resolution.
+
+What is still not produced here: dependency-cycle detection, orphan-interface
+detection, and prose-quality sweeps over design artifacts. Those are STO-208's
+content linter, per `agents/design-critic.md`'s *Scope boundaries*.
