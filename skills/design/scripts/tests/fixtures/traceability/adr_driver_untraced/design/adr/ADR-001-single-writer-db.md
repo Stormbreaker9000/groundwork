@@ -2,7 +2,7 @@
 id: ADR-001
 type: adr
 traces_from:
-  - NFR-001
+- NFR-001
 traces_to: {}
 decision_status: accepted
 ---

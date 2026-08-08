@@ -2,8 +2,8 @@
 id: CMP-001
 type: component
 traces_from:
-  - FR-001
-  - FR-404
+- FR-001
+- FR-404
 traces_to: {}
 ---
 
