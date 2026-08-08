@@ -324,28 +324,43 @@ python3 skills/design/scripts/validate_traceability.py .sdlc/design \
   --requirements .sdlc/requirements
 ```
 
-It must also exit 0. Three of its rules are errors — a design artifact citing
-a requirement that does not exist, an ADR naming an unresolvable decision
-driver, and a requirement whose `traces_to.design` names a design artifact
-that does not exist. Two are warnings that do not block: an FR no component
-addresses, and an ADR body driver missing from its own frontmatter.
+It must also exit 0. Its errors are a design artifact citing a requirement
+that does not exist, an ADR listing an unresolvable decision driver, and a
+requirement with a requirement ID parked in `traces_to.design`/`tests`/`code`
+— slots that hold design-artifact, test and source-file references. Its
+warnings do not block: an FR no component addresses, an ADR body driver
+missing from its own frontmatter, a requirement ID mentioned in an ADR's
+drivers prose rather than listed as one, and the two index caveats below.
 
-The three errors do not share one fix:
+Exit 2 is neither: it means one of the two directories is missing, produces
+no findings, and is an environment problem to report as such — not a
+traceability failure to chase through the fixes below.
+
+The errors do not share one fix:
 
 - `dangling-trace` and `adr-driver-unresolved` flag a **design artifact**.
   Fix them the same way a `validate_design.py` failure is fixed: re-dispatch
   the named artifacts to their owning specialist through the critique loop,
   then re-run until clean.
-- `dangling-reverse-trace` flags a **requirement** file, and this stage never
-  writes into `.sdlc/requirements/` — the requirement→design edge is stored
-  once, on `design.traces_from`. So there is nothing to re-dispatch and no
-  loop to run. **Report it to the user and stop**, naming the requirement ID
-  and its file path: the fix is to clear or correct that requirement's
-  `traces_to.design`, which holds design-artifact IDs (`CMP-`/`IF-`/`ADR-`)
-  only, and then re-run the design stage. Requirement sets written before
-  this rule existed can carry *requirement* IDs there, which is precisely
-  what it catches — so on an older project, expect this one and expect the
-  fix to belong to the requirements stage, not this one.
+- `dangling-reverse-trace` and `misplaced-requirement-trace` flag a
+  **requirement** file, and this stage never writes into
+  `.sdlc/requirements/` — the requirement→design edge is stored once, on
+  `design.traces_from`. So there is nothing to re-dispatch and no loop to run.
+  **Report them to the user and stop**, passing the validator's lines through
+  as they are: each already names the requirement ID, its file path in
+  trailing brackets, and the exact edit to make. Then re-run the design stage.
+  Requirement sets written before these rules existed carry *requirement* IDs
+  in those slots, which is precisely what they catch — so on an older project,
+  expect them, expect the fix to be a hand edit in the requirements stage, and
+  note that there is deliberately no migration script: rewriting requirement
+  files from the design stage would make it a second writer.
+
+**`index-unparseable` and `duplicate-id` are warnings, but do not report them
+as ordinary ones.** They say the sweep ran over an index that was missing a
+file or had collapsed two artifacts into one ID — so every other result on
+that run, a clean one included, is unreliable in both directions. Tell the
+user the sweep could not see the whole set, and what to fix, before you tell
+them what it found.
 
 Those warnings arrive **after** the write, not at the Step 3 sign-off. That
 ordering is inherent — nothing is on disk before the formatter runs, and

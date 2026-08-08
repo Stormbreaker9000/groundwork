@@ -8,13 +8,22 @@ not that the requirement exists, and ``validate_requirements.py`` excludes
 every ``traces_to`` sub-list from its dangling-reference sweep. This tool is
 the one that reads both directories at once and resolves that edge.
 
-It runs five rules::
+It runs these rules::
 
-    dangling-trace          error  design traces_from resolves to a requirement
-    uncovered-fr            warn   every FR is cited by some component
-    adr-driver-unresolved   error  IDs under '## Decision Drivers' resolve
-    adr-driver-untraced     warn   a body driver absent from frontmatter
-    dangling-reverse-trace  error  requirement traces_to.design resolves
+    dangling-trace               error  design traces_from resolves to a requirement
+    adr-driver-unresolved        error  IDs listed under '## Decision Drivers' resolve
+    dangling-reverse-trace       error  requirement traces_to.design resolves
+    misplaced-requirement-trace  error  no requirement id in traces_to.tests/code
+    uncovered-fr                 warn   every FR is cited by some component
+    adr-driver-untraced          warn   a listed driver absent from frontmatter
+    adr-driver-unlisted          warn   a prose-only ID was not checked as a driver
+    index-unparseable            warn   a file is missing from the index
+    duplicate-id                 warn   two files claim one id; only one indexed
+
+The last two are index caveats rather than edge checks, and they are findings
+for a reason: they travel the same channel every consumer already reads (the
+warning count, --strict, --json, and the formatter's hand-off), so a sweep
+that could not see the whole set cannot be reported downstream as a clean one.
 
 It never schema-validates and never writes. Required fields, enums and ID
 shape belong to the two structural validators; this tool only resolves IDs.
@@ -53,6 +62,7 @@ for _p in (
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import artifact_core as core  # noqa: E402
 import validate_design as vd  # noqa: E402
 import validate_requirements as vr  # noqa: E402
 from artifact_core import parse_frontmatter  # noqa: E402
@@ -81,6 +91,8 @@ class Requirement:
     status: str
     path: str
     traces_to_design: List[str] = field(default_factory=list)
+    traces_to_tests: List[str] = field(default_factory=list)
+    traces_to_code: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -124,15 +136,16 @@ def index_requirements(
             continue
         if data["id"] in index:
             duplicates.append(data["id"])
-        traces_to = data.get("traces_to")
-        design = _str_list(traces_to.get("design")) if isinstance(traces_to, dict) else []
+        traces_to = data.get("traces_to") if isinstance(data.get("traces_to"), dict) else {}
         index[data["id"]] = Requirement(
             req_id=data["id"],
             type=_text(data.get("type")),
             priority=_text(data.get("priority")),
             status=_text(data.get("status")),
             path=os.path.relpath(path, reqs_dir),
-            traces_to_design=design,
+            traces_to_design=_str_list(traces_to.get("design")),
+            traces_to_tests=_str_list(traces_to.get("tests")),
+            traces_to_code=_str_list(traces_to.get("code")),
         )
     return index, skipped, duplicates
 
@@ -245,6 +258,8 @@ def rule_uncovered_fr(
 # Known gap: the guard does not block a *hyphen* prefix, so prose such as
 # 'non-FR-001' still scans as 'FR-001'. Documented, not fixed — a hyphen is a
 # legal separator inside these IDs, so excluding it would break real ones.
+# This is one of two reasons a bare scan of the section is not trustworthy
+# enough to hard-fail a stage on; see DRIVER_ITEM_RE.
 #
 # 'ADR' is deliberately absent from the alternation: an ADR cross-reference in
 # the prose is not a requirement.
@@ -252,17 +267,30 @@ REQUIREMENT_ID_SCAN_RE = re.compile(
     r"(?<!\w)(?:FR|NFR|CON|BR|UC)(?:-[A-Z0-9]+)*-[0-9]{3,}(?!\w)"
 )
 
+# A *declared* driver is the leading token of a list item, which is the only
+# shape `agents/adr-generator.md` emits ('- NFR-001: keep p99 under 200ms').
+# Anything else under the heading is prose, and prose must not hard-fail a
+# stage: an architect writing '- NFR-001 (latency); supersedes the earlier
+# FR-014 framing' is describing history, not declaring a driver on a
+# requirement that no longer exists. Optional wrappers cover the ways a
+# generator or a human marks the ID up: '- **FR-001**', '- `FR-001`',
+# '- [FR-001](...)'.
+DRIVER_ITEM_RE = re.compile(
+    r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+[*_`\[\"']*"
+    r"((?:FR|NFR|CON|BR|UC)(?:-[A-Z0-9]+)*-[0-9]{3,})(?!\w)"
+)
+
 DECISION_DRIVERS_HEADING = "## Decision Drivers"
 
 
-def extract_decision_drivers(path: str) -> List[str]:
-    """Return the requirement IDs named under '## Decision Drivers', in order.
+def decision_drivers_section(path: str) -> str:
+    """Return the raw text under '## Decision Drivers', or '' if absent.
 
     The section runs from the heading line to the next '## ' line or EOF. An
     H3 such as '### Consequences' does not terminate it, because '^## ' needs
     a space as the third character.
 
-    Returns [] when the heading is absent: validate_design.py gates the five
+    Returns '' when the heading is absent: validate_design.py gates the five
     MADR headings, so a missing one is that tool's finding, not ours.
 
     Known limitation: the scan is not fence-aware, so a '## ' line inside a
@@ -272,24 +300,46 @@ def extract_decision_drivers(path: str) -> List[str]:
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
     except (OSError, UnicodeDecodeError):
-        return []
+        return ""
 
     match = re.search(
         rf"^{re.escape(DECISION_DRIVERS_HEADING)}\s*$", text, re.MULTILINE
     )
     if not match:
-        return []
+        return ""
     rest = text[match.end():]
     nxt = re.search(r"^## ", rest, re.MULTILINE)
-    section = rest[: nxt.start()] if nxt else rest
+    return rest[: nxt.start()] if nxt else rest
 
+
+def _dedupe(ids: List[str]) -> List[str]:
     ordered: List[str] = []
     seen: set = set()
-    for m in REQUIREMENT_ID_SCAN_RE.finditer(section):
-        if m.group(0) not in seen:
-            seen.add(m.group(0))
-            ordered.append(m.group(0))
+    for value in ids:
+        if value not in seen:
+            seen.add(value)
+            ordered.append(value)
     return ordered
+
+
+def extract_decision_drivers(path: str) -> Tuple[List[str], List[str]]:
+    """Return (declared, mentioned_only) requirement IDs for an ADR's drivers.
+
+    ``declared`` are the IDs in leading list-item position — the generated
+    shape, and the only ones this tool is willing to hard-fail on.
+    ``mentioned_only`` are IDs that appear somewhere in the section but never
+    as a declared item; they are reported, never enforced, because the scan
+    cannot tell a driver from a sentence.
+    """
+    section = decision_drivers_section(path)
+    if not section:
+        return [], []
+
+    matches = (DRIVER_ITEM_RE.match(line) for line in section.splitlines())
+    declared = _dedupe([m.group(1) for m in matches if m])
+    everything = _dedupe([m.group(0) for m in REQUIREMENT_ID_SCAN_RE.finditer(section)])
+    mentioned_only = [i for i in everything if i not in set(declared)]
+    return declared, mentioned_only
 
 
 def rule_adr_drivers(
@@ -312,7 +362,10 @@ def rule_adr_drivers(
         if art.type != "adr":
             continue
         traced = set(art.traces_from)
-        for driver in extract_decision_drivers(os.path.join(design_dir, art.path)):
+        declared, mentioned_only = extract_decision_drivers(
+            os.path.join(design_dir, art.path)
+        )
+        for driver in declared:
             if driver not in req_index:
                 findings.append(Finding(
                     rule="adr-driver-unresolved",
@@ -320,8 +373,8 @@ def rule_adr_drivers(
                     artifact_id=art.design_id,
                     path=art.path,
                     message=(
-                        f"'{DECISION_DRIVERS_HEADING}' names '{driver}', "
-                        f"which is not a known requirement id"
+                        f"'{DECISION_DRIVERS_HEADING}' lists '{driver}' as a "
+                        f"driver, which is not a known requirement id"
                     ),
                 ))
             elif driver not in traced:
@@ -331,10 +384,29 @@ def rule_adr_drivers(
                     artifact_id=art.design_id,
                     path=art.path,
                     message=(
-                        f"'{DECISION_DRIVERS_HEADING}' names '{driver}', "
-                        f"which is absent from frontmatter traces_from"
+                        f"'{DECISION_DRIVERS_HEADING}' lists '{driver}' as a "
+                        f"driver, which is absent from frontmatter traces_from"
                     ),
                 ))
+        # An ID that never appears in declared position is not enforced — but
+        # staying silent about it would hide a real drivers list written as a
+        # paragraph instead of bullets, which this rule would then never check.
+        # Say so, at a severity that cannot block the stage.
+        for mention in mentioned_only:
+            if mention in req_index and mention in traced:
+                continue
+            findings.append(Finding(
+                rule="adr-driver-unlisted",
+                severity=WARN,
+                artifact_id=art.design_id,
+                path=art.path,
+                message=(
+                    f"'{DECISION_DRIVERS_HEADING}' mentions '{mention}' in prose "
+                    f"but not as a list item, so it was not checked as a driver"
+                    + ("" if mention in req_index else
+                       " (and it does not resolve to a known requirement id)")
+                ),
+            ))
     return findings
 
 
@@ -350,15 +422,66 @@ def rule_dangling_reverse_trace(
     findings: List[Finding] = []
     for req in sorted(req_index.values(), key=lambda r: r.req_id):
         for target in req.traces_to_design:
-            if target not in design_index:
+            if target in design_index:
+                continue
+            # A target that resolves as a *requirement* is not a typo, it is
+            # the pre-STO-102 pattern the old constraint-specialist rule
+            # mandated. Naming the exact remedy turns a stage-stopping error
+            # the user cannot act on into a mechanical edit, which matters
+            # because this rule has no re-dispatch loop behind it.
+            if target in req_index:
+                remedy = (
+                    f"traces_to.design -> '{target}' is a requirement, not a "
+                    f"design artifact. This slot holds CMP-/IF-/ADR- ids only. "
+                    f"Move the edge: delete it here and add '{req.req_id}' to "
+                    f"{target}'s own traces_from"
+                )
+            else:
+                remedy = (
+                    f"traces_to.design -> '{target}' is not a known design "
+                    f"artifact id; clear it or correct it to a CMP-/IF-/ADR- id"
+                )
+            findings.append(Finding(
+                rule="dangling-reverse-trace",
+                severity=ERROR,
+                artifact_id=req.req_id,
+                path=req.path,
+                message=remedy,
+            ))
+    return findings
+
+
+def rule_misplaced_requirement_trace(
+    req_index: Dict[str, Requirement]
+) -> List[Finding]:
+    """No requirement ID may sit in traces_to.tests or traces_to.code.
+
+    Those slots hold test and source-file references. The same pre-STO-102
+    instruction that put requirement IDs in ``traces_to.design`` also put FR
+    IDs here, and enforcing one slot while ignoring the other lets a user fix
+    the half that fails, re-run to a clean exit, and ship the other half —
+    where a downstream test/code consumer will read a requirement ID as a
+    path.
+
+    Only an entry that resolves to a known requirement is flagged, so a real
+    file path can never trip this.
+    """
+    findings: List[Finding] = []
+    for req in sorted(req_index.values(), key=lambda r: r.req_id):
+        for slot, targets in (("tests", req.traces_to_tests), ("code", req.traces_to_code)):
+            for target in targets:
+                if target not in req_index:
+                    continue
                 findings.append(Finding(
-                    rule="dangling-reverse-trace",
+                    rule="misplaced-requirement-trace",
                     severity=ERROR,
                     artifact_id=req.req_id,
                     path=req.path,
                     message=(
-                        f"traces_to.design -> '{target}' is not a known "
-                        f"design artifact id"
+                        f"traces_to.{slot} -> '{target}' is a requirement id; "
+                        f"this slot holds {'test' if slot == 'tests' else 'source-file'} "
+                        f"references only. Move the edge: delete it here and add "
+                        f"'{req.req_id}' to {target}'s own traces_from"
                     ),
                 ))
     return findings
@@ -367,6 +490,46 @@ def rule_dangling_reverse_trace(
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
+def index_caveat_findings(skipped: List[str], duplicates: List[str]) -> List[Finding]:
+    """Turn the two index caveats into findings.
+
+    They are findings and not header prose because every consumer of this tool
+    reads findings: the warning count, ``--strict``, the ``--json`` payload and
+    the formatter's ``traceability_rerun.warnings`` hand-off. A caveat carried
+    outside that channel is a caveat that gets dropped at the first boundary,
+    and the contract downstream reads an empty warnings list as proof the
+    sweep was clean. A sweep over an index that is missing files or has
+    collapsed two artifacts into one ID is not clean; it is unreliable in both
+    directions, and it has to say so where it will be heard.
+    """
+    findings: List[Finding] = []
+    for path in skipped:
+        findings.append(Finding(
+            rule="index-unparseable",
+            severity=WARN,
+            artifact_id="-",
+            path=path,
+            message=(
+                "frontmatter did not parse, so this file is absent from the "
+                "index and every result computed over it may be wrong in "
+                "either direction. Run the structural validators for details"
+            ),
+        ))
+    for dup in duplicates:
+        findings.append(Finding(
+            rule="duplicate-id",
+            severity=WARN,
+            artifact_id=dup,
+            path="-",
+            message=(
+                "declared by more than one file; only the last was indexed, so "
+                "results for this id may be wrong in either direction. Run the "
+                "structural validators for details"
+            ),
+        ))
+    return findings
+
+
 def collect_findings(
     design_dir: str, reqs_dir: str
 ) -> Tuple[List[Finding], int, int, List[str], List[str]]:
@@ -377,19 +540,18 @@ def collect_findings(
     req_index, req_skipped, req_dupes = index_requirements(reqs_dir)
     design_index, design_skipped, design_dupes = index_design(design_dir)
 
+    skipped = req_skipped + design_skipped
+    duplicates = sorted(set(req_dupes + design_dupes))
+
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
     findings.extend(rule_uncovered_fr(design_index, req_index))
     findings.extend(rule_adr_drivers(design_index, req_index, design_dir))
     findings.extend(rule_dangling_reverse_trace(req_index, design_index))
+    findings.extend(rule_misplaced_requirement_trace(req_index))
+    findings.extend(index_caveat_findings(skipped, duplicates))
 
-    return (
-        findings,
-        len(design_index),
-        len(req_index),
-        req_skipped + design_skipped,
-        sorted(set(req_dupes + design_dupes)),
-    )
+    return findings, len(design_index), len(req_index), skipped, duplicates
 
 
 def print_report(
@@ -404,16 +566,19 @@ def print_report(
 ) -> None:
     print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
     print(f"Indexed {design_count} design artifact(s), {req_count} requirement(s).")
-    if skipped:
+    if not core.HAVE_YAML:
+        # The two structural validators announce this; so must this one. Its
+        # whole job is reading list fields out of frontmatter, and the stdlib
+        # fallback is the less faithful parser — a user who cannot see which
+        # parser ran cannot judge a clean result.
         print(
-            f"WARNING: {len(skipped)} file(s) skipped (unparseable frontmatter); "
-            f"results may be incomplete. Run the structural validators for details."
+            "WARNING: running in reduced (stdlib fallback) mode; "
+            "install pyyaml for full-fidelity frontmatter parsing."
         )
-    if duplicates:
+    if skipped or duplicates:
         print(
-            f"WARNING: duplicate id(s) across files: {', '.join(duplicates)}; "
-            f"only the last file for each id was indexed, so results may be "
-            f"unreliable. Run the structural validators for details."
+            f"WARNING: index is incomplete — {len(skipped)} unparseable file(s), "
+            f"{len(duplicates)} duplicate id(s); see the warning lines below."
         )
     print("-" * 60)
     # --quiet suppresses the warning listing only. Error lines always print:
@@ -425,7 +590,14 @@ def print_report(
     ):
         if quiet and f.severity != ERROR:
             continue
-        print(f"  {f.severity.upper():<6} {f.rule:<22} {f.artifact_id:<10} {f.message}")
+        # The path is printed, not just carried in --json. Both agent contracts
+        # require the stage to name the offending file, and the formatter runs
+        # this tool without --json — so a path that only exists in the JSON
+        # payload is a path the agent has to guess at.
+        print(
+            f"  {f.severity.upper():<6} {f.rule:<28} {f.artifact_id:<10} "
+            f"{f.message} [{f.path}]"
+        )
     print("-" * 60)
     errors = sum(1 for f in findings if f.severity == ERROR)
     warns = sum(1 for f in findings if f.severity == WARN)

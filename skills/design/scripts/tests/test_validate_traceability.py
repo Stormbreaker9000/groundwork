@@ -131,14 +131,27 @@ def test_quiet_suppresses_warning_lines_but_still_counts_them(capsys):
 # ---------------------------------------------------------------------------
 # Unparseable frontmatter
 # ---------------------------------------------------------------------------
-def test_unparseable_file_is_skipped_with_a_header_note(capsys):
+def test_unparseable_file_is_skipped_and_warned_about(capsys):
     """An unindexable component has an invisible traces_from, which would
     manufacture false coverage warnings. The run continues, but says so."""
     code = run("unparseable")
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "1 file(s) skipped (unparseable frontmatter)" in out
+    assert "index-unparseable" in out
     assert "Indexed 0 design artifact(s), 1 requirement(s)." in out
+
+
+def test_unparseable_file_counts_as_a_warning_and_blocks_under_strict(capsys):
+    """The caveat has to reach the warning count and the exit code, not just
+    the prose. A --strict CI job that goes green on a sweep whose index was
+    missing a file is reporting an unreliable result as a clean one, and the
+    formatter's hand-off reads an empty warnings list as proof of a clean
+    sweep."""
+    code = run("unparseable")
+    assert "Summary: 0 error(s), 1 warning(s)." in capsys.readouterr().out
+    assert code == 0
+
+    assert run("unparseable", "--strict") == 1
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +250,9 @@ def test_decision_drivers_section_stops_at_the_next_h2():
     path = os.path.join(
         FIXTURES, "adr_driver_untraced", "design", "adr", "ADR-001-single-writer-db.md"
     )
-    assert vt.extract_decision_drivers(path) == ["NFR-001", "CON-001"]
+    declared, mentioned_only = vt.extract_decision_drivers(path)
+    assert declared == ["NFR-001", "CON-001"]
+    assert mentioned_only == []
 
 
 # ---------------------------------------------------------------------------
@@ -265,22 +280,170 @@ def test_empty_reverse_trace_and_asymmetry_are_never_findings(capsys):
 # ---------------------------------------------------------------------------
 # Duplicate IDs
 # ---------------------------------------------------------------------------
-def test_duplicate_ids_are_reported_in_the_header(capsys):
+def test_duplicate_ids_are_reported_as_warnings(capsys):
     """Both indexes are keyed by ID, so a repeat silently overwrites and the
     shadowed file becomes invisible to every rule -- a false-positive
-    uncovered-fr in one file order, a missed dangling-trace in the other.
-    Not a rule and not a severity: a header caveat, like the skipped note."""
+    uncovered-fr in one file order, a missed dangling-trace in the other."""
     code = run("duplicate_ids")
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "WARNING: duplicate id(s) across files: CMP-001, FR-001" in out
-    assert "results may be unreliable" in out
+    assert "duplicate-id" in out
+    assert "CMP-001" in out and "FR-001" in out
+    assert "Summary: 0 error(s), 2 warning(s)." in out
+
+
+def test_duplicate_ids_block_under_strict(capsys):
+    """Same reason as the unparseable caveat: a collapsed index is not a
+    clean sweep, so the channel that reports cleanliness has to carry it."""
+    assert run("duplicate_ids", "--strict") == 1
 
 
 def test_duplicate_ids_reach_the_json_payload(capsys):
     run("duplicate_ids", "--json")
     payload = json.loads(capsys.readouterr().out)
     assert payload["duplicate_ids"] == ["CMP-001", "FR-001"]
+
+
+# ---------------------------------------------------------------------------
+# misplaced-requirement-trace (error)
+# ---------------------------------------------------------------------------
+def test_requirement_id_in_traces_to_code_is_an_error(capsys):
+    """The other half of the slot the old constraint-specialist rule misused.
+
+    Enforcing traces_to.design while ignoring traces_to.tests/code lets a user
+    fix the half that fails, re-run to a clean exit, and ship the half that
+    still has a requirement id where a downstream consumer reads a path.
+    """
+    code = run("misplaced_trace")
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "misplaced-requirement-trace" in out
+    assert "traces_to.code -> 'FR-001'" in out
+    assert "traces_to.tests -> 'FR-001'" in out
+
+
+def test_misplaced_trace_ignores_real_file_references(capsys):
+    """Only an entry that resolves to a known requirement is flagged, so the
+    ordinary source path beside it -- and the correctly-shaped FR-001, whose
+    traces_to.tests holds a test path -- are never findings."""
+    run("misplaced_trace")
+    out = capsys.readouterr().out
+    assert "src/orders/cart.ts" not in out
+    assert "tests/orders/test_place_order.py" not in out
+    assert out.count("misplaced-requirement-trace") == 2
+
+
+def test_misplaced_trace_names_the_remedy(capsys):
+    """This rule has no re-dispatch loop behind it either -- the message is
+    the entire fix instruction the user gets."""
+    run("misplaced_trace")
+    out = capsys.readouterr().out
+    assert "add 'BR-001' to FR-001's own traces_from" in out
+
+
+# ---------------------------------------------------------------------------
+# The pre-STO-102 legacy shape
+# ---------------------------------------------------------------------------
+def test_legacy_reverse_trace_names_the_exact_remedy(capsys):
+    """A target that resolves as a *requirement* is not a typo -- it is the
+    shape the old constraint-specialist rule mandated, so it is what every
+    pre-STO-102 project will hit. The rule stops the stage and has no loop
+    behind it, so an opaque message leaves the user with no way forward."""
+    code = run("legacy_reverse_trace")
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "dangling-reverse-trace" in out
+    assert "is a requirement, not a design artifact" in out
+    assert "add 'CON-001' to NFR-002's own traces_from" in out
+
+
+def test_reverse_trace_findings_print_the_file_path(capsys):
+    """Both agent contracts require the stage to name the requirement's file
+    path, and the formatter runs this tool without --json -- so a path that
+    exists only in the JSON payload is one the agent has to invent."""
+    run("legacy_reverse_trace")
+    out = capsys.readouterr().out
+    assert os.path.join("constraints", "CON-001-eu-data-residency.md") in out
+
+
+# ---------------------------------------------------------------------------
+# ADR drivers: declared vs. prose
+# ---------------------------------------------------------------------------
+def test_prose_mention_is_not_a_driver_and_does_not_block(capsys):
+    """An architect writing '- NFR-001 (latency); supersedes the earlier
+    FR-014 framing' is describing history. Hard-failing the design stage until
+    an ordinary English sentence is deleted is not a defect the tool found."""
+    code = run("adr_driver_in_prose")
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "adr-driver-unresolved" not in out
+
+
+def test_prose_mention_is_still_reported_as_a_warning(capsys):
+    """Silence would hide a real drivers list written as a paragraph, which
+    this rule would then never check at all."""
+    run("adr_driver_in_prose")
+    out = capsys.readouterr().out
+    assert "adr-driver-unlisted" in out
+    assert "FR-014" in out
+    assert "does not resolve to a known requirement id" in out
+
+
+def test_declared_driver_survives_markup():
+    """The generator writes '- NFR-001: ...', humans write '- **NFR-001**'
+    and '- [NFR-001](...)'. All three are declarations, not prose."""
+    for line in ("- NFR-001: keep it fast",
+                 "- **NFR-001** keep it fast",
+                 "- `NFR-001`",
+                 "* [NFR-001](../req.md)",
+                 "1. NFR-001"):
+        assert vt.DRIVER_ITEM_RE.match(line), line
+    for line in ("  this supersedes NFR-001 as a framing",
+                 "NFR-001 at the start of a paragraph"):
+        assert not vt.DRIVER_ITEM_RE.match(line), line
+
+
+# ---------------------------------------------------------------------------
+# Reduced (stdlib fallback) mode
+# ---------------------------------------------------------------------------
+def test_block_lists_at_key_indentation_parse_without_pyyaml(monkeypatch):
+    """Every artifact Groundwork writes puts `traces_from:` and its `- FR-001`
+    rows at the same indentation. Reading those rows as siblings of the key
+    rather than as its value empties the one field this whole tool resolves --
+    silently, in both directions: a dangling trace goes unreported and a
+    covered FR is flagged uncovered.
+    """
+    import artifact_core
+
+    monkeypatch.setattr(artifact_core, "HAVE_YAML", False)
+    path = os.path.join(
+        FIXTURES, "dangling_trace", "design", "components", "CMP-001-order-service.md"
+    )
+    data, err = artifact_core.parse_frontmatter(path)
+    assert err is None
+    assert data["traces_from"] == ["FR-001", "FR-404"]
+
+
+def test_dangling_trace_is_still_caught_without_pyyaml(monkeypatch, capsys):
+    """The end-to-end consequence of the parse gap: the same set that exits 1
+    with pyyaml installed must not exit 0 without it."""
+    import artifact_core
+
+    monkeypatch.setattr(artifact_core, "HAVE_YAML", False)
+    code = run("dangling_trace")
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "FR-404" in out
+
+
+def test_reduced_mode_is_announced(monkeypatch, capsys):
+    """Both structural validators say which parser ran. A user who cannot see
+    that the less faithful one was used cannot judge a clean result."""
+    import artifact_core
+
+    monkeypatch.setattr(artifact_core, "HAVE_YAML", False)
+    run("clean")
+    assert "reduced (stdlib fallback) mode" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

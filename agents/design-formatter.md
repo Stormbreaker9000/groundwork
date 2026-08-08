@@ -395,10 +395,17 @@ invisible `traces_from`, which manufactures false `uncovered-fr` warnings for
 requirements that are in fact covered. Do not run it on a non-zero structural
 exit — report the structural failure and stop.
 
-A non-zero exit here is a **hard failure**, exactly like the structural gate:
-report it and do not treat the write as done. Warnings (`uncovered-fr`,
-`adr-driver-untraced`) do not exit non-zero; carry them forward so the skill
-can surface them.
+Exit **1** is a **hard failure**, exactly like the structural gate: report it
+and do not treat the write as done. Warnings do not exit non-zero; carry them
+forward so the skill can surface them.
+
+Exit **2 is not a traceability failure** — it is an environment error, and it
+produces no findings at all. It means one of the two directories does not
+exist relative to your working directory (the message on stderr says which).
+There is nothing to re-dispatch and no artifact to name, so do not feed it
+into the error-rule routing below: report the missing directory to the
+orchestrator as an environment problem and stop. Routing an exit 2 as if it
+were a dangling trace sends the stage looking for a defect that is not there.
 
 Record its exit code and any warning lines in `formatter_result.traceability_rerun`
 — sibling to `validator_rerun`, same failure handling. See `## Output` for the
@@ -419,7 +426,7 @@ formatter_result:
   traceability_rerun:
     exit_code: 0
     warnings:
-      - "uncovered-fr FR-007 — no component traces_from this functional requirement"
+      - "uncovered-fr FR-007 — no component traces_from this functional requirement [functional/FR-007-....md]"
 ```
 
 `review_queue_count` is the number of `confidence: low` entries in
@@ -428,11 +435,19 @@ Report this back to the orchestrator, which forwards it to the skill. The
 skill owns sign-off and the commit.
 
 `traceability_rerun.exit_code` is `validate_traceability.py`'s exit code —
-run only after `validator_rerun.exit_code` is `0` — and is a hard failure the
-same as `validator_rerun` if non-zero. `traceability_rerun.warnings` is the
-list of warning-severity lines the run reported (`uncovered-fr`,
-`adr-driver-untraced`), or empty; an empty list means the sweep was clean,
-not that it was skipped.
+run only after `validator_rerun.exit_code` is `0`. Exit 1 is a hard failure
+the same as `validator_rerun`; exit 2 is the environment error described
+above, not a traceability failure.
+
+`traceability_rerun.warnings` is **every** warning-severity line the run
+reported, copied verbatim including the trailing `[path]`. Copy them all, not
+the ones that look like edge findings: `index-unparseable` and `duplicate-id`
+say the sweep ran over an index that was missing a file or had collapsed two
+artifacts into one ID, which makes every other result on that run unreliable
+in both directions. Those two are the reason the list is defined as "every
+warning" — dropping them is what turns an unreliable sweep into a reported
+clean one, and the orchestrator has no other way to learn the difference. An
+empty list means the sweep was clean, not that it was skipped.
 
 ## Gotchas
 

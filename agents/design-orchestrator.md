@@ -566,28 +566,47 @@ pass: the formatter's contract is to run both and report both, so a missing
 key means the gate did not run. Treat it exactly as a non-zero exit code —
 never infer success from silence.
 
-`traceability_rerun.warnings` (`uncovered-fr`, `adr-driver-untraced`) do not
-block sign-off; report them to the skill for the user, which surfaces them at
-`skills/design/SKILL.md` Step 4b.
+`traceability_rerun.warnings` do not block sign-off; report them to the skill
+for the user, which surfaces them at `skills/design/SKILL.md` Step 4b. Two of
+them deserve a sentence of their own when you report: `index-unparseable` and
+`duplicate-id` are not edge findings but statements that the sweep could not
+see the whole set, so every *other* result on that run — including a clean
+one — is unreliable in both directions. Say so rather than passing them along
+as ordinary warnings.
 
-**Which error rule takes which path.** `validate_traceability.py` has three
-error rules, and they do not share one remedy:
+**Exit 2 is not a traceability failure.** It means a directory is missing and
+it yields no findings, so none of the routing below applies. Report the
+environment problem to the skill and stop; do not send anything back to a
+specialist looking for a defect that was never reported.
+
+**Which error rule takes which path.** `validate_traceability.py`'s error
+rules do not share one remedy:
 
 - `dangling-trace` and `adr-driver-unresolved` name a **design artifact**
   (`CMP-`/`IF-`/`ADR-`). Both are re-dispatches: attach the validator's error
   lines, send the named artifacts back to their owning specialist, then re-run
   the critic and the formatter on the corrected set — the same loop a
   `validator_rerun` failure opens.
-- `dangling-reverse-trace` names a **requirement** file. It is **not** a
-  re-dispatch, and there is no specialist to send it to. The design stage never
-  writes into `.sdlc/requirements/` — the requirement→design edge lives once, on
-  `design.traces_from` (spec D3), and that one-writer discipline is not relaxed
-  to close a gate. **Report it to the skill and stop:** name the requirement ID
-  and its file path, and state that the fix is to clear or correct that
-  requirement's `traces_to.design`, which holds design-artifact IDs
-  (`CMP-`/`IF-`/`ADR-`) only, and then re-run the design stage. Requirement sets
-  generated before STO-102 may carry *requirement* IDs in that slot, which is
-  exactly what this rule flags — expect it on older projects. Do not edit the
+- `dangling-reverse-trace` and `misplaced-requirement-trace` name a
+  **requirement** file. Neither is a re-dispatch, and there is no specialist to
+  send them to. The design stage never writes into `.sdlc/requirements/` — the
+  requirement→design edge lives once, on `design.traces_from` (spec D3), and
+  that one-writer discipline is not relaxed to close a gate. **Report them to
+  the skill and stop:** pass the validator's error lines through verbatim.
+  Each one already carries the requirement ID, the file path in trailing
+  brackets, and the specific edit — the tool distinguishes a target that
+  resolves as a *requirement* (the pre-STO-102 shape, whose fix is to move the
+  edge onto that requirement's own `traces_from`) from one that resolves as
+  nothing (whose fix is to clear or correct it). Do not paraphrase them into a
+  generic "fix your traces", and do not invent a path — it is in the line.
+
+  Expect both on any project whose requirements predate STO-102: the
+  instruction that shipped before it told constraints to put requirement IDs
+  in `traces_to.design` and business rules to put them in
+  `traces_to.tests`/`code`. The fix belongs to the requirements stage, and it
+  is a hand edit — there is no migration script and no bypass flag, by design,
+  because a tool that rewrites requirement files from the design stage is
+  exactly the second writer this pipeline refuses to have. Do not edit the
   requirement yourself, do not re-dispatch to a specialist, and do not loop:
   re-dispatching here converges on nothing, because no design artifact is wrong.
 

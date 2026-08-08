@@ -310,6 +310,9 @@ formatter_result:
   context_artifact: ".sdlc/requirements/assumptions.md"
   glossary: ".sdlc/requirements/glossary.md"
   validator_rerun: { exit_code: 0 }
+  applies_to_backfill:
+    - from: "CON-001"
+      into: [ "NFR-002" ]
 ```
 
 Report the `formatter_result` back to the caller (the skill), which owns the
@@ -317,6 +320,24 @@ sign-off and commit. You never commit. This is conditional on
 `validator_rerun.exit_code` being `0` — see Stage 6: a non-zero exit is a hard
 failure that re-opens the critique loop instead of reaching sign-off, so nothing
 here reports to the skill until a clean re-run confirms the write.
+
+**Reconcile `applies_to_backfill` before sign-off.** You are the only stage
+that still knows what `applies_to` said, because the formatter strips it. Walk
+every constraint and business rule you passed into Stage 7 that carried
+`applies_to`, and confirm each appears in `applies_to_backfill` with an `into`
+list covering every requirement it named. A missing or short entry is a hard
+failure, handled the same as a non-zero `validator_rerun`: re-dispatch to the
+formatter with the specific edges named.
+
+Do not skip this on the grounds that the validator passed. It cannot catch
+this. Since the edge moved off `traces_to`, a back-fill that is stripped but
+never written leaves both files schema-valid and `validate_requirements.py`
+exiting 0 — an empty `traces_from` is legal, and its dangling sweep only
+resolves references that are present. The result is a set where every
+constraint and business rule is unlinked in both directions: no CON/BR rows in
+the traceability matrix, and a design stage whose `requirements_digest` never
+learns which NFR a constraint bounds. This reconciliation is the only thing
+standing between that outcome and sign-off.
 
 ## Gotchas
 

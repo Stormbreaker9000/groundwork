@@ -91,16 +91,35 @@ validator's dangling-reference check passes:
   `constraint-specialist.md`, "Tracing — mandatory") listing the requirement
   IDs they bound or implement. For every item that carries `applies_to`,
   append that item's own ID to the `traces_from` of each requirement named in
-  it, then delete `applies_to` from the item before you write its file. This is
-  the only bidirectional-link mechanism for these edges — do not additionally
-  look for requirement IDs under any item's `traces_to` for this purpose;
-  `traces_to.design`/`tests`/`code` never hold requirement IDs, only
-  design-artifact IDs, test references, and code references respectively.
-  **Stripping `applies_to` matters, not just tidiness**: `requirement.schema.json`
-  sets `additionalProperties: false`, so a leaked `applies_to` fails
-  `validate_requirements.py` outright — that hard failure is the safety net if
-  this step is skipped, and it is far cheaper to strip the field here than to
-  chase the resulting non-zero exit back to its source.
+  it **if it is not already there**, then delete `applies_to` from the item
+  before you write its file. This is the only bidirectional-link mechanism for
+  these edges — do not additionally look for requirement IDs under any item's
+  `traces_to` for this purpose; `traces_to.design`/`tests`/`code` never hold
+  requirement IDs, only design-artifact IDs, test references, and code
+  references respectively.
+
+  The "if it is not already there" is not tidiness. `traces_from` is
+  `uniqueItems: true`, and an FR that already cites the business rule it
+  implements is the *normal* case, not a rare one — `fr-specialist.md`'s own
+  worked example emits `traces_from: [ BR-001 ]`. An unguarded append writes
+  `[BR-001, BR-001]`, which fails `validate_requirements.py` on the very next
+  step with the invalid file already on disk.
+
+  **Stripping `applies_to` matters too**: `requirement.schema.json` sets
+  `additionalProperties: false`, so a leaked `applies_to` fails
+  `validate_requirements.py` outright, and it is far cheaper to strip the field
+  here than to chase the resulting non-zero exit back to its source.
+
+  **Report the back-fill; do not let it fail silently.** The two failure modes
+  are not symmetrical. A leaked `applies_to` is caught by the schema. A
+  *dropped* back-fill — you strip the field but never write the edge — is
+  caught by nothing: both files validate, `validate_requirements.py` exits 0
+  (an empty `traces_from` is legal, and its dangling sweep only checks
+  references that are present), and the set ships with every constraint and
+  business rule unlinked in both directions. This edge has no other carrier
+  since it left `traces_to`, so list what you wrote in
+  `formatter_result.applies_to_backfill`, one entry per source item, and let
+  the orchestrator reconcile it against what it dispatched.
 - Drop or repair any reference whose target ID is not in the approved set —
   dangling references fail the validator.
 - Leave `traces_to.design`/`tests`/`code` empty when no downstream artifact yet
@@ -228,7 +247,18 @@ formatter_result:
   context_artifact: ".sdlc/requirements/assumptions.md"
   glossary: ".sdlc/requirements/glossary.md"
   validator_rerun: { exit_code: 0 }
+  applies_to_backfill:            # one entry per item that arrived with applies_to
+    - from: "CON-001"
+      into: [ "NFR-002" ]         # requirements whose traces_from now cites CON-001
+    - from: "BR-001"
+      into: [ "FR-008" ]          # already present; recorded, not appended twice
 ```
+
+`applies_to_backfill` is the receipt for the edge that has no other carrier.
+An item that arrived with `applies_to` and is missing here, or is here with an
+`into` list shorter than the `applies_to` it arrived with, means the edge was
+dropped — report it rather than papering over it. An empty list is correct
+only when no constraint or business rule carried `applies_to` at all.
 
 ## Gotchas
 

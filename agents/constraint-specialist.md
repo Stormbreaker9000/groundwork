@@ -66,7 +66,9 @@ applies_to: [ NFR-002 ]   # ← TRANSIENT, drives the back-fill; never reaches a
 - A **business rule** is implemented by one or more FRs. List their IDs in
   `applies_to`. Do not list those FR IDs under this rule's `traces_to.tests` or
   `traces_to.code` — those slots hold test and source-file references, not
-  requirement IDs.
+  requirement IDs, and `validate_traceability.py` resolves them as such: a
+  requirement ID in either slot is a `misplaced-requirement-trace` error that
+  stops the design stage, exactly as it is in `traces_to.design`.
 
 One field serves both directions: whichever your `type` is, `applies_to` names
 the requirements that must record *this* artifact's ID in their own

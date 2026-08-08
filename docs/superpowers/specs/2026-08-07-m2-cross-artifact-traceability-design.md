@@ -188,7 +188,19 @@ match the existing shipped precedent `NFR-005 traces_from: [FR-001]`, both
 
 The sibling business-rule bullet is corrected in the same pass: it currently
 routes FR IDs into `traces_to.tests`/`traces_to.code`, which is the same class
-of misuse and is not caught by any rule here.
+of misuse — and `misplaced-requirement-trace` catches it, at the same severity
+as the `traces_to.design` case. Correcting the instruction without also
+checking those two slots would leave the contract enforced in one slot and
+unenforced in the other, so a legacy project would fix the half that fails,
+re-run to a clean exit, and ship the half that still has a requirement ID where
+a downstream test or code consumer reads a path.
+
+Neither rule offers a migration script or a bypass flag, and that is
+deliberate. Every pre-STO-102 requirement set will trip them, and the fix is a
+hand edit in the requirements stage — the messages name the exact edit, ID by
+ID, precisely because there is no automation behind them. A tool that rewrote
+requirement files from the design stage would be the second writer D3 exists
+to prevent.
 
 ### D7 — A new sibling script, not a flag on `validate_design.py`
 
@@ -227,15 +239,66 @@ the alternative is asking the critic to compute coverage over drafts, which is
 the unreachable-gate mistake again. The skill documents the ordering rather
 than hiding it.
 
+### D9 — The `applies_to` back-fill needs a receipt, not just a leak check
+
+D6 moves the constraint/business-rule edge onto a transient `applies_to` that
+the formatter consumes and strips. That trade has an asymmetry worth naming.
+
+Before, the edge rode on `traces_to` — a required schema field that flowed
+untransformed from specialist to disk, so it always arrived. Now it survives
+only if the formatter performs two steps: append the ID to each named
+requirement's `traces_from`, and strip `applies_to`. `additionalProperties:
+false` catches the *leak* (a stripped-nothing), but it cannot catch the
+*drop*: a formatter that strips the field and skips the append leaves both
+files schema-valid, `validate_requirements.py` exiting 0 (an empty
+`traces_from` is legal, and its dangling sweep only resolves references that
+are present), and a set where every constraint and business rule is unlinked
+in both directions.
+
+So the formatter reports `formatter_result.applies_to_backfill` — one entry
+per item, naming the requirements it wrote into — and the orchestrator, the
+only stage that still knows what `applies_to` said, reconciles it against what
+it dispatched. A missing or short entry is a hard failure handled like a
+non-zero `validator_rerun`.
+
+The append is also guarded with "if not already present". `traces_from` is
+`uniqueItems: true`, and an FR already citing the business rule it implements
+is the normal case — `fr-specialist.md`'s own worked example emits
+`traces_from: [ BR-001 ]`. An unguarded append writes a duplicate and fails
+the structural gate on the very next step, with the invalid file on disk.
+
 ## Rules
 
 | Rule | Severity | Check |
 | --- | --- | --- |
 | `dangling-trace` | error | Every design artifact's `traces_from` ID resolves to a requirement file |
-| `uncovered-fr` | warn | Every FR (excluding `priority: wont`, `status: obsolete`) appears in ≥1 component's `traces_from` |
-| `adr-driver-unresolved` | error | Requirement IDs under an ADR's `## Decision Drivers` resolve |
-| `adr-driver-untraced` | warn | A resolving body driver ID absent from that ADR's frontmatter `traces_from` |
+| `adr-driver-unresolved` | error | Requirement IDs *listed* under an ADR's `## Decision Drivers` resolve |
 | `dangling-reverse-trace` | error | A non-empty `traces_to.design` on a requirement resolves to a real design ID |
+| `misplaced-requirement-trace` | error | No requirement ID sits in a requirement's `traces_to.tests` or `traces_to.code` |
+| `uncovered-fr` | warn | Every FR (excluding `priority: wont`, `status: obsolete`) appears in ≥1 component's `traces_from` |
+| `adr-driver-untraced` | warn | A resolving listed driver ID absent from that ADR's frontmatter `traces_from` |
+| `adr-driver-unlisted` | warn | A requirement ID in the drivers *prose* that was therefore not checked as a driver |
+| `index-unparseable` | warn | A file's frontmatter did not parse, so it is absent from the index |
+| `duplicate-id` | warn | Two files claim one ID; only the last read was indexed |
+
+`misplaced-requirement-trace` is the other half of D6. The same instruction
+that put requirement IDs in `traces_to.design` put them in
+`traces_to.tests`/`code`, and enforcing one slot while ignoring the others
+lets a user fix the half that fails, re-run to a clean exit, and ship the rest.
+Only an entry that resolves to a known requirement is flagged, so a real file
+path can never trip it.
+
+`adr-driver-unlisted` exists because the body scan cannot tell a driver from a
+sentence. A *listed* driver is the leading token of a list item — the only
+shape `agents/adr-generator.md` emits — and only those are enforced. A
+requirement ID appearing anywhere else under the heading is reported at warn
+severity and never blocks: an architect writing "supersedes the earlier FR-014
+framing" is describing history, and a stage that cannot complete until ordinary
+English is deleted from an ADR has found no defect. The warning is what keeps
+a drivers list written as a paragraph from going silently unchecked.
+
+The last two are index caveats rather than edge checks; see "Unparseable
+files" for why they are findings and not header prose.
 
 ## Tool shape
 
@@ -271,7 +334,7 @@ the same `sys.path` handling both existing validators use.
 ```python
 @dataclass
 class Finding:
-    rule: str        # one of the five rule names above
+    rule: str        # one of the rule names above
     severity: str    # "error" | "warn"
     artifact_id: str # the artifact the finding is about
     path: str        # path relative to its stage directory
@@ -281,10 +344,9 @@ class Finding:
 `--json` emits `{"findings": [...], "counts": {"error": N, "warn": N},
 "skipped": [...], "duplicate_ids": [...]}`, mirroring
 `lint_requirements_content.py`'s machine-readable contract so an agent can
-consume it without parsing prose. `skipped` and `duplicate_ids` carry the same
-caveats the human report prints in its header: without them a consumer cannot
-tell that coverage was computed over an incomplete or collapsed index, which
-is precisely the condition that manufactures false `uncovered-fr` findings.
+consume it without parsing prose. `skipped` and `duplicate_ids` are retained
+as top-level keys for consumers that want them structured, but they are *also*
+findings — see "Unparseable files".
 
 ### Human report
 
@@ -292,20 +354,38 @@ is precisely the condition that manufactures false `uncovered-fr` findings.
 Validating traceability: .sdlc/design <-> .sdlc/requirements
 Indexed 23 design artifact(s), 22 requirement(s).
 ------------------------------------------------------------
-  ERROR  dangling-trace         CMP-003  traces_from -> 'FR-009' is not a known requirement id
-  WARN   uncovered-fr           FR-005   no component traces_from this functional requirement
+  ERROR  dangling-trace   CMP-003  traces_from -> 'FR-009' is not a known requirement id [components/CMP-003-....md]
+  WARN   uncovered-fr     FR-005   no component traces_from this functional requirement [functional/FR-005-....md]
 ------------------------------------------------------------
 Summary: 1 error(s), 1 warning(s).
 ```
 
+Every line ends with the artifact's path. `Finding.path` is not decoration:
+both agent contracts require the stage to name the offending file, and the
+formatter runs this tool without `--json`, so a path that exists only in the
+JSON payload is one the agent has to invent.
+
+When `pyyaml` is absent the report carries a `reduced (stdlib fallback) mode`
+warning, as both structural validators already do. This tool's whole job is
+reading list fields out of frontmatter, so the user has to be able to see
+which parser produced a clean result.
+
 ### Unparseable files
 
-A file whose frontmatter does not parse is skipped and counted, with a note in
-the report header stating that results may be incomplete. This matters
-specifically for coverage: an unparseable component's `traces_from` is
-invisible, which would manufacture false `uncovered-fr` warnings. In the
-pipeline path this cannot occur, because `validate_design.py` has already
-exited 0 (D8).
+A file whose frontmatter does not parse is skipped and reported as an
+`index-unparseable` finding; a duplicate ID becomes a `duplicate-id` finding.
+Findings, and not header prose, because findings are the channel every
+consumer already reads: the warning count, the `--strict` exit code, the
+`--json` payload and the formatter's `traceability_rerun.warnings` hand-off. A
+caveat carried outside that channel is dropped at the first boundary, and the
+contract downstream reads an empty warning list as proof the sweep was clean —
+so a `--strict` CI job goes green, and the orchestrator signs off, on a sweep
+that could not see the whole set.
+
+This matters specifically for coverage: an unparseable component's
+`traces_from` is invisible, which would manufacture false `uncovered-fr`
+warnings. In the pipeline path this cannot occur, because `validate_design.py`
+has already exited 0 (D8).
 
 ### Parsing `## Decision Drivers`
 
@@ -316,16 +396,30 @@ scan. The variant is guarded so `NFR-001` does not also match as `FR-001`, and
 `ADR-` is not in the alternation, so an ADR cross-reference in the prose is
 not mistaken for a requirement.
 
+That scan alone is not trustworthy enough to hard-fail a stage on. It has a
+documented gap (a hyphen prefix, so `non-FR-001` scans as `FR-001`) and it
+cannot distinguish a declaration from a sentence. So enforcement is restricted
+to **declared** drivers: an ID in the leading position of a list item, after
+optional markup (`- FR-001`, `- **FR-001**`, `` - `FR-001` ``,
+`- [FR-001](...)`, `1. FR-001`). That is the only shape `adr-generator.md`
+emits. Every other ID in the section is `adr-driver-unlisted`, a warning, so
+that a drivers list written as a paragraph is visible without an English
+sentence being able to block the stage.
+
 ## Files changed
 
 | File | Change |
 | --- | --- |
-| `skills/design/scripts/validate_traceability.py` | New. The five rules, the CLI, the report. |
+| `skills/design/scripts/validate_traceability.py` | New. The rules, the CLI, the report. |
 | `skills/design/scripts/tests/test_validate_traceability.py` | New. See Testing. |
-| `skills/design/scripts/tests/fixtures/traceability/**` | New. Paired design + requirements trees. |
-| `agents/design-formatter.md` | "Validator re-run" gains the second command; `formatter_result` carries both outcomes. |
+| `skills/design/scripts/tests/fixtures/traceability/**` | New. Paired design + requirements trees, written in the block-list style the formatters emit. |
+| `lib/artifact_core.py` | Fix: the stdlib fallback parser now reads a block sequence at its key's own indentation, which is the style every emitted artifact uses. |
+| `agents/design-formatter.md` | "Validator re-run" gains the second command; `formatter_result` carries both outcomes; exit 2 routed as an environment error. |
+| `agents/design-orchestrator.md` | Stage 10 routing: exit 2 branch, the requirement-file rules, and the index caveats. |
 | `skills/design/SKILL.md` | Step 4 documents both commands; the "What This Stage Does Not Produce" list is corrected. |
 | `agents/constraint-specialist.md` | Tracing section: both the constraint and business-rule bullets corrected (D6). |
+| `agents/requirements-formatter.md` | The `applies_to` back-fill gains a dedup guard and an `applies_to_backfill` receipt (D9). |
+| `agents/requirements-orchestrator.md` | Stage 7 reconciles that receipt against what it dispatched (D9). |
 | `skills/design/scripts/README.md` | New. Documents both design-stage scripts, mirroring the M1 scripts README. |
 | `docs/requirements/examples/tamagotchi/requirements/**` | 3 constraints clear `traces_to.design`; 4 bounded requirements gain the ID in `traces_from`. |
 | `docs/requirements/examples/gdpr/requirements/**` | 1 constraint clears `traces_to.design`. `FR-002` already carries `CON-001` in `traces_from`, so nothing is added. |
