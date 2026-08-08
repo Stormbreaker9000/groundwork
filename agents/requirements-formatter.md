@@ -78,13 +78,48 @@ Rules that keep the validator green:
   optional keys `design`/`tests`/`code`, each a list of strings.
 - Do not add `source`, `owner`, `version`, `nfr_links`, `history`, or `risk` —
   these are not in the locked schema.
+- Do not add `applies_to` either — it is the constraint/business-rule
+  specialist's transient back-fill signal (see "Populate traceability" below),
+  never a schema field.
 
 ## Populate traceability
 
 Before writing, reconcile traceability so the matrix is derivable and the
 validator's dangling-reference check passes:
-- Keep links bidirectional: if `BR-001` lists `FR-002` under its `traces_to`,
-  ensure `FR-002` lists `BR-001` in `traces_from` (and vice versa).
+- **Back-fill from `applies_to`.** Constraints and business rules arrive from
+  the constraint specialist carrying a transient `applies_to` field (see
+  `constraint-specialist.md`, "Tracing — mandatory") listing the requirement
+  IDs they bound or implement. For every item that carries `applies_to`,
+  append that item's own ID to the `traces_from` of each requirement named in
+  it **if it is not already there**, then delete `applies_to` from the item
+  before you write its file. This is the only bidirectional-link mechanism for
+  these edges — do not additionally look for requirement IDs under any item's
+  `traces_to` for this purpose; `traces_to.design`/`tests`/`code` never hold
+  requirement IDs, only design-artifact IDs, test references, and code
+  references respectively.
+
+  The "if it is not already there" is not tidiness. `traces_from` is
+  `uniqueItems: true`, and an FR that already cites the business rule it
+  implements is the *normal* case, not a rare one — `fr-specialist.md`'s own
+  worked example emits `traces_from: [ BR-001 ]`. An unguarded append writes
+  `[BR-001, BR-001]`, which fails `validate_requirements.py` on the very next
+  step with the invalid file already on disk.
+
+  **Stripping `applies_to` matters too**: `requirement.schema.json` sets
+  `additionalProperties: false`, so a leaked `applies_to` fails
+  `validate_requirements.py` outright, and it is far cheaper to strip the field
+  here than to chase the resulting non-zero exit back to its source.
+
+  **Report the back-fill; do not let it fail silently.** The two failure modes
+  are not symmetrical. A leaked `applies_to` is caught by the schema. A
+  *dropped* back-fill — you strip the field but never write the edge — is
+  caught by nothing: both files validate, `validate_requirements.py` exits 0
+  (an empty `traces_from` is legal, and its dangling sweep only checks
+  references that are present), and the set ships with every constraint and
+  business rule unlinked in both directions. This edge has no other carrier
+  since it left `traces_to`, so list what you wrote in
+  `formatter_result.applies_to_backfill`, one entry per source item, and let
+  the orchestrator reconcile it against what it dispatched.
 - Drop or repair any reference whose target ID is not in the approved set —
   dangling references fail the validator.
 - Leave `traces_to.design`/`tests`/`code` empty when no downstream artifact yet
@@ -212,13 +247,26 @@ formatter_result:
   context_artifact: ".sdlc/requirements/assumptions.md"
   glossary: ".sdlc/requirements/glossary.md"
   validator_rerun: { exit_code: 0 }
+  applies_to_backfill:            # one entry per item that arrived with applies_to
+    - from: "CON-001"
+      into: [ "NFR-002" ]         # requirements whose traces_from now cites CON-001
+    - from: "BR-001"
+      into: [ "FR-008" ]          # already present; recorded, not appended twice
 ```
+
+`applies_to_backfill` is the receipt for the edge that has no other carrier.
+An item that arrived with `applies_to` and is missing here, or is here with an
+`into` list shorter than the `applies_to` it arrived with, means the edge was
+dropped — report it rather than papering over it. An empty list is correct
+only when no constraint or business rule carried `applies_to` at all.
 
 ## Gotchas
 
 - Never write `body_markdown` into the frontmatter; it is the file body.
 - The filename ID prefix and the directory must agree with `type` and `id`.
 - Emit only schema fields — unknown keys fail `additionalProperties: false`.
+  This includes `applies_to`: consume it during the back-fill, then strip it —
+  never write it.
 - If `validate_requirements.py` exits non-zero after your write, report the
   failure; do not patch around it or leave the invalid files in place. This is
   the pipeline's structural gate — the critic never ran it, so a clean

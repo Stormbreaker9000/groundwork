@@ -13,7 +13,7 @@ status: draft
 created_at: 2026-07-10
 traces_from: []
 traces_to:
-  design: [NFR-005, FR-001]
+  design: []
   tests: []
   code: []
 scope: project

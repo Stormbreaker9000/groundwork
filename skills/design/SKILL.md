@@ -316,6 +316,64 @@ critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema`
 for the install and fallback details (the design validator shares the same
 dependency story).
 
+The formatter then runs the cross-artifact validator, which resolves the
+requirement↔design edge neither structural validator checks:
+
+```bash
+python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+  --requirements .sdlc/requirements
+```
+
+It must also exit 0. Its errors are a design artifact citing a requirement
+that does not exist, an ADR listing an unresolvable decision driver, and a
+requirement with a requirement ID parked in `traces_to.design`/`tests`/`code`
+— slots that hold design-artifact, test and source-file references. Its
+warnings do not block: an FR no component addresses, an ADR body driver
+missing from its own frontmatter, a requirement ID mentioned in an ADR's
+drivers prose rather than listed as one, and the two index caveats below.
+
+Exit 2 is neither: it means one of the two directories is missing, produces
+no findings, and is an environment problem to report as such — not a
+traceability failure to chase through the fixes below.
+
+The errors do not share one fix:
+
+- `dangling-trace` and `adr-driver-unresolved` flag a **design artifact**.
+  Fix them the same way a `validate_design.py` failure is fixed: re-dispatch
+  the named artifacts to their owning specialist through the critique loop,
+  then re-run until clean.
+- `dangling-reverse-trace` and `misplaced-requirement-trace` flag a
+  **requirement** file, and this stage never writes into
+  `.sdlc/requirements/` — the requirement→design edge is stored once, on
+  `design.traces_from`. So there is nothing to re-dispatch and no loop to run.
+  **Report them to the user and stop**, passing the validator's lines through
+  as they are: each already names the requirement ID, its file path in
+  trailing brackets, and the exact edit to make. Then re-run the design stage.
+  Requirement sets written before these rules existed carry *requirement* IDs
+  in those slots, which is precisely what they catch — so on an older project,
+  expect them, expect the fix to be a hand edit in the requirements stage, and
+  note that there is deliberately no migration script: rewriting requirement
+  files from the design stage would make it a second writer.
+
+**`index-unparseable` and `duplicate-id` are warnings, but do not report them
+as ordinary ones.** They say the sweep ran over an index that was missing a
+file or had collapsed two artifacts into one ID — so every other result on
+that run, a clean one included, is unreliable in both directions. Tell the
+user the sweep could not see the whole set, and what to fix, before you tell
+them what it found.
+
+Those warnings arrive **after** the write, not at the Step 3 sign-off. That
+ordering is inherent — nothing is on disk before the formatter runs, and
+computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
+
+**Step 4b — Report traceability warnings:**
+
+Read `formatter_result.traceability_rerun.warnings` (empty if the sweep was
+clean, not skipped) and surface them to the user before committing: each
+`uncovered-fr` or `adr-driver-untraced` line, as returned. They are advisory
+and do not block the commit — acting on them is the user's call, not a
+condition of Step 5.
+
 **Step 5 — Commit:**
 
 ```bash
@@ -345,6 +403,11 @@ This stage does not write C4 diagrams. `.sdlc/design/diagrams/` is a declared
 dispatch slot owned by STO-101 — an absent `diagrams/` directory after this
 skill runs is expected, not a bug.
 
-This stage also does not resolve cross-artifact traceability (`traces_from`
-resolution, dependency-cycle detection, orphan-interface detection) — that is
-STO-102's and STO-208's territory, not this skill's.
+Cross-artifact traceability *is* resolved, but not by this skill's judgment —
+`validate_traceability.py` runs at Step 4 as a second hard gate and owns
+`traces_from` resolution, FR coverage, ADR decision-driver resolution, and
+`traces_to.design` resolution.
+
+What is still not produced here: dependency-cycle detection, orphan-interface
+detection, and prose-quality sweeps over design artifacts. Those are STO-208's
+content linter, per `agents/design-critic.md`'s *Scope boundaries*.

@@ -143,6 +143,16 @@ def _stdlib_parse_frontmatter(block: str) -> Dict[str, Any]:
     this wrong silently corrupts the document: the continuation keys leak up
     into the enclosing mapping as phantom siblings.
 
+    A block sequence may sit at the *same* indentation as its key::
+
+        traces_from:
+        - FR-001
+
+    That is legal YAML and the style every artifact Groundwork writes uses, so
+    it is not an edge case — reading those rows as siblings of the key rather
+    than as its value yields ``traces_from: None`` and silently empties the
+    single most load-bearing field in the document.
+
     Known non-support (install PyYAML if you need it): block scalars (``>``/
     ``|``) are not folded — the value is left as the literal ``>`` marker. This
     is harmless for the fallback's job (required-field *presence*) but is why
@@ -182,7 +192,17 @@ def _stdlib_parse_frontmatter(block: str) -> Dict[str, Any]:
             key, value = key.strip(), value.strip()
             end = block_end(seg, i)
             if value == "":
-                # Empty scalar, or a nested block in the deeper child rows.
+                # A block sequence is allowed to sit at the key's own
+                # indentation, so the deeper-rows scan above stops short of it.
+                # Absorb each same-indent `- ` row (and its own deeper
+                # children) into this key's value before parsing.
+                while (
+                    end < len(seg)
+                    and seg[end][0] == _indent
+                    and seg[end][1].startswith("- ")
+                ):
+                    end = block_end(seg, end)
+                # Empty scalar, or a nested block in the child rows.
                 mapping[key] = parse(seg[i + 1:end]) if end > i + 1 else None
             else:
                 mapping[key] = _coerce_scalar(value)

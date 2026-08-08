@@ -15,7 +15,7 @@ traces_from: []
 traces_to:
   design: []
   tests: []
-  code: [FR-008]
+  code: []
 scope: project
 parent_scope: null
 ---

@@ -11,7 +11,7 @@ confidence: medium
 verification_method: test
 status: draft
 created_at: 2026-07-10
-traces_from: []
+traces_from: [CON-003]
 traces_to:
   design: []
   tests: []
