@@ -46,17 +46,17 @@ application's local, on-device log without owning where or how it is written.
 
 ## Interaction
 Mixed: `record` is asynchronous, `flush` is synchronous, and that split is the
-resolution of a genuinely close call worth naming. NFR-002's <= 1% idle
-CPU budget argues against putting a synchronous disk write on the decay path, which
-fires on a timer for the whole life of the process. NFR-007 pulls the other way: a
-24-hour session must have zero missing transition entries, and an accepted-but-buffered
-entry is exactly the one a crash loses. The resolution is asynchronous accept plus an
-explicit `flush` that CMP-007 calls on the shutdown path and CMP-004 calls after a
-lifecycle transition — and the caller does block on that flush, because a flush nobody
-waits on cannot establish durability before process exit, which is the only thing flush
-exists to do. What would tip `record` to synchronous is evidence that transition entries
-are being lost in fault-injection testing; the cost of that would be a disk write inside
-every stat mutation.
+resolution of a genuinely close call worth naming. NFR-002's <= 1% idle CPU budget
+argues against putting a synchronous disk write on the decay path, which fires on a
+timer for the whole life of the process. NFR-007 pulls the other way: a 24-hour session
+must have zero missing transition entries, and an accepted-but-buffered entry is exactly
+the one a crash loses. The resolution is asynchronous accept plus an explicit `flush`
+that CMP-007 calls on the shutdown path and CMP-004 calls after a lifecycle transition —
+and the caller does block on that flush, because a flush nobody waits on cannot
+establish durability before process exit, which is the only thing flush exists to do.
+What would tip `record` to synchronous is evidence that transition entries are being
+lost in fault-injection testing; the cost of that would be a disk write inside every
+stat mutation.
 
 ## Error Modes
 - Log sink unwritable — the log directory is missing, full, or permission-denied,

@@ -195,6 +195,9 @@ and for a requirement to be traced through the contract — it is not OpenAPI
 written in YAML, and an interface spec that drifts into field-by-field payloads
 is both wrong for this stage and obsolete the moment code is written.
 
+The bullets below illustrate `summary` quality specifically, so they omit
+`interaction` for brevity — every operation still requires it, per above.
+
 - Good: `{ name: "authorize", summary: "Reserve funds against a card for an order total, returning an authorisation reference." }`
 - Good: `{ name: "capture", summary: "Settle a previously authorised amount." }`
 - Bad: `{ name: "POST /v2/payment_intents", summary: "..." }` — transport and

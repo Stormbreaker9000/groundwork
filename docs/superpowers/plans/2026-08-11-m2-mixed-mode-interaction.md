@@ -1023,7 +1023,10 @@ After Task 4, the ticket is complete when all of the following hold:
 
 - `python3 -m pytest skills/ -q` reports 165 passed.
 - Both design validators exit 0 over the tamagotchi worked example.
-- `grep -rn "^interaction:" --include="*.md" agents/ skills/ docs/` returns nothing.
+- `grep -rn "^interaction:" --include="*.md" agents/ skills/ docs/ --exclude-dir=superpowers`
+  returns nothing (`docs/superpowers/` holds this plan itself, whose own
+  before/after snippet quotes the retired shape as illustration, not live
+  source, and would otherwise self-trigger the check it documents).
 - `grep -rn '"mixed"' skills/design/schema/design.schema.json` returns nothing — no enum gained a third value.
 - `git status --short docs/requirements/examples/gdpr/` is empty — the gdpr example has no design artifacts and must not have been touched.
 - `git diff --stat $(git merge-base main HEAD) HEAD -- docs/requirements/examples/tamagotchi/design/critique-report.yaml docs/requirements/examples/tamagotchi/design/drivers.md` is empty — generated history was not edited (spec D7). Use the merge-base, not `HEAD~N`: fix rounds add commits, so any fixed offset silently narrows the range and can report a clean diff over a change it never looked at.

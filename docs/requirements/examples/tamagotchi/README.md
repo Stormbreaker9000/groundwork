@@ -68,18 +68,17 @@ behaviour.
 
 **The set was written on a failing gate, by human override.** The pipeline's hardest
 invariant is that nothing is written until the critic returns `gate: pass` —
-`agents/design-formatter.md` ("Never write anything before the critic has returned
-`gate: pass`") and `agents/design-orchestrator.md` ("Never advance to the formatter
-without `gate: pass`"). This set's `critique-report.yaml` says `gate: fail`, and the
-artifacts were written anyway. That was a human decision taken knowingly, for one reason:
-the alternative was to keep re-dispatching until the critic went quiet, and the seven
-remaining findings are *worth more than a clean gate* (see the next section — three of
-them are schema limitations no wording could satisfy, and one is arguably a false
-positive). A worked example whose critic found nothing would teach nothing about whether
-the critic works. **An ordinary run must not do this.** A `gate: fail` reaching the
-formatter is a bug in the run, not a judgment call available to the agents; only a human
-looking at the specific findings can decide they are acceptable, and that is what
-happened here.
+`agents/design-formatter.md` ("Never write anything before the critic has returned `gate:
+pass`") and `agents/design-orchestrator.md` ("Never advance to the formatter without
+`gate: pass`"). This set's `critique-report.yaml` says `gate: fail`, and the artifacts
+were written anyway. That was a human decision taken knowingly, for one reason: the
+alternative was to keep re-dispatching until the critic went quiet, and the five remaining
+findings are *worth more than a clean gate* (see the next section — one is a segregation
+defect recorded rather than fixed, and one is arguably a false positive). A worked example
+whose critic found nothing would teach nothing about whether the critic works. **An
+ordinary run must not do this.** A `gate: fail` reaching the formatter is a bug in the
+run, not a judgment call available to the agents; only a human looking at the specific
+findings can decide they are acceptable, and that is what happened here.
 
 **`critique-report.yaml` is a hand-added exhibit, not pipeline output.** No agent is
 instructed to write it, and it appears in no declared layout — not in the spec's Part E,

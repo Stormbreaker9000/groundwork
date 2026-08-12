@@ -52,14 +52,14 @@ asynchronous. While one value had to cover both, this was the closest call in th
 the three consumers want opposite things from one contract. CMP-003 must know the
 lifecycle state *before* it mutates a Stat, because the Q-2 resolution makes death
 permanent and no restorative arithmetic may run after it; that is a blocking read on the
-write path. CMP-005 and CMP-006 want the opposite: a push, so that a
-transition reaches the mood mapping and the window without polling under NFR-002.
-Both are on the contract, and each is now declared for what it is. What the
-single-value form forced was a choice between them, resolved toward the blocking read
-because a missed push shows a stale mood for a moment while a missed gate revives a dead
-pet. That choice is no longer necessary — but the divergent consumer sets underneath it
-are, and they are what the README records: CMP-003 uses only the read, CMP-005 and
-CMP-006 only the push, so this should have been two contracts.
+write path. CMP-005 and CMP-006 want the opposite: a push, so that a transition reaches
+the mood mapping and the window without polling under NFR-002. Both are on the contract,
+and each is now declared for what it is. What the single-value form forced was a choice
+between them, resolved toward the blocking read because a missed push shows a stale mood
+for a moment while a missed gate revives a dead pet. That choice is no longer necessary
+— but the divergent consumer sets underneath it are, and they are what the README
+records: CMP-003 uses only the read, CMP-005 and CMP-006 only the push, so this should
+have been two contracts.
 
 ## Error Modes
 - Lifecycle state queried before the session has been seeded — no state exists to

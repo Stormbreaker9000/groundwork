@@ -47,16 +47,15 @@ told when those values change, without any of them being able to set one.
   changes, receiving the new snapshot and the instant of the change.
 
 ## Interaction
-Mixed: `subscribe_to_stat_changes` is asynchronous, `current_stats` synchronous.
-Four components declared this capability as "track ... as they change",
-and NFR-002's <= 1% idle CPU budget forbids each of them polling for it: FR-007's
-one-second expression update and FR-009's one-minute reminder latency both have to be
-met by being told, not by asking. The snapshot read exists for recovery and for the
-first read after seeding, not as the normal path — but its caller does block on it, so
-it is declared for what it is rather than folded into the contract's dominant mode.
-What makes this medium rather than
-high: the push mechanism is inferred from the budget, not declared. The consumers on
-the webview side of the Tauri process boundary (CMP-006) receive these notifications
+Mixed: `subscribe_to_stat_changes` is asynchronous, `current_stats` synchronous. Four
+components declared this capability as "track ... as they change", and NFR-002's <= 1%
+idle CPU budget forbids each of them polling for it: FR-007's one-second expression
+update and FR-009's one-minute reminder latency both have to be met by being told, not
+by asking. The snapshot read exists for recovery and for the first read after seeding,
+not as the normal path — but its caller does block on it, so it is declared for what it
+is rather than folded into the contract's dominant mode. What makes this medium rather
+than high: the push mechanism is inferred from the budget, not declared. The consumers
+on the webview side of the Tauri process boundary (CMP-006) receive these notifications
 over an IPC hop that the in-process consumers do not, which is a latency asymmetry
 FR-007's one-second bound has to absorb.
 
