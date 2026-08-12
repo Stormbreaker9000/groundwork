@@ -23,9 +23,10 @@ provider: CMP-010
 operations:
 - name: show_reminder
   summary: Present a short care-reminder message to the owner outside the application window.
+  interaction: asynchronous
 - name: delivery_available
   summary: Report whether this platform can deliver a notification at all, including whether the owner has granted permission, so the caller can decide before it tries.
-interaction: asynchronous
+  interaction: synchronous
 error_modes:
 - No notification service on this platform — a target staged after v1 may have none, and no core feature may depend on delivery, since CON-002 keeps the rest of the system fully local and FR-009 is optional.
 - Permission denied by the operating system or the owner — delivery is refused until the owner grants it, and the application cannot grant it on their behalf.
@@ -46,10 +47,13 @@ application window — the system's only outward crossing of the process boundar
   before it tries.
 
 ## Interaction
-Asynchronous. Nothing in the system waits on a reminder: the owner may not be at the
+Mixed: `show_reminder` is asynchronous, `delivery_available` synchronous.
+Nothing in the system waits on a reminder: the owner may not be at the
 machine, the OS may hold or coalesce it, and no pet state depends on the outcome.
 Blocking the scheduler on an OS call would also put a foreign latency inside the process
-that NFR-002's idle budget has to cover.
+that NFR-002's idle budget has to cover. `delivery_available` is the exception a single
+contract-level value could not express — the caller must have its answer before it
+decides whether to try at all.
 
 ## Error Modes
 - No notification service on this platform — a target staged after v1 may have none, and

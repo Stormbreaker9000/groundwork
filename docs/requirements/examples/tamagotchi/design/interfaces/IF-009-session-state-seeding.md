@@ -22,9 +22,10 @@ provider: CMP-003
 operations:
 - name: seed_from_snapshot
   summary: Install a restored, decay-adjusted set of Stat values as the live in-session state, before any consumer observes or mutates it.
+  interaction: synchronous
 - name: seed_defaults
   summary: Install a fresh default pet as the live in-session state, for the case where no valid saved state exists.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - Seeding attempted a second time in one session — live values would be replaced underneath existing observers, so the second attempt must be refused rather than silently applied.
 - Supplied snapshot fails validation — Stat values outside the valid range must be rejected rather than installed, because every later computation is anchored to them.

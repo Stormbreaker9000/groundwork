@@ -20,6 +20,7 @@ FIXTURES = os.path.join(HERE, "fixtures")
 VALID_DIR = os.path.join(FIXTURES, "valid")
 INVALID_DIR = os.path.join(FIXTURES, "invalid")
 SCHEMA = vd.default_schema_path()
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
 def run(design_dir):
@@ -604,3 +605,22 @@ def test_adr_prefix_type_mismatch_is_flagged():
     df.frontmatter = {"id": "ADR-001", "type": "component"}
     vd.cross_file_checks([df])
     assert any("implies type" in e for e in df.errors)
+
+
+# ---------------------------------------------------------------------------
+# Real-world regression: the shipped tamagotchi worked example
+# ---------------------------------------------------------------------------
+def test_shipped_tamagotchi_example_passes_structural_gate(capsys):
+    """The worked example must satisfy the schema it ships alongside.
+
+    `test_validate_traceability.py:452` already pins this set, but that tool
+    never schema-validates — so until STO-216 nothing ran THIS validator over
+    `docs/requirements/examples/`. A shape change could stale all 12 interface
+    artifacts with nothing turning red, which is how STO-216 found them.
+    """
+    example = os.path.join(
+        REPO_ROOT, "docs", "requirements", "examples", "tamagotchi", "design"
+    )
+    code = run(example)
+    out = capsys.readouterr().out
+    assert code == 0, out

@@ -23,9 +23,10 @@ provider: CMP-001
 operations:
 - name: load
   summary: Return the last committed pet state together with its last-saved timestamp, or report that no valid state exists, having first retained any unreadable file under a Quarantine name.
+  interaction: synchronous
 - name: commit
   summary: Write a complete pet state and its last-saved timestamp such that a reader afterwards sees either the whole previous state or the whole new one, never a partial write.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - No committed state found — a first launch or a removed file, so the caller must start a new pet from default values and must not treat this as a failure (FR-010).
 - Integrity validation failed — the stored state is unreadable or malformed; it is retained under a Quarantine name and reported as a distinct outcome, not thrown.

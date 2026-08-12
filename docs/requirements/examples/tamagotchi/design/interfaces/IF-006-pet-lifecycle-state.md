@@ -23,9 +23,10 @@ provider: CMP-004
 operations:
 - name: current_lifecycle_state
   summary: Return the pet's current lifecycle state, including whether it has reached the terminal dead state.
+  interaction: synchronous
 - name: subscribe_to_transitions
   summary: Register to be notified when the lifecycle state transitions, receiving the prior state, the new state, and the instant of the transition.
-interaction: synchronous
+  interaction: asynchronous
 error_modes:
 - Lifecycle state queried before the session has been seeded — no state exists to report, and the caller must not assume a healthy default.
 - Transition notification missed — a subscriber that misses one must re-query the current state rather than inferring it from the transitions it did see, because the terminal state is irreversible and cannot be reconstructed from a partial sequence.
@@ -46,17 +47,19 @@ take effect.
   transition.
 
 ## Interaction
-Synchronous, and this is the closest call in the set — the three consumers want
-opposite things from one contract. CMP-003 must know the lifecycle state *before* it
-mutates a Stat, because the Q-2 resolution makes death permanent and no restorative
-arithmetic may run after it; that is a blocking read on the write path and it decides
-the enum value here. CMP-005 and CMP-006 want the opposite: a push, so that a
+Mixed: `current_lifecycle_state` is synchronous, `subscribe_to_transitions`
+asynchronous. While one value had to cover both, this was the closest call in the set —
+the three consumers want opposite things from one contract. CMP-003 must know the
+lifecycle state *before* it mutates a Stat, because the Q-2 resolution makes death
+permanent and no restorative arithmetic may run after it; that is a blocking read on the
+write path. CMP-005 and CMP-006 want the opposite: a push, so that a
 transition reaches the mood mapping and the window without polling under NFR-002.
-Both are on the contract, and the interaction is recorded as synchronous because the
-correctness-critical use is the blocking one — a missed push shows a stale mood for a
-moment, a missed gate revives a dead pet. What would tip it to asynchronous is moving
-the death gate into CMP-003 itself as cached state, at the cost of two components
-holding the same terminal flag and a window in which they disagree.
+Both are on the contract, and each is now declared for what it is. What the
+single-value form forced was a choice between them, resolved toward the blocking read
+because a missed push shows a stale mood for a moment while a missed gate revives a dead
+pet. That choice is no longer necessary — but the divergent consumer sets underneath it
+are, and they are what the README records: CMP-003 uses only the read, CMP-005 and
+CMP-006 only the push, so this should have been two contracts.
 
 ## Error Modes
 - Lifecycle state queried before the session has been seeded — no state exists to

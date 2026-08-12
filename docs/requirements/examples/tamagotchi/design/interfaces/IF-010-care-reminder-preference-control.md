@@ -21,9 +21,10 @@ provider: CMP-008
 operations:
 - name: reminders_enabled
   summary: Report whether the owner currently wants care reminders, so the control can show the true state rather than an assumed one.
+  interaction: synchronous
 - name: set_reminders_enabled
   summary: Turn care reminders on or off on the owner's behalf, taking effect for subsequent warning-threshold crossings.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - The preference could not be persisted — the change applies to this session only, and the owner must be told rather than discovering it reverted after a restart.
 - Reminders enabled where no notification delivery exists — the preference is accepted but no reminder can be shown on this platform, and the control must be able to surface that rather than silently promising reminders that never arrive.
