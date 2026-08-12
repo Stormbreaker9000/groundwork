@@ -17,9 +17,10 @@ provider: CMP-002
 operations:
   - name: authorize
     summary: Reserve funds on a card without capturing them.
+    interaction: synchronous
   - name: capture
     summary: Capture previously authorized funds.
-interaction: synchronous
+    interaction: synchronous
 error_modes:
   - card declined
   - provider timeout

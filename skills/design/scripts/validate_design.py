@@ -141,7 +141,9 @@ _FALLBACK_REQUIRED_BASE = [
 ]
 _FALLBACK_REQUIRED_BY_TYPE = {
     "component": ["responsibility", "boundary", "depends_on"],
-    "interface": ["provider", "operations", "interaction", "error_modes"],
+    # `interaction` is per-operation as of STO-216; checked by
+    # `_fallback_check_operations`, not by this flat list.
+    "interface": ["provider", "operations", "error_modes"],
     # `chosen_option`/`considered_options` are conditional on decision_status,
     # which this path cannot express — the schema is the source of truth.
     "adr": ["decision_status"],
@@ -149,7 +151,6 @@ _FALLBACK_REQUIRED_BY_TYPE = {
 _FALLBACK_ENUMS = {
     "type": {"component", "interface", "adr"},
     "boundary": {"internal", "external"},
-    "interaction": {"synchronous", "asynchronous"},
     "confidence": {"high", "medium", "low"},
     "status": {"draft", "reviewed", "approved", "implemented", "verified", "obsolete"},
     "decision_status": {
@@ -157,6 +158,10 @@ _FALLBACK_ENUMS = {
     },
     "scope": {"project", "epic", "story"},
 }
+
+# Per-operation interaction enum (STO-216). Kept separate from _FALLBACK_ENUMS
+# because that dict only scans top-level keys.
+_FALLBACK_OPERATION_INTERACTIONS = {"synchronous", "asynchronous"}
 
 
 class DesignFile(ArtifactFile):
@@ -178,6 +183,44 @@ class DesignFile(ArtifactFile):
 # ---------------------------------------------------------------------------
 # Schema validation (fallback path — design-specific, per-type field knowledge)
 # ---------------------------------------------------------------------------
+def _fallback_check_operations(data: Dict[str, Any]) -> List[str]:
+    """Per-operation `interaction` checks for the stdlib path (STO-216).
+
+    Also reports a retired contract-level `interaction`. That check has no
+    counterpart in `_FALLBACK_ENUMS` on purpose: on the schema path
+    `unevaluatedProperties: false` rejects the stale field, and this path cannot
+    express that, so without an explicit check reduced mode would accept a field
+    nothing reads.
+    """
+    errors: List[str] = []
+    if "interaction" in data:
+        errors.append(
+            "schema(fallback): 'interaction' is declared per operation, not on "
+            "the contract — move it into each entry of 'operations' (STO-216)"
+        )
+    operations = data.get("operations")
+    if not isinstance(operations, list):
+        return errors  # presence/shape is the required-field check's business
+    for index, operation in enumerate(operations):
+        if not isinstance(operation, dict):
+            errors.append(f"schema(fallback): operations[{index}] must be a mapping")
+            continue
+        name = operation.get("name", "?")
+        value = operation.get("interaction")
+        if value in (None, ""):
+            errors.append(
+                f"schema(fallback): operations[{index}] ('{name}') missing "
+                "required field 'interaction'"
+            )
+        elif value not in _FALLBACK_OPERATION_INTERACTIONS:
+            errors.append(
+                f"schema(fallback): operations[{index}] ('{name}') "
+                f"'interaction'='{value}' not in "
+                f"{sorted(_FALLBACK_OPERATION_INTERACTIONS)}"
+            )
+    return errors
+
+
 def _fallback_validate(data: Dict[str, Any]) -> List[str]:
     """Best-effort structural validation when jsonschema is unavailable.
 
@@ -197,6 +240,8 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
             errors.append(
                 f"schema(fallback): '{field}'='{data[field]}' not in {sorted(allowed)}"
             )
+    if data.get("type") == "interface":
+        errors.extend(_fallback_check_operations(data))
     tt = data.get("traces_to")
     if tt is not None and not isinstance(tt, dict):
         errors.append("schema(fallback): 'traces_to' must be a mapping")

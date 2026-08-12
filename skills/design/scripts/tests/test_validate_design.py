@@ -267,7 +267,7 @@ def _base_interface():
         "id": "IF-001", "type": "interface", "title": "x", "description": "x",
         "traces_from": [], "traces_to": {}, "status": "draft", "confidence": "high",
         "created_at": "2026-07-18", "provider": "CMP-001",
-        "operations": [{"name": "a", "summary": "b"}], "interaction": "synchronous",
+        "operations": [{"name": "a", "summary": "b", "interaction": "synchronous"}],
         "error_modes": ["boom"],
     }
 
@@ -304,6 +304,62 @@ def test_interface_field_on_component_is_rejected():
 
 
 # ---------------------------------------------------------------------------
+# STO-216: interaction is per-operation. `mixed` is never a stored value — a
+# mixed contract is one whose operations disagree.
+# ---------------------------------------------------------------------------
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_rejects_contract_level_interaction():
+    """The retired field. Rejected by unevaluatedProperties, not by an explicit
+    rule: once `interaction` leaves the interface branch's `properties`, a stale
+    one is unevaluated. Get the branch edit wrong and this silently accepts."""
+    validator = core_validator()
+    interface = _base_interface()
+    interface["interaction"] = "synchronous"
+    errors = _schema_errors(validator, interface)
+    assert errors, "schema wrongly accepted a contract-level interaction"
+
+
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_requires_operation_interaction():
+    validator = core_validator()
+    interface = _base_interface()
+    del interface["operations"][0]["interaction"]
+    errors = _schema_errors(validator, interface)
+    assert errors, "schema wrongly accepted an operation with no interaction"
+
+
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_rejects_bad_operation_interaction():
+    validator = core_validator()
+    interface = _base_interface()
+    interface["operations"][0]["interaction"] = "eventual"
+    errors = _schema_errors(validator, interface)
+    assert errors, "schema wrongly accepted an out-of-enum operation interaction"
+
+
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_rejects_mixed_as_an_operation_value():
+    """`mixed` is a reading of a contract, never a stored value (spec D1)."""
+    validator = core_validator()
+    interface = _base_interface()
+    interface["operations"][0]["interaction"] = "mixed"
+    errors = _schema_errors(validator, interface)
+    assert errors, "schema wrongly accepted 'mixed' as an operation value"
+
+
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_accepts_mixed_contract():
+    """The case that could not exist before: one contract, two modes."""
+    validator = core_validator()
+    interface = _base_interface()
+    interface["operations"] = [
+        {"name": "record", "summary": "Accept an entry.", "interaction": "asynchronous"},
+        {"name": "flush", "summary": "Make accepted entries durable.", "interaction": "synchronous"},
+    ]
+    assert _schema_errors(validator, interface) == []
+
+
+# ---------------------------------------------------------------------------
 # The stdlib fallback path (no jsonschema): per-type required-field lists.
 # ---------------------------------------------------------------------------
 def test_fallback_accepts_valid_per_type():
@@ -332,6 +388,45 @@ def test_fallback_flags_bad_enum():
     assert any("boundary" in e for e in errors)
 
 
+def test_fallback_flags_retired_contract_level_interaction():
+    """Deliberately NOT parity with the schema path. There,
+    unevaluatedProperties rejects the stale field generically; here nothing
+    would, and reduced mode would accept a field nothing reads — the silent-drop
+    class STO-102 fixed in artifact_core.py."""
+    iface = _base_interface()
+    iface["interaction"] = "synchronous"
+    errors = vd._fallback_validate(iface)
+    assert any("per operation" in e for e in errors), errors
+
+
+def test_fallback_flags_missing_operation_interaction():
+    iface = _base_interface()
+    del iface["operations"][0]["interaction"]
+    errors = vd._fallback_validate(iface)
+    assert any("interaction" in e and "operations[0]" in e for e in errors), errors
+
+
+def test_fallback_flags_bad_operation_interaction_enum():
+    iface = _base_interface()
+    iface["operations"][0]["interaction"] = "eventual"
+    errors = vd._fallback_validate(iface)
+    assert any("eventual" in e and "operations[0]" in e for e in errors), errors
+
+
+def test_fallback_accepts_mixed_contract():
+    iface = _base_interface()
+    iface["operations"] = [
+        {"name": "record", "summary": "Accept an entry.", "interaction": "asynchronous"},
+        {"name": "flush", "summary": "Make accepted entries durable.", "interaction": "synchronous"},
+    ]
+    assert vd._fallback_validate(iface) == []
+
+
+def test_fallback_ignores_operations_on_a_component():
+    """The nested check is interface-only; a component has no `operations`."""
+    assert vd._fallback_validate(_base_component()) == []
+
+
 def test_valid_set_passes_in_fallback_mode(monkeypatch, capsys):
     """With pyyaml/jsonschema forced off, the stdlib parser + per-type fallback
     still pass the conformant set. Exercises the path that rots quietly on a
@@ -354,16 +449,21 @@ def test_stdlib_parser_handles_list_of_mappings():
     block = vd.extract_frontmatter_block(open(iface_path, encoding="utf-8").read())
     data = vd.core._stdlib_parse_frontmatter(block)
     assert data["operations"] == [
-        {"name": "authorize", "summary": "Reserve funds on a card without capturing them."},
-        {"name": "capture", "summary": "Capture previously authorized funds."},
+        {"name": "authorize",
+         "summary": "Reserve funds on a card without capturing them.",
+         "interaction": "synchronous"},
+        {"name": "capture",
+         "summary": "Capture previously authorized funds.",
+         "interaction": "synchronous"},
     ]
     # No phantom keys leaked from inside operations into the top-level mapping.
     assert "summary" not in data
+    assert "interaction" not in data
     assert "- name" not in data
     assert set(data) == {
         "id", "type", "title", "description", "traces_from", "traces_to",
         "status", "confidence", "created_at", "provider", "operations",
-        "interaction", "error_modes",
+        "error_modes",
     }
 
 
