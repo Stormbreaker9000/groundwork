@@ -1024,4 +1024,4 @@ After Task 4, the ticket is complete when all of the following hold:
 - `grep -rn "^interaction:" --include="*.md" agents/ skills/ docs/` returns nothing.
 - `grep -rn '"mixed"' skills/design/schema/design.schema.json` returns nothing — no enum gained a third value.
 - `git status --short docs/requirements/examples/gdpr/` is empty — the gdpr example has no design artifacts and must not have been touched.
-- `git diff --stat HEAD~4 -- docs/requirements/examples/tamagotchi/design/critique-report.yaml docs/requirements/examples/tamagotchi/design/drivers.md` is empty — generated history was not edited (spec D7).
+- `git diff --stat $(git merge-base main HEAD) HEAD -- docs/requirements/examples/tamagotchi/design/critique-report.yaml docs/requirements/examples/tamagotchi/design/drivers.md` is empty — generated history was not edited (spec D7). Use the merge-base, not `HEAD~N`: fix rounds add commits, so any fixed offset silently narrows the range and can report a clean diff over a change it never looked at.
