@@ -163,6 +163,19 @@ _FALLBACK_ENUMS = {
 # because that dict only scans top-level keys.
 _FALLBACK_OPERATION_INTERACTIONS = {"synchronous", "asynchronous"}
 
+# STO-216 migration hint, shared verbatim by both validation paths. On the
+# fallback path this is the only signal a migrating user gets. On the schema
+# path it is not: a stale contract-level `interaction` just falls out as one
+# more name in `unevaluatedProperties`' "were unexpected" list, indistinguishable
+# from a typo, and the interface branch's failed `then` also drags `provider`,
+# `operations` and `error_modes` into that same list even though all three are
+# mandatory on a real interface. `validate()` appends this message on the
+# schema path too so the move has a name there as well.
+RETIRED_INTERACTION_MIGRATION_MSG = (
+    "'interaction' is declared per operation, not on the contract — move it "
+    "into each entry of 'operations' (STO-216)"
+)
+
 
 class DesignFile(ArtifactFile):
     """A parsed design artifact. ``design_id`` reads the generic ``artifact_id``."""
@@ -186,21 +199,22 @@ class DesignFile(ArtifactFile):
 def _fallback_check_operations(data: Dict[str, Any]) -> List[str]:
     """Per-operation `interaction` checks for the stdlib path (STO-216).
 
-    Also reports a retired contract-level `interaction`. That check has no
-    counterpart in `_FALLBACK_ENUMS` on purpose: on the schema path
-    `unevaluatedProperties: false` rejects the stale field, and this path cannot
-    express that, so without an explicit check reduced mode would accept a field
-    nothing reads.
+    Interface-only: called only when `type == "interface"`, because `operations`
+    itself is an interface-only field. The retired contract-level `interaction`
+    check used to live here too, but that check is not type-specific — a
+    top-level `interaction` is invalid on every artifact type, not just an
+    interface — so it is hoisted out to `_fallback_validate` and applies to
+    components and ADRs as well.
     """
     errors: List[str] = []
-    if "interaction" in data:
-        errors.append(
-            "schema(fallback): 'interaction' is declared per operation, not on "
-            "the contract — move it into each entry of 'operations' (STO-216)"
-        )
     operations = data.get("operations")
     if not isinstance(operations, list):
-        return errors  # presence/shape is the required-field check's business
+        if "operations" in data and data["operations"] not in (None, ""):
+            errors.append(
+                "schema(fallback): 'operations' must be a list, got "
+                f"{type(data['operations']).__name__}"
+            )
+        return errors  # presence is the required-field check's business; shape is ours
     for index, operation in enumerate(operations):
         if not isinstance(operation, dict):
             errors.append(f"schema(fallback): operations[{index}] must be a mapping")
@@ -212,7 +226,7 @@ def _fallback_check_operations(data: Dict[str, Any]) -> List[str]:
                 f"schema(fallback): operations[{index}] ('{name}') missing "
                 "required field 'interaction'"
             )
-        elif value not in _FALLBACK_OPERATION_INTERACTIONS:
+        elif not isinstance(value, str) or value not in _FALLBACK_OPERATION_INTERACTIONS:
             errors.append(
                 f"schema(fallback): operations[{index}] ('{name}') "
                 f"'interaction'='{value}' not in "
@@ -240,6 +254,12 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
             errors.append(
                 f"schema(fallback): '{field}'='{data[field]}' not in {sorted(allowed)}"
             )
+    # A retired contract-level `interaction` is invalid on every artifact type,
+    # not only an interface — it has no type gate on purpose (STO-216 Deferred
+    # Item). Before STO-216 the flat `_FALLBACK_ENUMS` scan caught this on a
+    # component too; a type-gated check would silently stop catching it there.
+    if "interaction" in data:
+        errors.append(f"schema(fallback): {RETIRED_INTERACTION_MIGRATION_MSG}")
     if data.get("type") == "interface":
         errors.extend(_fallback_check_operations(data))
     tt = data.get("traces_to")
@@ -419,6 +439,16 @@ def validate(design_dir: str, schema_path: str) -> Tuple[List[DesignFile], List[
         df.frontmatter = data
         if validator is not None:
             df.errors.extend(core.validate_against_schema(data, validator))
+            # A retired contract-level `interaction` on an interface fails the
+            # branch `then`, so none of the branch's own properties get
+            # evaluated and `unevaluatedProperties` reports `provider`,
+            # `operations` and `error_modes` — all three mandatory on a real
+            # interface — as unexpected right alongside it (schema $comment
+            # "Diagnostic note"). The schema still does the rejecting; this
+            # only adds the same named hint the fallback path already gives,
+            # so a migrating user is told what actually moved.
+            if data.get("type") == "interface" and "interaction" in data:
+                df.errors.append(f"schema: (root): {RETIRED_INTERACTION_MIGRATION_MSG}")
         else:
             df.errors.extend(_fallback_validate(data))
         if data.get("type") == "adr":

@@ -317,7 +317,7 @@ def test_schema_rejects_contract_level_interaction():
     interface = _base_interface()
     interface["interaction"] = "synchronous"
     errors = _schema_errors(validator, interface)
-    assert errors, "schema wrongly accepted a contract-level interaction"
+    assert any("interaction" in e for e in errors), errors
 
 
 @pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
@@ -326,7 +326,7 @@ def test_schema_requires_operation_interaction():
     interface = _base_interface()
     del interface["operations"][0]["interaction"]
     errors = _schema_errors(validator, interface)
-    assert errors, "schema wrongly accepted an operation with no interaction"
+    assert any("interaction" in e for e in errors), errors
 
 
 @pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
@@ -335,7 +335,7 @@ def test_schema_rejects_bad_operation_interaction():
     interface = _base_interface()
     interface["operations"][0]["interaction"] = "eventual"
     errors = _schema_errors(validator, interface)
-    assert errors, "schema wrongly accepted an out-of-enum operation interaction"
+    assert any("eventual" in e for e in errors), errors
 
 
 @pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
@@ -345,7 +345,7 @@ def test_schema_rejects_mixed_as_an_operation_value():
     interface = _base_interface()
     interface["operations"][0]["interaction"] = "mixed"
     errors = _schema_errors(validator, interface)
-    assert errors, "schema wrongly accepted 'mixed' as an operation value"
+    assert any("mixed" in e for e in errors), errors
 
 
 @pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
@@ -358,6 +358,41 @@ def test_schema_accepts_mixed_contract():
         {"name": "flush", "summary": "Make accepted entries durable.", "interaction": "synchronous"},
     ]
     assert _schema_errors(validator, interface) == []
+
+
+@pytest.mark.skipif(not vd.core.HAVE_JSONSCHEMA, reason="jsonschema not installed")
+def test_schema_path_names_the_migration_on_a_pre_sto216_interface(tmp_path):
+    """A pre-STO-216-shaped interface (contract-level `interaction`, no
+    per-operation one) run through the schema path's `validate()` must produce
+    an error naming the move, not only the `unevaluatedProperties` cascade that
+    tells a migrating user `provider`/`operations`/`error_modes` are
+    'unexpected' on an interface — which they are not."""
+    design_dir = tmp_path / "design"
+    (design_dir / "interfaces").mkdir(parents=True)
+    body = (
+        "---\n"
+        "id: IF-001\n"
+        "type: interface\n"
+        "title: x\n"
+        "description: x\n"
+        "traces_from: []\n"
+        "traces_to: {}\n"
+        "status: draft\n"
+        "confidence: high\n"
+        "created_at: 2026-07-18\n"
+        "provider: CMP-001\n"
+        "interaction: synchronous\n"
+        "operations:\n"
+        "  - name: a\n"
+        "    summary: b\n"
+        "error_modes:\n"
+        "  - boom\n"
+        "---\n\n# IF-001\n"
+    )
+    (design_dir / "interfaces" / "IF-001-x.md").write_text(body, encoding="utf-8")
+    files, _ = vd.validate(str(design_dir), SCHEMA)
+    assert len(files) == 1
+    assert any("per operation" in e for e in files[0].errors), files[0].errors
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +449,27 @@ def test_fallback_flags_bad_operation_interaction_enum():
     assert any("eventual" in e and "operations[0]" in e for e in errors), errors
 
 
+def test_fallback_operation_interaction_non_string_is_flagged_not_raised():
+    """`value not in _FALLBACK_OPERATION_INTERACTIONS` is a set membership test,
+    which raises `TypeError: unhashable type` on an unhashable value. This is
+    reachable through the stdlib parser: `interaction: [synchronous,
+    asynchronous]` inside an operation parses to a list. Must produce an error
+    line, not a traceback."""
+    iface = _base_interface()
+    iface["operations"][0]["interaction"] = ["synchronous", "asynchronous"]
+    errors = vd._fallback_validate(iface)
+    assert any("operations[0]" in e for e in errors), errors
+
+
+def test_fallback_flags_non_list_operations():
+    """`operations: "not a list"` must not pass the fallback entirely — presence
+    is the required-field check's business, but shape is this function's."""
+    iface = _base_interface()
+    iface["operations"] = "not a list"
+    errors = vd._fallback_validate(iface)
+    assert any("operations" in e and "must be a list" in e for e in errors), errors
+
+
 def test_fallback_accepts_mixed_contract():
     iface = _base_interface()
     iface["operations"] = [
@@ -423,9 +479,21 @@ def test_fallback_accepts_mixed_contract():
     assert vd._fallback_validate(iface) == []
 
 
-def test_fallback_ignores_operations_on_a_component():
-    """The nested check is interface-only; a component has no `operations`."""
-    assert vd._fallback_validate(_base_component()) == []
+def test_fallback_ignores_operations_on_a_component_but_flags_retired_interaction():
+    """The per-operation checks are interface-only: a component carrying
+    `operations` gets none of `_fallback_check_operations`'s per-item checks,
+    because that function is only called when `type == "interface"`. But the
+    retired contract-level `interaction` check is NOT type-gated (STO-216
+    Deferred Item) — it must still fire on a component, exactly as it did
+    before STO-216 replaced the flat `_FALLBACK_ENUMS` scan with a
+    type-gated one. Without the hoist, a component carrying
+    `interaction: eventual` would pass silently."""
+    comp = _base_component()
+    comp["operations"] = [{"name": "a", "summary": "b", "interaction": "synchronous"}]
+    comp["interaction"] = "synchronous"
+    errors = vd._fallback_validate(comp)
+    assert any("per operation" in e for e in errors), errors
+    assert not any("operations[" in e for e in errors), errors
 
 
 def test_valid_set_passes_in_fallback_mode(monkeypatch, capsys):
