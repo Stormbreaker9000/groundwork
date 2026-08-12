@@ -250,10 +250,6 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **Interfaces:**
 - IF-001 <title> — provider: CMP-XXX, interaction: synchronous | asynchronous | mixed
 
-`interaction` is declared per operation, so render `mixed` here when a
-contract's operations disagree. It is computed for this summary only and is
-never written to an artifact.
-
 **ADRs:**
 - ADR-001 <title> — decision_status: accepted | proposed
 
@@ -276,6 +272,10 @@ never written to an artifact.
 
 **Next Step:** Implementation
 ```
+
+`interaction` is declared per operation, so render `mixed` here when a
+contract's operations disagree. It is computed for this summary only and is
+never written to an artifact.
 
 Render **ADRs** from `draft_adrs.adrs` — every ADR the generator emitted, with
 its `decision_status` so the user can see at a glance which decisions were
