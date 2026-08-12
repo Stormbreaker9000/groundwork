@@ -36,17 +36,33 @@ reconciles them. The critic is correct to flag it and powerless to let it pass.
 
 ## Evidence
 
-The shipped tamagotchi worked example produced three such interfaces on a real
-run. All three are recorded as standing critic findings that
-`docs/requirements/examples/tamagotchi/README.md:136` explains cannot be
-cleared: "the schema cannot express a mixed-mode contract, so no wording of
-these artifacts would satisfy the check."
+The shipped tamagotchi worked example produced four such interfaces on a real
+run, of which the critic caught three. Those three are recorded as standing
+findings that `docs/requirements/examples/tamagotchi/README.md:136` explains
+cannot be cleared: "the schema cannot express a mixed-mode contract, so no
+wording of these artifacts would satisfy the check."
 
-| Interface | Operations | Consumers | Declared |
-| --- | --- | --- | --- |
-| IF-002 Diagnostic Log Recording | `record` (fire-and-forget), `flush` (blocking) | CMP-001, CMP-003, CMP-004, CMP-007 | `asynchronous` |
-| IF-012 Desktop Notification Delivery | `show_reminder` (async), `delivery_available` (sync query) | CMP-008 | `asynchronous` |
-| IF-006 Pet Lifecycle State | `current_lifecycle_state` (blocking read), `subscribe_to_transitions` (push) | CMP-003, CMP-005, CMP-006 | `synchronous` |
+| Interface | Operations | Consumers | Declared | Flagged |
+| --- | --- | --- | --- | --- |
+| IF-002 Diagnostic Log Recording | `record` (fire-and-forget), `flush` (blocking) | CMP-001, CMP-003, CMP-004, CMP-007 | `asynchronous` | yes |
+| IF-012 Desktop Notification Delivery | `show_reminder` (async), `delivery_available` (sync query) | CMP-008 | `asynchronous` | yes |
+| IF-006 Pet Lifecycle State | `current_lifecycle_state` (blocking read), `subscribe_to_transitions` (push) | CMP-003, CMP-005, CMP-006 | `synchronous` | yes |
+| IF-005 Pet Stat Observation | `current_stats` (snapshot read), `subscribe_to_stat_changes` (push) | CMP-004, CMP-005, CMP-006, CMP-008 | `asynchronous` | **no** |
+
+The fourth row is the sharpest evidence in the set. IF-005 is structurally
+identical to IF-006 — a blocking read and a subscription on one contract — and
+the critic passed it. Its body argues the dominant mode rather than the mixture:
+"The snapshot read exists for recovery and for the first read after seeding, not
+as the normal path." That is a defensible sentence, and it is exactly the escape
+a single contract-level field leaves open. The IF-012 finding calls itself the
+"Third instance of the same shape in this set (IF-002, IF-006, IF-012)," so the
+miss was not noticed at the time either.
+
+The contract-level field therefore does not merely force an artifact to
+misdescribe itself. It gives the author a way to argue past the gate, and the
+critic no operand precise enough to refuse. Under D1 the question stops being
+"what is this contract's dominant mode" and becomes "does `current_stats`
+block," which has one answer.
 
 The cost is recorded in three separate places, which is itself evidence that
 the pipeline noticed the defect and had nowhere to put the fix. IF-006's own
@@ -61,13 +77,17 @@ misdescribed by its own declared interaction, and the two push consumers get a
 notification stream the field denies" — and `critique-report.yaml:155,235`
 carries it as findings against IF-002 and IF-006.
 
-The three cases are not the same defect, and the difference decides the design.
-IF-002 and IF-012 have **coincident consumer sets**: every consumer of the
-contract uses every operation on it. Splitting them would force CMP-008 to
-depend on two notification interfaces it always uses together, and would sever
-`record` from the `flush` that exists to bound it. Those are genuine mixed-mode
-contracts. IF-006's consumer sets **diverge** — CMP-003 takes only the blocking
-read, CMP-005 and CMP-006 only the push — which is the same nested-consumer-set
+The four cases are not the same defect, and the difference decides the design.
+IF-002, IF-012 and IF-005 have **coincident consumer sets**: every consumer of
+the contract uses every operation on it. Splitting them would force CMP-008 to
+depend on two notification interfaces it always uses together, would sever
+`record` from the `flush` that exists to bound it, and would separate IF-005's
+seeding read from the subscription the same four components hold — its body
+places the read in those consumers' first-read phase, not in a different
+consumer. Those are genuine mixed-mode contracts.
+
+IF-006's consumer sets **diverge** — CMP-003 takes only the blocking read,
+CMP-005 and CMP-006 only the push — which is the same nested-consumer-set
 argument under which `docs/requirements/examples/tamagotchi/README.md` already
 records IF-003 as a contract that should have been two.
 
@@ -183,12 +203,25 @@ finding no one could act on. The new one applies to every operation on every
 interface, including the ones that were previously unreachable behind a
 contract-level summary.
 
+IF-005 is the case that proves the difference. Under the old rule the critic had
+to weigh a whole-contract claim against a whole body, and a body arguing the
+dominant mode beat it. Under the new one there is no dominant mode to argue:
+`current_stats` either blocks or it does not, and its own summary says it
+returns a snapshot.
+
 ### D6 — The worked examples are updated mechanically here; regeneration stays STO-219
 
 All 12 tamagotchi interface artifacts move `interaction` onto their operations,
 preserving the existing wording. Where an interface is uniform, every operation
 takes the value the contract carried. Where it is mixed — IF-002, IF-006,
 IF-012 — each operation takes the value its own body prose already describes.
+
+Where a mixed contract's body already argues one mode for the whole contract —
+IF-005's "Asynchronous. …", IF-006's "Synchronous, and this is the closest call
+in the set" — the opening word is corrected to describe the mixture, and the
+argument the body makes for the dominant mode is kept. Those paragraphs are the
+reasoning that earned the artifact its `confidence` value; only the claim that a
+single mode covers the contract is wrong.
 
 This is a mechanical frontmatter edit, not a regeneration, and it does not
 encroach on STO-219. STO-100 and STO-217 both declined to touch
@@ -199,13 +232,14 @@ through all four tools. STO-102 set the precedent, editing four example
 requirement files when its own fix made them invalid.
 
 Two of the three standing findings genuinely clear. IF-002 and IF-012 can now
-state what they always were. IF-006 does not clear: it converts from a schema
-limitation into a segregation divergence, joining IF-003 in the README's
-granularity section. The README's current text at line 136 — three interfaces,
-unsatisfiable check — is rewritten to say what is now true, rather than deleted.
-The example's value is as an honest record of what the pipeline produced, and
-that is served by restating the finding correctly, not by removing evidence
-that the pipeline once had nowhere to put it.
+state what they always were, as can IF-005, which was never flagged. IF-006 does
+not clear: it converts from a schema limitation into a segregation divergence,
+joining IF-003 in the README's granularity section. The README's current text at
+line 136 — three interfaces, unsatisfiable check — is rewritten to say what is
+now true, including that a fourth instance went uncaught. The example's value is
+as an honest record of what the pipeline produced, and that is served by
+restating the findings correctly, not by removing evidence that the pipeline
+once had nowhere to put them.
 
 ### D7 — Generated history is not edited
 
