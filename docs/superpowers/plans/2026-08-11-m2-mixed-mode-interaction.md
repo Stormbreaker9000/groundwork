@@ -1021,7 +1021,10 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 After Task 4, the ticket is complete when all of the following hold:
 
-- `python3 -m pytest skills/ -q` reports 165 passed.
+- `python3 -m pytest skills/ -q` reports 168 passed. (The four tasks land 165; the
+  final review's fix wave added three more — a schema-path migration-message test
+  and two fallback malformed-input tests. Task 2's and Task 4's per-task
+  expectations of 165 above remain correct at those points.)
 - Both design validators exit 0 over the tamagotchi worked example.
 - `grep -rn "^interaction:" --include="*.md" agents/ skills/ docs/ --exclude-dir=superpowers`
   returns nothing (`docs/superpowers/` holds this plan itself, whose own
