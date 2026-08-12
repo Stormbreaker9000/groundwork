@@ -223,7 +223,7 @@ provider: CMP-002
 operations:
   - name: <operation name>
     summary: <one-line summary>
-interaction: synchronous | asynchronous
+    interaction: synchronous | asynchronous
 error_modes: [<how this contract can fail>, ...]
 ---
 
@@ -248,9 +248,10 @@ Rules that keep the validator green:
   an ID to fill a downstream trace.
 - Only include a component's branch fields (`responsibility`, `boundary`,
   `depends_on`) on a `type: component` file, and only an interface's branch
-  fields (`provider`, `operations`, `interaction`, `error_modes`) on a
-  `type: interface` file. Putting either set on the wrong type fails the
-  schema.
+  fields (`provider`, `operations`, `error_modes`) on a `type: interface`
+  file. `interaction` is **not** a contract field: it belongs on each entry
+  of `operations`, and a top-level one fails the schema. Putting either set
+  on the wrong type fails the schema.
 
 ## `assumptions.md`
 

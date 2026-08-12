@@ -248,7 +248,11 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 - CMP-001 <title> — <one-line responsibility>
 
 **Interfaces:**
-- IF-001 <title> — provider: CMP-XXX, interaction: synchronous | asynchronous
+- IF-001 <title> — provider: CMP-XXX, interaction: synchronous | asynchronous | mixed
+
+`interaction` is declared per operation, so render `mixed` here when a
+contract's operations disagree. It is computed for this summary only and is
+never written to an artifact.
 
 **ADRs:**
 - ADR-001 <title> — decision_status: accepted | proposed
