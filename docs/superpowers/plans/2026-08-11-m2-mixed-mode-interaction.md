@@ -960,18 +960,20 @@ never written to an artifact.
 - [ ] **Step 6: Verify by inspection**
 
 ```bash
-python3 -c "
-import re,sys
-bad={}
-for p in ['agents/design-orchestrator.md','agents/design-formatter.md']:
-    t=open(p).read()
-    hits=[l for l in t.splitlines() if re.match(r'^(interaction:|    interaction:)', l)]
-    if hits: bad[p]=hits
-print(bad)
-sys.exit(1 if bad else 0)"
+grep -rn "^interaction:" agents/ skills/
 ```
 
-Expected: `{}`, exit 0 — no contract-level `interaction` survives in either template.
+Expected: no output — no contract-level `interaction` survives in any agent contract or skill file.
+
+Anchor on column 0, not on an indent width. An earlier draft of this step tested
+`^(interaction:|    interaction:)`, which is wrong: indentation means different
+things in the two templates. In `design-orchestrator.md` the interface is a list
+item under `draft_interfaces:`, so a key at four spaces is a sibling of `type:`
+— contract-level, and a real defect. In `design-formatter.md` the template is a
+raw frontmatter block where `operations:` nests its own list, so a key at four
+spaces is a property of the operation — exactly what this ticket requires. One
+regex cannot mean both, and the version that flagged the formatter's correct
+output as a defect would push an implementer to break it.
 
 ```bash
 grep -c "per operation" agents/design-critic.md
