@@ -123,7 +123,9 @@ Three corollaries decide when to merge and when to split:
   otherwise. "Consumer" means a component that declared the capability in its
   `required_capabilities`; the test is over capabilities, not operations — a
   consumer is never expected to call every operation of a contract it depends on,
-  only to genuinely need the capability that contract satisfies.
+  only to genuinely need the capability that contract satisfies. (The
+  `interaction` guard below runs a narrower, operation-level version of this
+  same test, and only once a contract's operations already disagree.)
 
   This rule can only **merge**. It decides whether several capabilities from one
   provider share an interface; it can never split one capability across two,
@@ -183,7 +185,8 @@ is whatever component actually takes the payment.
 
 ## Authoring at architecture altitude
 
-`operations` is a list of `{name, summary}` objects, minimum one. That is all.
+`operations` is a list of `{name, summary, interaction}` objects, minimum one.
+That is all.
 
 **Deliberately excluded:** request and response payload schemas, versioning,
 authentication, and transport. Those are code-level or ADR-level concerns
@@ -324,7 +327,8 @@ redefine the same word (STO-197 A.2).
 
 ## Interaction
 <synchronous or asynchronous, and why; when the choice is close, say what would
-tip it and what each option costs>
+tip it and what each option costs. For a mixed contract, open by naming which
+operation is which, then make the same case for the split.>
 
 ## Error Modes
 - <mode>
@@ -454,27 +458,27 @@ string is quoted exactly as declared:
 
 A mixed contract in the same system, and why this one is allowed to be mixed:
 
-```yaml
-  - id: IF-002
-    type: interface
-    title: Payment Audit Recording
-    description: The contract through which payment activity is recorded for audit and forced durable before a reconciliation boundary.
-    provider: CMP-003
-    operations:
-      - name: record
-        summary: Accept an audit entry for eventual durable storage.
-        interaction: asynchronous
-      - name: flush
-        summary: Make every previously accepted entry durable before returning.
-        interaction: synchronous
-    error_modes:
-      - "Entry volume exceeds the buffer between flushes — entries are dropped, and the caller is told which window was lost."
-      - "Flush times out with entries unwritten — durability is not established and the caller must not treat the window as recorded."
-    consumed_by: [CMP-001, CMP-004]
-    satisfies_capabilities:
-      - { component: CMP-001, capability: "record payment activity for audit" }
-      - { component: CMP-004, capability: "record payment activity for audit" }
-```
+````yaml
+- id: IF-002
+  type: interface
+  title: Payment Audit Recording
+  description: The contract through which payment activity is recorded for audit and forced durable before a reconciliation boundary.
+  provider: CMP-003
+  operations:
+    - name: record
+      summary: Accept an audit entry for eventual durable storage.
+      interaction: asynchronous
+    - name: flush
+      summary: Make every previously accepted entry durable before returning.
+      interaction: synchronous
+  error_modes:
+    - "Entry volume exceeds the buffer between flushes — entries are dropped, and the caller is told which window was lost."
+    - "Flush times out with entries unwritten — durability is not established and the caller must not treat the window as recorded."
+  consumed_by: [CMP-001, CMP-004]
+  satisfies_capabilities:
+    - { component: CMP-001, capability: "record payment activity for audit" }
+    - { component: CMP-004, capability: "record payment activity for audit" }
+````
 
 `record` does not block and `flush` must, so the contract is mixed. It is
 allowed to be mixed because `CMP-001` (order-service) and `CMP-004`
@@ -484,6 +488,17 @@ them two contracts they always hold together.
 
 Had `CMP-001` used only `record` and `CMP-004` only `flush`, the consumer sets
 would diverge and this would be two interfaces instead.
+
+Rendered into `body_markdown`, IF-002's `## Interaction` section opens by
+naming which operation is which, then makes the same consumer-set case:
+
+```
+## Interaction
+Mixed: `record` is asynchronous, `flush` is synchronous. Both operations share
+every consumer — CMP-001 and CMP-004 call both, `record` on their normal path
+and `flush` before closing a reconciliation window — so the split stays one
+contract instead of giving them two they always hold together.
+```
 
 Contrast with an interface that would be re-dispatched:
 
