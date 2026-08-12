@@ -226,10 +226,18 @@ single mode covers the contract is wrong.
 This is a mechanical frontmatter edit, not a regeneration, and it does not
 encroach on STO-219. STO-100 and STO-217 both declined to touch
 `docs/requirements/examples/` because neither invalidated the data; this ticket
-does invalidate it, and leaving a committed example that fails its own
-validator would break the regression test that pins the tamagotchi set clean
-through all four tools. STO-102 set the precedent, editing four example
+does invalidate it, and a committed example that fails its own validator is not
+a state to leave main in. STO-102 set the precedent, editing four example
 requirement files when its own fix made them invalid.
+
+**The gate this relies on does not yet exist.** The only regression test over
+the worked example is `test_shipped_tamagotchi_example_is_clean`
+(`test_validate_traceability.py:452`), and it invokes `validate_traceability.py`
+— a tool that by its own Global Constraints never schema-validates. No test runs
+`validate_design.py` over `docs/requirements/examples/tamagotchi/design/`, so
+the 12 interface artifacts have no structural gate in CI and would go stale
+under this change without anything turning red. That test is added here, in the
+task that edits the data, because it is what makes the edit verifiable.
 
 Two of the three standing findings genuinely clear. IF-002 and IF-012 can now
 state what they always were, as can IF-005, which was never flagged. IF-006 does
@@ -259,7 +267,7 @@ speaks in the present tense about a set that does not.
 | --- | --- |
 | `skills/design/schema/design.schema.json` | Interface branch: `interaction` moves into `operations.items`, out of the branch's `required` and `properties`. Line 5 description and line 176 `$comment` both name it as a contract field |
 | `skills/design/scripts/validate_design.py` | D3 — three parity edits plus the retired-field check |
-| `skills/design/scripts/tests/test_validate_design.py` | `_base_interface` (line 270) and the exact-key-set assertion (line 366) both assert the old shape |
+| `skills/design/scripts/tests/test_validate_design.py` | `_base_interface` (line 270) and the exact-key-set assertion (line 366) both assert the old shape; gains the new schema/fallback cases and the missing tamagotchi structural regression |
 | `skills/design/scripts/tests/fixtures/valid/interfaces/IF-001-payment-api.md` | Move `interaction` onto operations |
 | `skills/design/scripts/tests/fixtures/invalid/dangling_provider/interfaces/IF-001-dangling-provider.md` | Same |
 | `agents/interface-specialist.md` | `interaction` section (228) gains the D4 guard; output template (254); schema-shape paragraph (277); worked example (388) plus the D4 mixed example |
@@ -285,8 +293,11 @@ a `requirements/` tree only and no design artifacts.
   unexpected key.
 - **Mixed contract.** An interface whose two operations carry different values
   validates on both paths — the case that does not exist today.
-- **Regression.** The tamagotchi set validates clean through `validate_design.py`
-  and `validate_traceability.py`, as it does now.
+- **Regression.** A new `test_shipped_tamagotchi_example_passes_structural_gate`
+  in `test_validate_design.py` runs `validate_design.py` over the worked
+  example's `design/` directory and asserts exit 0. This is the gate D6 needs
+  and the repo does not have; the existing traceability regression continues to
+  pass unchanged, since that tool does not read `interaction`.
 
 Agent Markdown has no test suite, so the instruction changes are verified by
 inspection against the checkable claims in "Files changed": no template in any
