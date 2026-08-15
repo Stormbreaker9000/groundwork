@@ -15,6 +15,27 @@ def findings_for(subdir, rule):
     return [f for f in ldc.lint_dir(os.path.join(LINT, subdir)) if f.rule == rule]
 
 
+def test_read_body_strips_frontmatter_fence():
+    # Regression: _read_body must land on the real content, not on the
+    # closing '---' fence line that extract_frontmatter_block's capture
+    # group excludes but does not itself consume.
+    path = os.path.join(LINT, "clean", "components", "CMP-001-order-service.md")
+    body = ldc._read_body(path)
+    assert body.lstrip().startswith("# order-service")
+    assert "---" not in body.splitlines()[0]
+
+
+def test_read_body_returns_empty_for_unreadable_file():
+    assert ldc._read_body(os.path.join(LINT, "does-not-exist.md")) == ""
+
+
+def test_read_body_returns_full_text_for_missing_frontmatter():
+    path = os.path.join(LINT, "clean", "assumptions.md")
+    with open(path, "r", encoding="utf-8") as handle:
+        expected = handle.read()
+    assert ldc._read_body(path) == expected
+
+
 def test_clean_fixture_has_no_findings():
     assert ldc.lint_dir(os.path.join(LINT, "clean")) == []
 

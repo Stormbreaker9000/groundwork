@@ -45,6 +45,15 @@ from lint_core import Finding  # noqa: E402  (re-exported for tests)
 import validate_design as vd  # noqa: E402
 
 
+# Matches the whole frontmatter fence block, opening ``---`` through closing
+# ``---`` inclusive. Mirrors artifact_core._FRONTMATTER_RE's shape (that
+# regex is private to artifact_core, so this is a self-contained twin) but,
+# unlike ``extract_frontmatter_block`` — whose capture group excludes both
+# fence lines — this one is used for its match *span*, so ``match.end()``
+# lands after the closing fence rather than after the YAML content.
+_FRONTMATTER_FENCE_RE = re.compile(r"^---\s*\n.*?\n---\s*(?:\n|$)", re.DOTALL)
+
+
 def _read_body(path: str) -> str:
     """Return a file's text with the frontmatter block stripped.
 
@@ -57,10 +66,10 @@ def _read_body(path: str) -> str:
             text = handle.read()
     except (OSError, UnicodeDecodeError):
         return ""
-    block = vd.extract_frontmatter_block(text)
-    if block is None:
+    match = _FRONTMATTER_FENCE_RE.match(text)
+    if match is None:
         return text
-    return text[text.index(block) + len(block):]
+    return text[match.end():]
 
 
 # ---------------------------------------------------------------------------
