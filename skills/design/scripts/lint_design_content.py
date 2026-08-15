@@ -379,6 +379,103 @@ def check_adr_option_unexamined(
 
 
 # ---------------------------------------------------------------------------
+# Set-level: the dependency graph
+# ---------------------------------------------------------------------------
+def _component_graph(
+    artifacts: List[Tuple[str, Dict[str, Any], str]]
+) -> Dict[str, Dict[str, str]]:
+    """Build {component_id: {target_component_id: via_interface_id}}.
+
+    One edge type: component A depends on component B when A lists an interface
+    whose provider is B. Where two interfaces produce the same A->B edge, the
+    lowest-sorting interface id is kept, so the reported path is deterministic.
+    """
+    providers: Dict[str, str] = {}
+    for artifact_id, fm, _body in artifacts:
+        if fm.get("type") == "interface":
+            provider = core.flatten_text(fm.get("provider"))
+            if provider:
+                providers[artifact_id] = provider
+
+    graph: Dict[str, Dict[str, str]] = {}
+    for artifact_id, fm, _body in artifacts:
+        if fm.get("type") != "component":
+            continue
+        edges: Dict[str, str] = {}
+        depends = fm.get("depends_on")
+        if isinstance(depends, list):
+            for raw in sorted(core.flatten_text(d) for d in depends):
+                target = providers.get(raw)
+                if target and target not in edges:
+                    edges[target] = raw
+        graph[artifact_id] = edges
+    return graph
+
+
+def _canonical(cycle: List[str]) -> Tuple[str, ...]:
+    """Rotate a cycle to start at its lowest-sorting component id.
+
+    Without this the same cycle is reported once per entry path — the shipped
+    tamagotchi set yields its single CMP-003/CMP-004 cycle six times.
+    """
+    pivot = cycle.index(min(cycle))
+    return tuple(cycle[pivot:] + cycle[:pivot])
+
+
+def check_dependency_cycles(
+    artifacts: List[Tuple[str, Dict[str, Any], str]]
+) -> List[Finding]:
+    """Flag cycles in the CMP.depends_on -> IF.provider -> CMP graph.
+
+    Not a structural error: every edge resolves and every provider exists, so
+    the structural validator is right to pass it. The *shape* is the defect,
+    and shape is what the structural tier cannot see.
+    """
+    graph = _component_graph(artifacts)
+    seen: set = set()
+    cycles: List[List[str]] = []
+
+    def walk(node: str, stack: List[str]) -> None:
+        for target in sorted(graph.get(node, {})):
+            if target in stack:
+                cycle = stack[stack.index(target):]
+                key = _canonical(cycle)
+                if key not in seen:
+                    seen.add(key)
+                    cycles.append(list(key))
+                continue
+            walk(target, stack + [target])
+
+    for start in sorted(graph):
+        walk(start, [start])
+
+    findings: List[Finding] = []
+    for cycle in sorted(cycles):
+        # Render CMP-001 -> IF-002 -> CMP-002 -> IF-001 -> CMP-001, naming the
+        # interfaces because the interfaces are where the fix is made.
+        parts: List[str] = []
+        for i, node in enumerate(cycle):
+            nxt = cycle[(i + 1) % len(cycle)]
+            parts.append(node)
+            parts.append(graph[node][nxt])
+        path = " -> ".join(parts + [cycle[0]])
+        findings.append(Finding(
+            rule="dependency-cycle",
+            severity="warn",
+            artifact_id=cycle[0],
+            field="depends_on",
+            excerpt=path[:120],
+            message=f"dependency cycle: {path}",
+            suggested_rewrite_hint=(
+                "break the loop at one of the named interfaces — invert the "
+                "dependency, or move the shared state into a component both "
+                "can depend on"
+            ),
+        ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Registries
 # ---------------------------------------------------------------------------
 # Per-artifact checks: (artifact_id, frontmatter, body) -> [Finding].
@@ -399,6 +496,7 @@ CHECKS: List[Callable[[str, Dict[str, Any], str], List[Finding]]] = [
 # same reason M1's glossary check needed SET_CHECKS.
 SET_CHECKS: List[Callable[[List[Tuple[str, Dict[str, Any], str]]], List[Finding]]] = [
     check_orphan_interfaces,
+    check_dependency_cycles,
 ]
 
 

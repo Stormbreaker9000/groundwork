@@ -225,3 +225,59 @@ def test_adr_option_unexamined_skips_placeholder_section():
         "considered_options": ["Event sourcing", "Snapshot table"],
     }
     assert ldc.check_adr_option_unexamined("ADR-001", fm, body) == []
+
+
+# ---------------------------------------------------------------------------
+# dependency-cycle
+# ---------------------------------------------------------------------------
+def test_dependency_cycle_flagged_once():
+    # A naive DFS reports the same two-component cycle once per entry path.
+    # This asserts the canonicalization, not just the detection.
+    found = findings_for("cycle-one", "dependency-cycle")
+    assert len(found) == 1
+    assert found[0].severity == "warn"
+
+
+def test_dependency_cycle_message_names_components_and_interfaces():
+    found = findings_for("cycle-one", "dependency-cycle")
+    message = found[0].message
+    for token in ("CMP-001", "CMP-002", "IF-001", "IF-002"):
+        assert token in message
+
+
+def test_dependency_cycle_reported_on_lowest_component():
+    found = findings_for("cycle-one", "dependency-cycle")
+    assert found[0].artifact_id == "CMP-001"
+
+
+def test_self_dependency_flagged():
+    found = findings_for("cycle-self", "dependency-cycle")
+    assert len(found) == 1
+    assert "CMP-001" in found[0].message
+
+
+def test_acyclic_set_is_clean():
+    assert findings_for("orphan-interface", "dependency-cycle") == []
+
+
+def _triple(artifact_id, **fields):
+    return (artifact_id, dict(id=artifact_id, **fields), "")
+
+
+def test_two_independent_cycles_reported_separately():
+    # Built in memory rather than as a fixture: the assertion is about the
+    # de-duplication key, not about file parsing. Canonicalization must collapse
+    # each cycle's rotations without collapsing two distinct cycles into one.
+    artifacts = [
+        _triple("CMP-001", type="component", depends_on=["IF-002"]),
+        _triple("CMP-002", type="component", depends_on=["IF-001"]),
+        _triple("CMP-003", type="component", depends_on=["IF-004"]),
+        _triple("CMP-004", type="component", depends_on=["IF-003"]),
+        _triple("IF-001", type="interface", provider="CMP-001"),
+        _triple("IF-002", type="interface", provider="CMP-002"),
+        _triple("IF-003", type="interface", provider="CMP-003"),
+        _triple("IF-004", type="interface", provider="CMP-004"),
+    ]
+    found = ldc.check_dependency_cycles(artifacts)
+    assert len(found) == 2
+    assert {f.artifact_id for f in found} == {"CMP-001", "CMP-003"}
