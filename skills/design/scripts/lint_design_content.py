@@ -246,6 +246,19 @@ _CONSEQUENCE_RE = re.compile(r"^\s*[-*]\s*(?:\*\*)?(Good|Bad)\b", re.MULTILINE)
 _PLACEHOLDER_RE = re.compile(r"^\s*[-*]\s*None\b", re.MULTILINE)
 
 
+def _is_placeholder_section(section: str) -> bool:
+    """True if a body section's only content is the formatter's placeholder.
+
+    Distinct from ``_PLACEHOLDER_RE.search(section)``, which matches if a
+    placeholder-shaped line appears *anywhere* in the section -- true of an
+    unrelated bullet like "- None of the existing migrations need to
+    change." sitting alongside real content. The placeholder means "nothing
+    to record yet", which is only true when it is the section's only line.
+    """
+    lines = [line for line in section.splitlines() if line.strip()]
+    return len(lines) == 1 and bool(_PLACEHOLDER_RE.match(lines[0]))
+
+
 def check_adr_consequences_one_sided(
     artifact_id: str, fm: Dict[str, Any], body: str
 ) -> List[Finding]:
@@ -260,7 +273,7 @@ def check_adr_consequences_one_sided(
     if fm.get("type") != "adr" or fm.get("decision_status") == "proposed":
         return []
     section = core.body_section(body, CONSEQUENCES_HEADING)
-    if not section.strip() or _PLACEHOLDER_RE.search(section):
+    if not section.strip() or _is_placeholder_section(section):
         return []
     kinds = {m.group(1).lower() for m in _CONSEQUENCE_RE.finditer(section)}
     if "bad" in kinds or "good" not in kinds:
@@ -327,6 +340,11 @@ def check_adr_option_unexamined(
     `## Decision Outcome` instead, so this reports a smell it cannot prove.
     The schema's `minItems: 2` is what makes the smell worth reporting — an
     option can be added to clear that gate without ever being considered.
+
+    Skipped when the options section is the formatter's placeholder: a
+    `proposed` decision can carry options in frontmatter (per the
+    adr-generator contract) while the body honestly records that none have
+    been examined yet, which is not this smell.
     """
     if fm.get("type") != "adr":
         return []
@@ -334,7 +352,7 @@ def check_adr_option_unexamined(
     if not isinstance(options, list):
         return []
     section = core.body_section(body, OPTIONS_HEADING)
-    if not section.strip():
+    if not section.strip() or _is_placeholder_section(section):
         return []
     low = section.lower()
     findings: List[Finding] = []

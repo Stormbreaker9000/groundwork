@@ -188,3 +188,40 @@ def test_adr_rules_skip_non_adrs():
     body = "### Consequences\n\n- Good: only upside.\n"
     fm = {"type": "component", "decision_status": "accepted"}
     assert ldc.check_adr_consequences_one_sided("CMP-001", fm, body) == []
+
+
+def test_adr_consequences_placeholder_only_is_clean():
+    # The placeholder guard must mean "this section IS the placeholder", not
+    # "a placeholder-shaped line appears somewhere in this section" -- this
+    # is the case where that distinction doesn't yet matter (fix round 1).
+    body = ("## Decision Outcome\n\nx\n\n### Consequences\n\n"
+            "- None — the decision is pending.\n")
+    fm = {"type": "adr", "decision_status": "accepted"}
+    assert ldc.check_adr_consequences_one_sided("ADR-001", fm, body) == []
+
+
+def test_adr_consequences_stray_none_bullet_still_flagged():
+    # Regression for fix round 1: an unrelated "- None ..." bullet sitting
+    # alongside real Good bullets must not silence the one-sided finding --
+    # _PLACEHOLDER_RE.search over the whole section previously did exactly
+    # that.
+    body = ("## Decision Outcome\n\nx\n\n### Consequences\n\n"
+            "- Good: fast reads.\n- Good: simple to reason about.\n"
+            "- None of the existing migrations need to change.\n")
+    fm = {"type": "adr", "decision_status": "accepted"}
+    found = ldc.check_adr_consequences_one_sided("ADR-001", fm, body)
+    assert len(found) == 1
+
+
+def test_adr_option_unexamined_skips_placeholder_section():
+    # Regression for fix round 1: a `proposed` ADR can carry options in
+    # frontmatter (adr-generator contract) while the body honestly records
+    # that none have been examined yet via the formatter's placeholder --
+    # that must not be reported as an unexamined option.
+    body = "## Considered Options\n\n- None — no alternatives are recorded yet.\n"
+    fm = {
+        "type": "adr",
+        "decision_status": "proposed",
+        "considered_options": ["Event sourcing", "Snapshot table"],
+    }
+    assert ldc.check_adr_option_unexamined("ADR-001", fm, body) == []
