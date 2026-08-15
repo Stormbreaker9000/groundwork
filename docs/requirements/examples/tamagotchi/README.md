@@ -142,13 +142,19 @@ started checking the set structurally.
   accepts input is one duty by most readings.
 
   The STO-208 content linter's `god-component` rule, run over this same set, flags
-  none of the three. Their conjoined verbs — `commits`, `turns`, `caught up` — are
-  absent from `ACTION_VERBS` (`lib/lint_core.py`), a list tuned for EARS requirement
-  predicates rather than component responsibility prose. So this rule's recall on the
-  only real data available is 0/3. That is not a defect in the finding above — the
-  critic's grep-for-"and" caught what the linter's verb anchoring could not — but a
-  clean `god-component` run over this set should not be read as clearing these three;
-  a stage-local verb list is the principled fix, and is not this ticket's.
+  none of the three, and not for one reason. `CMP-006`'s responsibility genuinely
+  conjoins two verbs, and the conjoined one — `turns` — is absent from
+  `ACTION_VERBS` (`lib/lint_core.py`), a list tuned for EARS requirement predicates
+  rather than component responsibility prose: a real vocabulary miss. `CMP-003` and
+  `CMP-008` are not vocabulary misses at all — their `responsibility` fields are
+  single-clause, and the critic's second-duty findings for those two came from
+  fields the rule never reads (`CMP-003`'s rationale, `CMP-008`'s description);
+  `check_god_component` scans `responsibility` only. So this rule's recall on the
+  only real data available is 0/3, by two different mechanisms. Neither is a
+  defect — the verb anchoring is deliberately quiet, and the `responsibility`-only
+  scan is the rule's stated scope — but a clean `god-component` run over this set
+  should not be read as clearing these three; a richer verb list and a wider field
+  scan are both principled fixes, and neither is this ticket's.
 - **One interface** (`IF-006`) carries a blocking read and a push whose consumers want
   different halves of it: `CMP-003` uses only `current_lifecycle_state`, `CMP-005` and
   `CMP-006` only `subscribe_to_transitions`. Divergent consumer sets are a split under
