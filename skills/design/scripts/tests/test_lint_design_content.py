@@ -164,6 +164,31 @@ def test_adr_vague_driver_flagged():
     assert any("scalable" in f.message for f in found)
 
 
+def test_adr_vague_driver_placeholder_line_is_suppressed():
+    # Pins the chosen semantics: unlike `_is_placeholder_section` (used by
+    # the consequences/options rules), this rule guards per *line*, not per
+    # section. A bullet that starts with the formatter's placeholder is
+    # skipped whole, even when it goes on to carry vague text on the same
+    # line -- the divergence the final review flagged as untested.
+    body = ("## Decision Drivers\n\n"
+            "- None — the drivers are not yet recorded, but must be scalable.\n")
+    fm = {"type": "adr"}
+    assert ldc.check_adr_vague_driver("ADR-001", fm, body) == []
+
+
+def test_adr_vague_driver_real_driver_survives_alongside_placeholder():
+    # The other half of the same pin: a placeholder bullet must not silence a
+    # *different* line's real vague driver -- the per-line guard is scoped to
+    # the line it matches, not the whole section.
+    body = ("## Decision Drivers\n\n"
+            "- None of the other drivers apply.\n"
+            "- NFR-002: the system must be scalable.\n")
+    fm = {"type": "adr"}
+    found = ldc.check_adr_vague_driver("ADR-001", fm, body)
+    assert len(found) == 1
+    assert "scalable" in found[0].message
+
+
 def test_adr_option_unexamined_flagged():
     found = findings_for("adr-smells", "adr-option-unexamined")
     assert len(found) == 1
@@ -185,9 +210,17 @@ def test_balanced_consequences_not_flagged():
 
 
 def test_adr_rules_skip_non_adrs():
-    body = "### Consequences\n\n- Good: only upside.\n"
-    fm = {"type": "component", "decision_status": "accepted"}
+    body = ("## Decision Drivers\n\n- must be scalable.\n\n"
+            "## Considered Options\n\n"
+            "### Consequences\n\n- Good: only upside.\n")
+    fm = {
+        "type": "component",
+        "decision_status": "accepted",
+        "considered_options": ["Event sourcing", "Snapshot table"],
+    }
     assert ldc.check_adr_consequences_one_sided("CMP-001", fm, body) == []
+    assert ldc.check_adr_vague_driver("CMP-001", fm, body) == []
+    assert ldc.check_adr_option_unexamined("CMP-001", fm, body) == []
 
 
 def test_adr_consequences_placeholder_only_is_clean():
@@ -302,6 +335,16 @@ def test_shipped_tamagotchi_example_has_no_error_findings():
     assert [f for f in findings if f.severity == "error"] == []
 
 
+def test_shipped_tamagotchi_example_survives_without_pyyaml(monkeypatch):
+    # Spec Testing section: "runs without pyyaml ... must not crash." Findings
+    # may differ in fidelity under the stdlib fallback parser, but the run
+    # itself must not raise. Mirrors test_validate_design.py's
+    # test_valid_set_passes_in_fallback_mode.
+    monkeypatch.setattr(ldc.vd.core, "HAVE_YAML", False)
+    findings = ldc.lint_dir(TAMAGOTCHI_DESIGN)
+    assert [f for f in findings if f.severity == "error"] == []
+
+
 def test_shipped_tamagotchi_example_has_the_known_cycle():
     # The CMP-003/CMP-004 cycle is the only real-world input this rule has.
     # It is recorded as a named deviation in the example README, not fixed --
@@ -309,5 +352,9 @@ def test_shipped_tamagotchi_example_has_the_known_cycle():
     cycles = [f for f in ldc.lint_dir(TAMAGOTCHI_DESIGN)
               if f.rule == "dependency-cycle"]
     assert len(cycles) == 1
-    for token in ("CMP-003", "CMP-004", "IF-005", "IF-006"):
-        assert token in cycles[0].message
+    # The exact rendered path, not substring membership: a transposed lookup
+    # in the path renderer (`graph[nxt][node]` instead of `graph[node][nxt]`)
+    # would reverse the path while every ID-substring assertion still passes.
+    assert cycles[0].message == (
+        "dependency cycle: CMP-003 -> IF-006 -> CMP-004 -> IF-005 -> CMP-003"
+    )

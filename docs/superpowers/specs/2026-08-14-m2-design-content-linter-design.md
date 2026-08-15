@@ -219,7 +219,7 @@ runs.
 | Rule | Sev | Field | Fires on |
 |---|---|---|---|
 | `adr-consequences-one-sided` | warn | `consequences` | `### Consequences` carries at least one Good bullet and no Bad bullet |
-| `adr-vague-driver` | warn | `decision_drivers` | A `VAGUE_TERMS` hit in the `## Decision Drivers` section |
+| `adr-vague-driver` | warn / info | `decision_drivers` | A `VAGUE_TERMS` hit in the `## Decision Drivers` section. Demoted to `info` when the driver line contains a digit, mirroring `vague-responsibility` — a quantified driver is not the failure being hunted |
 | `adr-option-unexamined` | info | `considered_options` | An option named in frontmatter that never appears in the `## Considered Options` body |
 
 `adr-consequences-one-sided` encodes the claim that every real decision costs

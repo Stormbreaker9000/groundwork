@@ -359,6 +359,17 @@ The errors do not share one fix:
   note that there is deliberately no migration script: rewriting requirement
   files from the design stage would make it a second writer.
 
+**`index-unparseable` and `duplicate-id` are warnings, but do not report them
+as ordinary ones.** They say the sweep ran over an index that was missing a
+file or had collapsed two artifacts into one ID — so every other result on
+that run, a clean one included, is unreliable in both directions. Tell the
+user the sweep could not see the whole set, and what to fix, before you tell
+them what it found.
+
+Those warnings arrive **after** the write, not at the Step 3 sign-off. That
+ordering is inherent — nothing is on disk before the formatter runs, and
+computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
+
 Then run the advisory content-quality linter and address any `warn`-severity
 findings (the two validators above are the hard gates; the content linter guides
 prose and shape). This is the only script-backed lint run in the stage — the
@@ -374,17 +385,6 @@ It always exits 0. `dependency-cycle` is the finding most worth acting on: it
 means two components each need the other, which no structural check can see
 because every individual edge resolves. Breaking it is a decomposition change,
 so it re-dispatches to the component specialist, not the interface specialist.
-
-**`index-unparseable` and `duplicate-id` are warnings, but do not report them
-as ordinary ones.** They say the sweep ran over an index that was missing a
-file or had collapsed two artifacts into one ID — so every other result on
-that run, a clean one included, is unreliable in both directions. Tell the
-user the sweep could not see the whole set, and what to fix, before you tell
-them what it found.
-
-Those warnings arrive **after** the write, not at the Step 3 sign-off. That
-ordering is inherent — nothing is on disk before the formatter runs, and
-computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
 
 **Step 4b — Report traceability warnings:**
 

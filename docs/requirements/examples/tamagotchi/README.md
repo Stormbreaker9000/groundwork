@@ -39,10 +39,15 @@ python3 skills/requirements/scripts/lint_requirements_content.py \
 # M2 — design
 python3 skills/design/scripts/validate_design.py \
   docs/requirements/examples/tamagotchi/design
+python3 skills/design/scripts/lint_design_content.py \
+  docs/requirements/examples/tamagotchi/design
 ```
 
 Expected: requirements validator **22/22 pass**, content linter **clean**, design
-validator **23/23 pass**.
+validator **23/23 pass**. The design content linter is **not** clean: it reports
+exactly one `warn` — `dependency-cycle` on `CMP-003` — and still exits 0, because
+the tool is advisory. See *The open findings, and why they are still here* below
+for what that finding is and why it is left in place.
 
 Note that the design set deliberately has no `README.md` of its own. Anything under
 `design/` that is not a skipped companion is discovered as an artifact and must parse as
@@ -135,6 +140,15 @@ started checking the set structurally.
   single-responsibility rule. `CMP-006` is arguably a false positive — the rule greps the
   sentence for "and" rather than judging cohesion, and a UI surface that presents and
   accepts input is one duty by most readings.
+
+  The STO-208 content linter's `god-component` rule, run over this same set, flags
+  none of the three. Their conjoined verbs — `commits`, `turns`, `caught up` — are
+  absent from `ACTION_VERBS` (`lib/lint_core.py`), a list tuned for EARS requirement
+  predicates rather than component responsibility prose. So this rule's recall on the
+  only real data available is 0/3. That is not a defect in the finding above — the
+  critic's grep-for-"and" caught what the linter's verb anchoring could not — but a
+  clean `god-component` run over this set should not be read as clearing these three;
+  a stage-local verb list is the principled fix, and is not this ticket's.
 - **One interface** (`IF-006`) carries a blocking read and a push whose consumers want
   different halves of it: `CMP-003` uses only `current_lifecycle_state`, `CMP-005` and
   `CMP-006` only `subscribe_to_transitions`. Divergent consumer sets are a split under

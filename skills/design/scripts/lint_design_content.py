@@ -300,6 +300,10 @@ def check_adr_vague_driver(
     The driver is what the decision claims to answer, so it is the most
     load-bearing place a vague qualifier can sit: 'must be scalable' names no
     threshold the chosen option can be checked against.
+
+    Mirrors `check_vague_responsibility`'s severity demotion: a driver line
+    carrying a digit has committed to a number somewhere, which is the
+    failure this rule hunts, so it drops to `info`.
     """
     if fm.get("type") != "adr":
         return []
@@ -307,6 +311,13 @@ def check_adr_vague_driver(
     findings: List[Finding] = []
     for line in section.splitlines():
         text = core.flatten_text(line)
+        # Deliberately the per-line guard, not `_is_placeholder_section`: a
+        # drivers section is a bullet list of distinct drivers, one per line,
+        # not a single prose block the way `### Consequences` or
+        # `## Considered Options` are. A placeholder bullet sitting next to
+        # real drivers should not silence the real ones -- unlike those other
+        # two sections, where the placeholder means "nothing here at all" and
+        # only counts if it is the section's *only* content.
         if not text or _PLACEHOLDER_RE.match(line):
             continue
         low = text.lower()

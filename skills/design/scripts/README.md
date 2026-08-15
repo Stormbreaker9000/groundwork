@@ -140,7 +140,7 @@ python3 lint_design_content.py --strict design     # exit non-zero on error-seve
 | `orphan-interface` | warn | An `IF-` no component lists in `depends_on` |
 | `error-modes-handwaved` | warn | An error mode naming an attitude ("handled gracefully") rather than a failure |
 | `adr-consequences-one-sided` | warn | An accepted ADR whose `### Consequences` are all upside |
-| `adr-vague-driver` | warn / info | A vague qualifier under `## Decision Drivers` |
+| `adr-vague-driver` | warn / info | A vague qualifier under `## Decision Drivers`; `info` when the driver line carries a digit |
 | `adr-option-unexamined` | info | An option in frontmatter never discussed under `## Considered Options` |
 | `dependency-cycle` | warn | A cycle in the `CMP.depends_on → IF.provider → CMP` graph |
 
