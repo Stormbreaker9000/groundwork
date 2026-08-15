@@ -281,3 +281,33 @@ def test_two_independent_cycles_reported_separately():
     found = ldc.check_dependency_cycles(artifacts)
     assert len(found) == 2
     assert {f.artifact_id for f in found} == {"CMP-001", "CMP-003"}
+
+
+# ---------------------------------------------------------------------------
+# The shipped worked example (STO-208 spec D7)
+# ---------------------------------------------------------------------------
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+TAMAGOTCHI_DESIGN = os.path.join(
+    REPO_ROOT, "docs", "requirements", "examples", "tamagotchi", "design"
+)
+
+
+def test_shipped_tamagotchi_example_has_no_error_findings():
+    # Deliberately not "has no findings". The tool always exits 0, so `clean`
+    # is not a state it guarantees, and STO-219 wants the example's remaining
+    # deviations to be chosen rather than absent. No rule emits `error` today;
+    # this is the pin that catches a future rule promoted to `error` silently
+    # invalidating the shipped example.
+    findings = ldc.lint_dir(TAMAGOTCHI_DESIGN)
+    assert [f for f in findings if f.severity == "error"] == []
+
+
+def test_shipped_tamagotchi_example_has_the_known_cycle():
+    # The CMP-003/CMP-004 cycle is the only real-world input this rule has.
+    # It is recorded as a named deviation in the example README, not fixed --
+    # breaking it is a design change, and regeneration is STO-219.
+    cycles = [f for f in ldc.lint_dir(TAMAGOTCHI_DESIGN)
+              if f.rule == "dependency-cycle"]
+    assert len(cycles) == 1
+    for token in ("CMP-003", "CMP-004", "IF-005", "IF-006"):
+        assert token in cycles[0].message
