@@ -148,6 +148,88 @@ def check_god_component(
 
 
 # ---------------------------------------------------------------------------
+# Interface rules
+# ---------------------------------------------------------------------------
+# Adverbs of intent: they describe an attitude toward failure rather than a
+# failure. "Handled gracefully" tells a reader nothing they can design against.
+_HANDWAVE_RE = re.compile(
+    r"\b(gracefully|appropriately|properly|as needed|as appropriate)\b",
+    re.IGNORECASE,
+)
+
+
+def check_error_modes_handwaved(
+    artifact_id: str, fm: Dict[str, Any], body: str
+) -> List[Finding]:
+    """Flag an error mode that names an attitude instead of a failure."""
+    if fm.get("type") != "interface":
+        return []
+    findings: List[Finding] = []
+    modes = fm.get("error_modes")
+    if not isinstance(modes, list):
+        return []
+    for mode in modes:
+        text = core.flatten_text(mode)
+        match = _HANDWAVE_RE.search(text)
+        if not match:
+            continue
+        findings.append(Finding(
+            rule="error-modes-handwaved",
+            severity="warn",
+            artifact_id=artifact_id,
+            field="error_modes",
+            excerpt=text[:120],
+            message=(
+                f"error mode says '{match.group(1)}' rather than naming a "
+                f"failure"
+            ),
+            suggested_rewrite_hint=(
+                "name the condition and what the caller observes: 'the "
+                "requested id does not exist', not 'errors are handled'"
+            ),
+        ))
+    return findings
+
+
+def check_orphan_interfaces(
+    artifacts: List[Tuple[str, Dict[str, Any], str]]
+) -> List[Finding]:
+    """Flag an interface no component consumes.
+
+    The `glossary-unused` analogue: defined-but-unused is a warning, not a gate.
+    A contract nobody depends on is either dead or a missing `depends_on` edge,
+    and the linter cannot tell which — so it reports rather than decides.
+    """
+    consumed: set = set()
+    interfaces: List[Tuple[str, Dict[str, Any]]] = []
+    for artifact_id, fm, _body in artifacts:
+        if fm.get("type") == "component":
+            depends = fm.get("depends_on")
+            if isinstance(depends, list):
+                consumed.update(core.flatten_text(d) for d in depends)
+        elif fm.get("type") == "interface":
+            interfaces.append((artifact_id, fm))
+
+    findings: List[Finding] = []
+    for artifact_id, fm in interfaces:
+        if artifact_id in consumed:
+            continue
+        findings.append(Finding(
+            rule="orphan-interface",
+            severity="warn",
+            artifact_id=artifact_id,
+            field="id",
+            excerpt=core.flatten_text(fm.get("title")),
+            message=f"interface '{artifact_id}' is consumed by no component",
+            suggested_rewrite_hint=(
+                "drop the contract, or add it to the depends_on of the "
+                "component that should be consuming it"
+            ),
+        ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Registries
 # ---------------------------------------------------------------------------
 # Per-artifact checks: (artifact_id, frontmatter, body) -> [Finding].
@@ -156,13 +238,16 @@ def check_god_component(
 CHECKS: List[Callable[[str, Dict[str, Any], str], List[Finding]]] = [
     check_vague_responsibility,
     check_god_component,
+    check_error_modes_handwaved,
 ]
 
 # Set-level checks: (artifacts) -> [Finding], where `artifacts` is the list of
 # (artifact_id, frontmatter, body) triples. These need the whole set at once —
 # "no component consumes this interface" is not decidable from one file, the
 # same reason M1's glossary check needed SET_CHECKS.
-SET_CHECKS: List[Callable[[List[Tuple[str, Dict[str, Any], str]]], List[Finding]]] = []
+SET_CHECKS: List[Callable[[List[Tuple[str, Dict[str, Any], str]]], List[Finding]]] = [
+    check_orphan_interfaces,
+]
 
 
 def lint_dir(design_dir: str) -> List[Finding]:

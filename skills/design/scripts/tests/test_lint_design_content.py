@@ -96,3 +96,35 @@ def test_component_rules_skip_non_components():
     fm = {"type": "interface", "responsibility": "Provides fast and easy access."}
     assert ldc.check_vague_responsibility("IF-001", fm, "") == []
     assert ldc.check_god_component("IF-001", fm, "") == []
+
+
+# ---------------------------------------------------------------------------
+# Interface rules
+# ---------------------------------------------------------------------------
+def test_orphan_interface_flagged():
+    found = findings_for("orphan-interface", "orphan-interface")
+    assert len(found) == 1
+    assert found[0].artifact_id == "IF-002"
+    assert found[0].severity == "warn"
+
+
+def test_consumed_interface_not_flagged():
+    found = findings_for("orphan-interface", "orphan-interface")
+    assert "IF-001" not in {f.artifact_id for f in found}
+
+
+def test_error_modes_handwaved_flagged():
+    found = findings_for("error-modes", "error-modes-handwaved")
+    assert len(found) == 1
+    assert "gracefully" in found[0].excerpt
+
+
+def test_concrete_error_mode_not_flagged():
+    fm = {"type": "interface",
+          "error_modes": ["The requested order id does not exist."]}
+    assert ldc.check_error_modes_handwaved("IF-001", fm, "") == []
+
+
+def test_error_modes_rule_skips_non_interfaces():
+    fm = {"type": "component", "error_modes": ["Handled gracefully."]}
+    assert ldc.check_error_modes_handwaved("CMP-001", fm, "") == []
