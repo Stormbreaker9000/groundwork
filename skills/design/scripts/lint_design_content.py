@@ -230,6 +230,137 @@ def check_orphan_interfaces(
 
 
 # ---------------------------------------------------------------------------
+# ADR rules
+# ---------------------------------------------------------------------------
+# MADR headings this stage writes. Gated for presence by validate_design.py;
+# their prose is this linter's business.
+DRIVERS_HEADING = "## Decision Drivers"
+OPTIONS_HEADING = "## Considered Options"
+CONSEQUENCES_HEADING = "### Consequences"
+
+# `- Good: ...` / `- Bad: ...`, and MADR 4.0's `- Good, because ...`. Bold
+# markers are tolerated because the formatter emits them in places.
+_CONSEQUENCE_RE = re.compile(r"^\s*[-*]\s*(?:\*\*)?(Good|Bad)\b", re.MULTILINE)
+
+# The formatter's honest placeholder for a section with nothing to record yet.
+_PLACEHOLDER_RE = re.compile(r"^\s*[-*]\s*None\b", re.MULTILINE)
+
+
+def check_adr_consequences_one_sided(
+    artifact_id: str, fm: Dict[str, Any], body: str
+) -> List[Finding]:
+    """Flag an accepted decision whose consequences are all upside.
+
+    Every real decision costs something. A consequences section with Good
+    bullets and no Bad bullet records a decision that was not weighed.
+
+    Skipped for `proposed` decisions and for the placeholder: both are correct
+    output for a decision that has not been taken.
+    """
+    if fm.get("type") != "adr" or fm.get("decision_status") == "proposed":
+        return []
+    section = core.body_section(body, CONSEQUENCES_HEADING)
+    if not section.strip() or _PLACEHOLDER_RE.search(section):
+        return []
+    kinds = {m.group(1).lower() for m in _CONSEQUENCE_RE.finditer(section)}
+    if "bad" in kinds or "good" not in kinds:
+        return []
+    return [Finding(
+        rule="adr-consequences-one-sided",
+        severity="warn",
+        artifact_id=artifact_id,
+        field="consequences",
+        excerpt=core.flatten_text(section)[:120],
+        message="consequences list only upsides; no cost is recorded",
+        suggested_rewrite_hint=(
+            "name what the decision costs — a decision with no downside was "
+            "not a decision"
+        ),
+    )]
+
+
+def check_adr_vague_driver(
+    artifact_id: str, fm: Dict[str, Any], body: str
+) -> List[Finding]:
+    """Flag a vague qualifier in an ADR's decision drivers.
+
+    The driver is what the decision claims to answer, so it is the most
+    load-bearing place a vague qualifier can sit: 'must be scalable' names no
+    threshold the chosen option can be checked against.
+    """
+    if fm.get("type") != "adr":
+        return []
+    section = core.body_section(body, DRIVERS_HEADING)
+    findings: List[Finding] = []
+    for line in section.splitlines():
+        text = core.flatten_text(line)
+        if not text or _PLACEHOLDER_RE.match(line):
+            continue
+        low = text.lower()
+        quantified = bool(re.search(r"\d", text))
+        for term in sorted(core.VAGUE_TERMS):
+            if re.search(rf"\b{re.escape(term)}\b", low):
+                findings.append(Finding(
+                    rule="adr-vague-driver",
+                    severity="info" if quantified else "warn",
+                    artifact_id=artifact_id,
+                    field="decision_drivers",
+                    excerpt=text[:120],
+                    message=(
+                        f"decision driver '{term}' names no threshold the "
+                        f"chosen option can be checked against"
+                    ),
+                    suggested_rewrite_hint=(
+                        "cite the NFR that quantifies it, or state the "
+                        "threshold in the driver"
+                    ),
+                ))
+    return findings
+
+
+def check_adr_option_unexamined(
+    artifact_id: str, fm: Dict[str, Any], body: str
+) -> List[Finding]:
+    """Flag an option named in frontmatter but never discussed in the body.
+
+    `info`, not `warn`: an option can legitimately be weighed under
+    `## Decision Outcome` instead, so this reports a smell it cannot prove.
+    The schema's `minItems: 2` is what makes the smell worth reporting — an
+    option can be added to clear that gate without ever being considered.
+    """
+    if fm.get("type") != "adr":
+        return []
+    options = fm.get("considered_options")
+    if not isinstance(options, list):
+        return []
+    section = core.body_section(body, OPTIONS_HEADING)
+    if not section.strip():
+        return []
+    low = section.lower()
+    findings: List[Finding] = []
+    for option in options:
+        text = core.flatten_text(option)
+        if not text or text.lower() in low:
+            continue
+        findings.append(Finding(
+            rule="adr-option-unexamined",
+            severity="info",
+            artifact_id=artifact_id,
+            field="considered_options",
+            excerpt=text[:120],
+            message=(
+                f"option '{text}' is listed in frontmatter but never appears "
+                f"under '{OPTIONS_HEADING}'"
+            ),
+            suggested_rewrite_hint=(
+                "weigh it in the body, or drop it — an option listed only to "
+                "clear the two-option gate was not considered"
+            ),
+        ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Registries
 # ---------------------------------------------------------------------------
 # Per-artifact checks: (artifact_id, frontmatter, body) -> [Finding].
@@ -239,6 +370,9 @@ CHECKS: List[Callable[[str, Dict[str, Any], str], List[Finding]]] = [
     check_vague_responsibility,
     check_god_component,
     check_error_modes_handwaved,
+    check_adr_consequences_one_sided,
+    check_adr_vague_driver,
+    check_adr_option_unexamined,
 ]
 
 # Set-level checks: (artifacts) -> [Finding], where `artifacts` is the list of

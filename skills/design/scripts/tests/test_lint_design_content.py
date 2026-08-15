@@ -128,3 +128,63 @@ def test_concrete_error_mode_not_flagged():
 def test_error_modes_rule_skips_non_interfaces():
     fm = {"type": "component", "error_modes": ["Handled gracefully."]}
     assert ldc.check_error_modes_handwaved("CMP-001", fm, "") == []
+
+
+# ---------------------------------------------------------------------------
+# body_section
+# ---------------------------------------------------------------------------
+def test_body_section_stops_at_same_level_heading():
+    text = "## A\n\nalpha\n\n## B\n\nbeta\n"
+    assert "alpha" in ldc.core.body_section(text, "## A")
+    assert "beta" not in ldc.core.body_section(text, "## A")
+
+
+def test_body_section_keeps_deeper_subsections():
+    text = "## Decision Outcome\n\npicked\n\n### Consequences\n\n- Good: x\n\n## Next\n"
+    section = ldc.core.body_section(text, "## Decision Outcome")
+    assert "Consequences" in section and "Next" not in section
+
+
+def test_body_section_absent_heading_is_empty():
+    assert ldc.core.body_section("## A\n\nalpha\n", "## Missing") == ""
+
+
+# ---------------------------------------------------------------------------
+# ADR rules
+# ---------------------------------------------------------------------------
+def test_adr_consequences_one_sided_flagged():
+    found = findings_for("adr-smells", "adr-consequences-one-sided")
+    assert len(found) == 1
+    assert found[0].artifact_id == "ADR-001"
+
+
+def test_adr_vague_driver_flagged():
+    found = findings_for("adr-smells", "adr-vague-driver")
+    assert found
+    assert any("scalable" in f.message for f in found)
+
+
+def test_adr_option_unexamined_flagged():
+    found = findings_for("adr-smells", "adr-option-unexamined")
+    assert len(found) == 1
+    assert "Snapshot table" in found[0].excerpt
+    assert found[0].severity == "info"
+
+
+def test_proposed_adr_with_placeholders_is_clean():
+    # The formatter writes these placeholders on purpose for a decision that
+    # has not been taken. Firing here would train the reader to ignore the rule.
+    assert ldc.lint_dir(os.path.join(LINT, "adr-proposed")) == []
+
+
+def test_balanced_consequences_not_flagged():
+    body = ("## Decision Outcome\n\nx\n\n### Consequences\n\n"
+            "- Good: fast reads.\n- Bad: writes fan out.\n")
+    fm = {"type": "adr", "decision_status": "accepted"}
+    assert ldc.check_adr_consequences_one_sided("ADR-001", fm, body) == []
+
+
+def test_adr_rules_skip_non_adrs():
+    body = "### Consequences\n\n- Good: only upside.\n"
+    fm = {"type": "component", "decision_status": "accepted"}
+    assert ldc.check_adr_consequences_one_sided("CMP-001", fm, body) == []

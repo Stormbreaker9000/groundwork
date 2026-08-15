@@ -146,3 +146,26 @@ def run_cli(
     if args.strict and any(f.severity == "error" for f in findings):
         return 1
     return 0
+
+
+def body_section(text: str, heading: str) -> str:
+    """Return the raw text under a Markdown heading, or '' if it is absent.
+
+    The section runs to the next heading of the same or higher level, so
+    ``body_section(body, "## Decision Outcome")`` stops at the next ``##`` but
+    contains its own ``### Consequences`` subsection.
+
+    ``validate_traceability.decision_drivers_section`` is a near-equivalent,
+    hard-coded to one heading. It is deliberately not reused: importing a
+    hard-gate validator into an advisory linter to save fifteen lines couples
+    the two tiers in the wrong direction (STO-208 spec D5).
+    """
+    level = len(heading) - len(heading.lstrip("#"))
+    if level == 0:
+        return ""
+    start = re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE)
+    if not start:
+        return ""
+    rest = text[start.end():]
+    nxt = re.search(rf"^#{{1,{level}}}\s+\S", rest, re.MULTILINE)
+    return rest[:nxt.start()] if nxt else rest
