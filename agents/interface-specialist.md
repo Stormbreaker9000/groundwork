@@ -123,7 +123,9 @@ Three corollaries decide when to merge and when to split:
   otherwise. "Consumer" means a component that declared the capability in its
   `required_capabilities`; the test is over capabilities, not operations — a
   consumer is never expected to call every operation of a contract it depends on,
-  only to genuinely need the capability that contract satisfies.
+  only to genuinely need the capability that contract satisfies. (The
+  `interaction` guard below runs a narrower, operation-level version of this
+  same test, and only once a contract's operations already disagree.)
 
   This rule can only **merge**. It decides whether several capabilities from one
   provider share an interface; it can never split one capability across two,
@@ -183,7 +185,8 @@ is whatever component actually takes the payment.
 
 ## Authoring at architecture altitude
 
-`operations` is a list of `{name, summary}` objects, minimum one. That is all.
+`operations` is a list of `{name, summary, interaction}` objects, minimum one.
+That is all.
 
 **Deliberately excluded:** request and response payload schemas, versioning,
 authentication, and transport. Those are code-level or ADR-level concerns
@@ -191,6 +194,9 @@ authentication, and transport. Those are code-level or ADR-level concerns
 and for a requirement to be traced through the contract — it is not OpenAPI
 written in YAML, and an interface spec that drifts into field-by-field payloads
 is both wrong for this stage and obsolete the moment code is written.
+
+The bullets below illustrate `summary` quality specifically, so they omit
+`interaction` for brevity — every operation still requires it, per above.
 
 - Good: `{ name: "authorize", summary: "Reserve funds against a card for an order total, returning an authorisation reference." }`
 - Good: `{ name: "capture", summary: "Settle a previously authorised amount." }`
@@ -227,17 +233,32 @@ reconciliation path, and it is the one most often left out.
 
 ## `interaction`
 
-`synchronous` when the consumer blocks on the result and cannot proceed without
-it. `asynchronous` otherwise — fire-and-forget, event-driven, queued, or
-polled-for-later.
+Declared **per operation**, not on the contract. `synchronous` when the consumer
+blocks on the result and cannot proceed without it. `asynchronous` otherwise —
+fire-and-forget, event-driven, queued, or polled-for-later.
 
-When the choice is genuinely close — a notification that could reasonably be
-awaited or queued, a write that could be confirmed or accepted-then-settled —
-**say so in the body**, naming what would tip it and what it costs either way.
-The critic runs an ATAM-lite pass and looks for sensitivity points; interaction
-style is one of the most common ones, because it trades latency against coupling
-and failure isolation. Recording the tension is how it reaches `drivers.md`
-instead of evaporating.
+Ask it of each operation separately. `flush` blocks and `record` does not, and
+no fact about the contract holding them changes either answer. A contract whose
+operations disagree is **mixed-mode**; there is no `mixed` value to write and
+none is needed, because the mixture is visible in the operations themselves.
+
+**Mixed is legal only when the operations share a consumer set.** If every
+component that consumes this contract uses every operation on it, a mixed
+contract is the right shape — splitting it would force consumers to depend on
+two contracts they always use together. If the consumer sets diverge, so that
+one component takes only the blocking operation and another only the
+non-blocking one, that is **two interfaces**, not one mixed interface. The
+Interface Segregation rule in the merge/split list above governs; mixed
+interaction is not an exemption from it, and reaching for it to avoid a split is
+the failure this rule exists to prevent.
+
+When the choice for a given operation is genuinely close — a notification that
+could reasonably be awaited or queued, a write that could be confirmed or
+accepted-then-settled — **say so in the body**, naming what would tip it and
+what it costs either way. The critic runs an ATAM-lite pass and looks for
+sensitivity points; interaction style is one of the most common ones, because it
+trades latency against coupling and failure isolation. Recording the tension is
+how it reaches `drivers.md` instead of evaporating.
 
 ## Output
 
@@ -250,8 +271,7 @@ draft_interfaces:
     title: string
     description: string
     provider: CMP-002
-    operations: [ { name, summary } ]
-    interaction: synchronous | asynchronous
+    operations: [ { name, summary, interaction } ]   # interaction is PER OPERATION
     error_modes: [ ... ]
     consumed_by: [ CMP-001 ]         # ← TRANSIENT, drives the back-fill
     satisfies_capabilities:          # ← TRANSIENT, proves nothing was dropped
@@ -273,9 +293,11 @@ dropped — quote the `capability` string exactly as the component declared it, 
 the match fails and you will be re-dispatched for a gap you did not create.
 
 Every other field above is written to the interface's frontmatter verbatim, so it
-must be schema-shaped as returned: `type: interface`, `status: draft`,
-`interaction` one of the two enum values, `operations` and `error_modes` both
-non-empty. Emit **no** component fields — `responsibility`, `boundary`, and
+must be schema-shaped as returned: `type: interface`, `status: draft`, every
+entry in `operations` carrying an `interaction` that is one of the two enum
+values, and `operations` and `error_modes` both non-empty. Do **not** emit a
+contract-level `interaction` — the schema's `unevaluatedProperties: false`
+rejects it. Emit **no** component fields — `responsibility`, `boundary`, and
 `depends_on` belong to components, and the schema's `unevaluatedProperties: false`
 rejects an artifact carrying one on an interface.
 
@@ -308,7 +330,8 @@ redefine the same word (STO-197 A.2).
 
 ## Interaction
 <synchronous or asynchronous, and why; when the choice is close, say what would
-tip it and what each option costs>
+tip it and what each option costs. For a mixed contract, open by naming which
+operation is which, then make the same case for the split.>
 
 ## Error Modes
 - <mode>
@@ -381,11 +404,13 @@ string is quoted exactly as declared:
   operations:
     - name: authorize
       summary: Reserve funds against a card for an order total, returning an authorisation reference.
+      interaction: synchronous
     - name: capture
       summary: Settle a previously authorised amount against the same reference.
+      interaction: synchronous
     - name: void
       summary: Release an authorisation that will not be captured.
-  interaction: synchronous
+      interaction: synchronous
   error_modes:
     - "Provider unreachable — network failure or provider outage."
     - "Request rejected — card declined, expired, or insufficient funds."
@@ -433,6 +458,50 @@ string is quoted exactly as declared:
     is the external card processor (CMP-002), modelled as a component so the
     dependency stays inside the graph.
 ````
+
+A mixed contract in the same system, and why this one is allowed to be mixed:
+
+````yaml
+- id: IF-002
+  type: interface
+  title: Payment Audit Recording
+  description: The contract through which payment activity is recorded for audit and forced durable before a reconciliation boundary.
+  provider: CMP-003
+  operations:
+    - name: record
+      summary: Accept an audit entry for eventual durable storage.
+      interaction: asynchronous
+    - name: flush
+      summary: Make every previously accepted entry durable before returning.
+      interaction: synchronous
+  error_modes:
+    - "Entry volume exceeds the buffer between flushes — entries are dropped, and the caller is told which window was lost."
+    - "Flush times out with entries unwritten — durability is not established and the caller must not treat the window as recorded."
+  consumed_by: [CMP-001, CMP-004]
+  satisfies_capabilities:
+    - { component: CMP-001, capability: "record payment activity for audit" }
+    - { component: CMP-004, capability: "record payment activity for audit" }
+````
+
+`record` does not block and `flush` must, so the contract is mixed. It is
+allowed to be mixed because `CMP-001` (order-service) and `CMP-004`
+(refund-processor) both use both operations — `record` on their normal path,
+`flush` before they close a reconciliation window. Splitting would give each of
+them two contracts they always hold together.
+
+Had `CMP-001` used only `record` and `CMP-004` only `flush`, the consumer sets
+would diverge and this would be two interfaces instead.
+
+Rendered into `body_markdown`, IF-002's `## Interaction` section opens by
+naming which operation is which, then makes the same consumer-set case:
+
+```
+## Interaction
+Mixed: `record` is asynchronous, `flush` is synchronous. Both operations share
+every consumer — CMP-001 and CMP-004 call both, `record` on their normal path
+and `flush` before closing a reconciliation window — so the split stays one
+contract instead of giving them two they always hold together.
+```
 
 Contrast with an interface that would be re-dispatched:
 

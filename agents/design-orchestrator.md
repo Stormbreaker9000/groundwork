@@ -257,8 +257,7 @@ draft_interfaces:
     title: string
     description: string
     provider: CMP-002
-    operations: [ { name, summary } ]
-    interaction: synchronous | asynchronous
+    operations: [ { name, summary, interaction } ]   # interaction is PER OPERATION
     error_modes: [ ... ]
     consumed_by: [ CMP-001 ]         # ← TRANSIENT, drives the back-fill
     satisfies_capabilities:          # ← TRANSIENT, proves nothing was dropped

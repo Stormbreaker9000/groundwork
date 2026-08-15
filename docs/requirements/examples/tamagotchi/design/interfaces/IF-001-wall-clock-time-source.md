@@ -23,9 +23,10 @@ provider: CMP-011
 operations:
 - name: now
   summary: Report the current wall-clock instant as an absolute timestamp.
+  interaction: synchronous
 - name: elapsed_since
   summary: Report the interval between a supplied earlier instant and the present, signalling explicitly when that interval is negative rather than returning it.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - Clock unavailable — the platform time source cannot be read, so no instant can be reported and the caller must not substitute a guess.
 - Backward clock movement — the reported instant precedes a previously observed one, so any interval derived from it is invalid and BR-002 requires zero Decay rather than a stat increase.

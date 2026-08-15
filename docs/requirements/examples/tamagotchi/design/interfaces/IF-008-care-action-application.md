@@ -24,9 +24,10 @@ provider: CMP-003
 operations:
 - name: apply_care_action
   summary: Apply one owner-selected care action — feed, play, clean, or begin sleep — to the pet's Stats, reporting whether it was applied, refused, or had no effect.
+  interaction: synchronous
 - name: end_sleep
   summary: End an in-progress sleep interaction, crediting energy in proportion to the fraction of the configured duration that elapsed.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - Action refused because the pet is in the terminal dead state — death is permanent per the Q-2 resolution, so no care action may restore a Stat and the caller must be told rather than shown an unchanged value.
 - Action applied but the Stat was already at its maximum — the caller must be able to tell this apart from a refusal, because the two mean different things to the owner and to NFR-003's accessible feedback.

@@ -16,7 +16,7 @@ provider: CMP-999
 operations:
   - name: ping
     summary: A single trivial operation.
-interaction: synchronous
+    interaction: synchronous
 error_modes:
   - unreachable
 ---

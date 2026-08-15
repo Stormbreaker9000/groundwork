@@ -22,9 +22,10 @@ provider: CMP-001
 operations:
 - name: read_reminder_preference
   summary: Return the stored care-reminder preference, or report that none has been stored so the documented default applies.
+  interaction: synchronous
 - name: write_reminder_preference
   summary: Store the care-reminder preference durably so that it survives a restart.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - No preference stored — a first launch, which the caller must resolve to the documented default rather than treating an absent record as 'off' by accident.
 - Storage unwritable — the app-data directory is missing, full, or permission-denied, so the preference change did not persist and will revert on the next launch.

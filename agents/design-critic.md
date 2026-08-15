@@ -64,10 +64,19 @@ description must contain. For every component and every interface, record a
   paraphrases of the same non-answer are a `revise`. A mutating operation with
   no timeout/unknown-commit-state mode is worth a finding even though the
   schema does not require that specific mode.
-- **Interaction matches the described wait.** If the body says the consumer
-  blocks on the result, `interaction` must be `synchronous`, and vice versa.
-  A mismatch between the prose and the field is a `revise` — one of the two is
-  wrong and you cannot silently pick which.
+- **Each operation's interaction matches the described wait.** `interaction` is
+  declared per operation (STO-216), so check it per operation: if the body
+  describes a consumer blocking on *that* operation's result, its `interaction`
+  must be `synchronous`, and vice versa. A mismatch between the prose and the
+  field is a `revise` — one of the two is wrong and you cannot silently pick
+  which.
+
+  Do not accept an argument about the contract's *dominant* mode. "The snapshot
+  read is not the normal path" is not a reason for a blocking read to be
+  declared asynchronous; a contract whose operations genuinely differ is
+  mixed-mode, and each operation says what it is. There is no `mixed` value and
+  none is needed. A body that argues one mode for a contract whose operations
+  disagree is itself the finding.
 - **`traces_from` is plausible.** You are not resolving whether the requirement
   ID exists (that is STO-102's job — see Scope boundaries below); you are
   judging whether the element genuinely serves the requirements it cites. A

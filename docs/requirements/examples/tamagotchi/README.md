@@ -68,18 +68,17 @@ behaviour.
 
 **The set was written on a failing gate, by human override.** The pipeline's hardest
 invariant is that nothing is written until the critic returns `gate: pass` —
-`agents/design-formatter.md` ("Never write anything before the critic has returned
-`gate: pass`") and `agents/design-orchestrator.md` ("Never advance to the formatter
-without `gate: pass`"). This set's `critique-report.yaml` says `gate: fail`, and the
-artifacts were written anyway. That was a human decision taken knowingly, for one reason:
-the alternative was to keep re-dispatching until the critic went quiet, and the seven
-remaining findings are *worth more than a clean gate* (see the next section — three of
-them are schema limitations no wording could satisfy, and one is arguably a false
-positive). A worked example whose critic found nothing would teach nothing about whether
-the critic works. **An ordinary run must not do this.** A `gate: fail` reaching the
-formatter is a bug in the run, not a judgment call available to the agents; only a human
-looking at the specific findings can decide they are acceptable, and that is what
-happened here.
+`agents/design-formatter.md` ("Never write anything before the critic has returned `gate:
+pass`") and `agents/design-orchestrator.md` ("Never advance to the formatter without
+`gate: pass`"). This set's `critique-report.yaml` says `gate: fail`, and the artifacts
+were written anyway. That was a human decision taken knowingly, for one reason: the
+alternative was to keep re-dispatching until the critic went quiet, and the five remaining
+findings are *worth more than a clean gate* (see the next section — one is a segregation
+defect recorded rather than fixed, and one is arguably a false positive). A worked example
+whose critic found nothing would teach nothing about whether the critic works. **An
+ordinary run must not do this.** A `gate: fail` reaching the formatter is a bug in the
+run, not a judgment call available to the agents; only a human looking at the specific
+findings can decide they are acceptable, and that is what happened here.
 
 **`critique-report.yaml` is a hand-added exhibit, not pipeline output.** No agent is
 instructed to write it, and it appears in no declared layout — not in the spec's Part E,
@@ -126,15 +125,28 @@ silently followed it. The critic caught the mismatch. The resolution recorded he
 `design/assumptions.md`. Architecture found a latent defect in the requirements it was
 built from.
 
-Seven findings remain open and are deliberately preserved as genuine critic output:
+Five findings remain open and are deliberately preserved as genuine critic output:
 
 - **Three responsibility phrasings** (`CMP-003`, `CMP-006`, `CMP-008`) trip the
   single-responsibility rule. `CMP-006` is arguably a false positive — the rule greps the
   sentence for "and" rather than judging cohesion, and a UI surface that presents and
   accepts input is one duty by most readings.
-- **Three interfaces** (`IF-002`, `IF-006`, `IF-012`) carry both a blocking and a
-  non-blocking operation, but `interaction` is a single enum. The schema cannot express a
-  mixed-mode contract, so no wording of these artifacts would satisfy the check.
+- **One interface** (`IF-006`) carries a blocking read and a push whose consumers want
+  different halves of it: `CMP-003` uses only `current_lifecycle_state`, `CMP-005` and
+  `CMP-006` only `subscribe_to_transitions`. Divergent consumer sets are a split under
+  the Interface Segregation rule — the same fault as `IF-003` below, and the finding
+  survives for that reason rather than the one originally recorded.
+
+  It was first written up here as one of *three* interfaces the schema could not
+  describe, because `interaction` was then a single contract-level enum. STO-216 moved
+  the field onto the operation, which cleared `IF-002` and `IF-012` — both have
+  coincident consumer sets and are legitimately mixed — and left `IF-006`'s real defect
+  visible underneath. A fourth, `IF-005`, had the identical shape and was never flagged
+  at all: its body argued the contract's dominant mode ("the snapshot read exists for
+  recovery and for the first read after seeding, not as the normal path") and the critic
+  had no per-operation field to check that against. It is legitimately mixed and now
+  says so. That a whole-contract field let one instance argue its way past the gate is
+  the clearest evidence for why the field moved.
 - **One `traces_from` plausibility** flag on `CMP-001`.
 
 They are left in place because a worked example showing a critic that found nothing would
@@ -158,6 +170,9 @@ the same reason the critic findings above are.
   coarsely upstream, and the split-when-unsure tiebreaker the component
   specialist now carries is what would have prevented it. This is the
   unrecoverable direction of that asymmetry, caught in the wild.
+  `IF-006` above is the same fault reached from the other direction: it arrived
+  disguised as a schema limitation and only became legible as a segregation problem
+  once STO-216 removed the disguise.
 - **Operation counts are suspiciously uniform.** Eleven of the twelve interfaces
   carry exactly two operations; only `IF-007` carries one. Twelve independent
   contracts over a clock, a log, a store, a decay calculator, a mood evaluator and

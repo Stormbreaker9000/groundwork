@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://groundwork.dev/schemas/design.schema.json",
   "title": "Groundwork Atomic Design Artifact",
-  "description": "Schema for a single atomic design-artifact file's YAML frontmatter. One artifact per Markdown file under .sdlc/design/<components|interfaces>/<ID>-<kebab-title>.md. A shared base plus a per-type branch: component specs (CMP-) carry responsibility/boundary/depends_on; interface specs (IF-) carry provider/operations/interaction/error_modes. The dependency edge lives once as CMP.depends_on -> IF.provider (there is no consumers field). Branch fields are declared inside their type's `then` clause, never at top level, so unevaluatedProperties:false rejects a component field on an interface (and vice versa) while still composing through the branch.",
+  "description": "Schema for a single atomic design-artifact file's YAML frontmatter. One artifact per Markdown file under .sdlc/design/<components|interfaces>/<ID>-<kebab-title>.md. A shared base plus a per-type branch: component specs (CMP-) carry responsibility/boundary/depends_on; interface specs (IF-) carry provider/operations/error_modes, with interaction declared per operation (STO-216). The dependency edge lives once as CMP.depends_on -> IF.provider (there is no consumers field). Branch fields are declared inside their type's `then` clause, never at top level, so unevaluatedProperties:false rejects a component field on an interface (and vice versa) while still composing through the branch.",
   "type": "object",
   "required": [
     "id",
@@ -173,7 +173,7 @@
       }
     },
     {
-      "$comment": "Interface branch. Same mechanism in reverse: provider/operations/interaction/error_modes are valid only on an interface.",
+      "$comment": "Interface branch. Same mechanism in reverse: provider/operations/error_modes are valid only on an interface, and a retired contract-level interaction is left unevaluated and so rejected.",
       "if": {
         "properties": {
           "type": {
@@ -188,7 +188,6 @@
         "required": [
           "provider",
           "operations",
-          "interaction",
           "error_modes"
         ],
         "properties": {
@@ -199,14 +198,15 @@
           },
           "operations": {
             "type": "array",
-            "description": "The operations this contract exposes, at architecture altitude (name + summary; no payload schemas).",
+            "description": "The operations this contract exposes, at architecture altitude (name + summary + interaction; no payload schemas).",
             "minItems": 1,
             "items": {
               "type": "object",
               "additionalProperties": false,
               "required": [
                 "name",
-                "summary"
+                "summary",
+                "interaction"
               ],
               "properties": {
                 "name": {
@@ -216,17 +216,17 @@
                 "summary": {
                   "type": "string",
                   "minLength": 1
+                },
+                "interaction": {
+                  "type": "string",
+                  "description": "Interaction style for THIS operation: `synchronous` when the consumer blocks on the result and cannot proceed without it, `asynchronous` otherwise. Declared per operation because interaction is a property of an operation, not of the contract bundling it — `flush` blocks and `record` does not, whatever contract holds them. A contract whose operations disagree is mixed-mode, which needs no stored name of its own (STO-216).",
+                  "enum": [
+                    "synchronous",
+                    "asynchronous"
+                  ]
                 }
               }
             }
-          },
-          "interaction": {
-            "type": "string",
-            "description": "Interaction style.",
-            "enum": [
-              "synchronous",
-              "asynchronous"
-            ]
           },
           "error_modes": {
             "type": "array",

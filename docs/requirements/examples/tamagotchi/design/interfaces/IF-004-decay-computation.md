@@ -22,9 +22,10 @@ provider: CMP-002
 operations:
 - name: apply_decay
   summary: Given a set of Stat values and a non-negative elapsed interval, return the Stat values after the reference Decay model has been applied, clamped to the valid Stat range.
+  interaction: synchronous
 - name: maximum_offline_interval
   summary: Report the configured cap beyond which additional elapsed time accrues no further Decay, so a caller can tell a capped result from an uncapped one.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - Negative elapsed interval — a backward clock change was observed, so BR-002 requires zero Decay and the caller must be told the interval was rejected rather than silently receiving unchanged stats.
 - Elapsed interval beyond the configured maximum — Decay is capped, and the caller is told the cap applied so that the difference is visible to NFR-007's log rather than silent.

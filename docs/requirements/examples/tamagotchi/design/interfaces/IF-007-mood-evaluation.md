@@ -21,7 +21,7 @@ provider: CMP-005
 operations:
 - name: current_mood
   summary: Return the pet's current Mood as a named value derived from its Stats and lifecycle state, carrying no colour, sprite, or other presentation choice.
-interaction: synchronous
+  interaction: synchronous
 error_modes:
 - Mood requested before Stats and lifecycle state are available — no Mood can be derived, and the caller must render nothing rather than a default that reads to the owner as a real Mood.
 - Stat and lifecycle combination falls outside every defined Mood band — the mapping is incomplete and must say so rather than return an arbitrary nearby band, because NFR-003 announces this value by name to a screen reader.
