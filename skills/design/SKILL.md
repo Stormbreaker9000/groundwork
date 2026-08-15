@@ -359,6 +359,22 @@ The errors do not share one fix:
   note that there is deliberately no migration script: rewriting requirement
   files from the design stage would make it a second writer.
 
+Then run the advisory content-quality linter and address any `warn`-severity
+findings (the two validators above are the hard gates; the content linter guides
+prose and shape). This is the only script-backed lint run in the stage — the
+critic applied the same checks by inspection at gate time, because the files did
+not exist yet. Route anything it turns up back through the critique loop to the
+owning specialist rather than editing the written files by hand:
+
+```bash
+python3 skills/design/scripts/lint_design_content.py .sdlc/design
+```
+
+It always exits 0. `dependency-cycle` is the finding most worth acting on: it
+means two components each need the other, which no structural check can see
+because every individual edge resolves. Breaking it is a decomposition change,
+so it re-dispatches to the component specialist, not the interface specialist.
+
 **`index-unparseable` and `duplicate-id` are warnings, but do not report them
 as ordinary ones.** They say the sweep ran over an index that was missing a
 file or had collapsed two artifacts into one ID — so every other result on
@@ -412,6 +428,7 @@ Cross-artifact traceability *is* resolved, but not by this skill's judgment —
 `traces_from` resolution, FR coverage, ADR decision-driver resolution, and
 `traces_to.design` resolution.
 
-What is still not produced here: dependency-cycle detection, orphan-interface
-detection, and prose-quality sweeps over design artifacts. Those are STO-208's
-content linter, per `agents/design-critic.md`'s *Scope boundaries*.
+Dependency-cycle detection, orphan-interface detection, and prose-quality
+sweeps over design artifacts *are* produced, but not by this skill's judgment
+either — `lint_design_content.py` runs at Step 4, advisory, once the files
+exist, per `agents/design-critic.md`'s *Scope boundaries*.

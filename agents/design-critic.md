@@ -258,7 +258,9 @@ duplicate — and likely disagree with — a finding you make here:
   STO-102's job. Your Phase 2 coverage check is scoped to `asr_analysis` —
   the architecturally significant subset — not the full requirement digest.
 - **Dependency cycles, orphan interfaces, and vague `responsibility` prose as a
-  lint tier.** These belong to STO-208's content linter. Phase 1's
+  lint tier.** These belong to the content linter,
+  `skills/design/scripts/lint_design_content.py`, which the skill runs at Step 4
+  once the files exist. Phase 1's
   single-responsibility check above is a quality judgment on the artifact you
   are reading, not a systematic prose-quality sweep across the whole set —
   leave the sweep to STO-208.

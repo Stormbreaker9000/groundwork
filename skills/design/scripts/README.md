@@ -121,3 +121,37 @@ shape belong to the two structural validators.
 ```bash
 pytest skills/design/scripts/tests
 ```
+
+## Content-quality linter — `lint_design_content.py`
+
+Advisory linter for design *prose and shape* (distinct from the two structural
+validators). The M2 analogue of `lint_requirements_content.py`.
+
+```bash
+python3 lint_design_content.py .sdlc/design        # human report
+python3 lint_design_content.py --json .sdlc/design # machine-readable
+python3 lint_design_content.py --strict design     # exit non-zero on error-severity
+```
+
+| Rule | Severity | Fires on |
+|---|---|---|
+| `vague-responsibility` | warn / info | A vague qualifier in a component's `responsibility`; `info` when the sentence carries a number |
+| `god-component` | warn | `and`/`or` joining two action verbs in a `responsibility` |
+| `orphan-interface` | warn | An `IF-` no component lists in `depends_on` |
+| `error-modes-handwaved` | warn | An error mode naming an attitude ("handled gracefully") rather than a failure |
+| `adr-consequences-one-sided` | warn | An accepted ADR whose `### Consequences` are all upside |
+| `adr-vague-driver` | warn / info | A vague qualifier under `## Decision Drivers` |
+| `adr-option-unexamined` | info | An option in frontmatter never discussed under `## Considered Options` |
+| `dependency-cycle` | warn | A cycle in the `CMP.depends_on → IF.provider → CMP` graph |
+
+Exit codes: `0` always (advisory), except `--strict` returns `1` when an
+`error`-severity finding exists, and `2` on a missing directory. No rule emits
+`error` today, so `--strict` is currently a no-op.
+
+The `--json` payload matches the M1 linter's: `rule`, `severity`, `artifact_id`,
+`field`, `excerpt`, `message`, `suggested_rewrite_hint`. Both linters share
+`lib/lint_core.py`.
+
+It reuses `validate_design.discover_files`/`parse_frontmatter`, so it sees
+exactly the same atomic artifacts as the structural validator and skips the same
+non-atomic files and the `diagrams/` subtree.
