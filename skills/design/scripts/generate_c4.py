@@ -68,11 +68,25 @@ def actor_alias(key: str) -> str:
     return "actor_" + key.lower().replace("-", "_")
 
 
+def _sanitized(text: Any) -> str:
+    """Baseline cleanup shared by every string literal this module emits:
+    coerce to ``str``, fold an inner double quote to a single quote (both
+    Mermaid and YAML use ``"`` as this module's literal delimiter, so a
+    passed-through inner ``"`` would terminate the literal early), collapse
+    newlines to spaces, and strip. Callers wrap the result in the delimiter
+    quotes themselves; `yaml_q` layers one more transform on top — see its
+    docstring for why it needs one and `q` does not."""
+    return str(text or "").replace('"', "'").replace("\n", " ").strip()
+
+
 def q(text: Any) -> str:
-    """A Mermaid string literal. Inner quotes become single quotes rather than
-    escapes: Mermaid has no escape syntax inside these, and an unbalanced quote
-    is exactly what validate_design.py rejects."""
-    return '"' + str(text or "").replace('"', "'").replace("\n", " ").strip() + '"'
+    """A Mermaid string literal. Consumed by exactly one parser (the Mermaid
+    renderer embedded in `validate_design.py`'s body checks and in Mermaid
+    itself), so there is no second parser to stay in agreement with — inner
+    quotes become single quotes rather than escapes because Mermaid has no
+    escape syntax inside these, and an unbalanced quote is exactly what
+    validate_design.py rejects."""
+    return '"' + _sanitized(text) + '"'
 
 
 def yaml_q(text: Any) -> str:
@@ -80,14 +94,21 @@ def yaml_q(text: Any) -> str:
     contain a colon (e.g. a generated description like "System context for
     Order System: its actors..."), which breaks YAML plain-scalar parsing.
 
-    Sanitize-then-quote, not escape: `lib/artifact_core.py`'s
-    `_coerce_scalar` strips surrounding quotes on the stdlib fallback path but
-    does NOT unescape, while pyyaml does unescape — a backslash-escaped quote
-    would survive into the value differently on each path. Sanitizing first
-    (inner double quotes become single quotes, newlines collapse to spaces)
-    means both parse paths see identical bytes, which the determinism
-    constraint requires."""
-    return '"' + str(text or "").replace('"', "'").replace("\n", " ").strip() + '"'
+    Unlike `q`, this string is read by TWO independent parsers that must
+    agree byte-for-byte (pyyaml, and `lib/artifact_core.py`'s stdlib
+    fallback — the determinism constraint requires a design set to validate
+    identically whichever one is installed), and those two parsers disagree
+    about backslash: pyyaml treats it as an escape introducer and unescapes
+    it, while `_coerce_scalar` in the stdlib fallback strips only the
+    surrounding quotes and does NOT unescape. The same source bytes would
+    therefore decode to two different Python strings. Sanitize-then-quote,
+    never escape, is the only way out of that: a backslash is folded to a
+    forward slash — the same treatment already given to an inner double
+    quote — rather than escaped, because the two parsers can only ever agree
+    on bytes that need no escaping at all. Do not "fix" this back to
+    `\\"` / `\\\\` — that reintroduces the exact divergence this exists
+    to prevent."""
+    return '"' + _sanitized(text).replace("\\", "/") + '"'
 
 
 class DesignSet:

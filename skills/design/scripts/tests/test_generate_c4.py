@@ -121,14 +121,17 @@ def test_generated_view_passes_the_validator(tmp_path):
     assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
 
 
-def test_generated_view_passes_the_validator_in_fallback_mode(
+def test_generated_title_and_description_parse_identically_both_ways(
     tmp_path, monkeypatch
 ):
-    """Same round-trip, forced onto the stdlib fallback parser (no pyyaml,
-    no jsonschema). The sanitize-then-quote fix has to satisfy both parse
-    paths identically, or a machine without the optional deps silently
-    diverges from CI. Mirrors test_validate_design.py's
-    test_valid_set_passes_in_fallback_mode."""
+    """The invariant that actually matters is not "the validator exits 0" --
+    it's "pyyaml and the stdlib fallback read the same value back". An
+    exit-code check can't tell the two apart: the stdlib fallback's
+    `text.partition(":")` only splits on the FIRST colon, so an unquoted
+    value with a LATER colon (this generator's own Context description)
+    survives intact rather than raising or truncating, and a validator
+    round-trip alone would pass even with the pre-fix unquoted emission.
+    Only comparing the two parsers' parsed values catches that quietly."""
     design_dir, model_path, _ = case("single-container")
     out = tmp_path / "design"
     shutil.copytree(design_dir, out)
@@ -136,9 +139,57 @@ def test_generated_view_passes_the_validator_in_fallback_mode(
         str(out), "--model", model_path, "--created-at", "2026-08-22",
     ])
     assert code == 0
-    monkeypatch.setattr(vd.core, "HAVE_YAML", False)
-    monkeypatch.setattr(vd.core, "HAVE_JSONSCHEMA", False)
-    assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+    diagram_path = str(out / "diagrams" / "DIA-001-system-context.md")
+
+    assert g4.core.HAVE_YAML, "pyyaml must be installed to exercise both paths"
+    pyyaml_data, err = g4.parse_frontmatter(diagram_path)
+    assert err is None, err
+
+    monkeypatch.setattr(g4.core, "HAVE_YAML", False)
+    stdlib_data, err = g4.parse_frontmatter(diagram_path)
+    assert err is None, err
+
+    assert pyyaml_data["title"] == stdlib_data["title"] == "System Context"
+    intended_description = (
+        "System context for Order System: its actors, its boundary, and "
+        "the external systems it depends on."
+    )
+    assert pyyaml_data["description"] == intended_description
+    assert stdlib_data["description"] == intended_description
+
+
+def test_yaml_q_agrees_across_parsers_on_hostile_characters(tmp_path, monkeypatch):
+    """A title or description a human wrote freely can contain a colon, a
+    quote, a hashtag, and — a Windows path is not exotic — a backslash.
+    yaml_q must sanitize all of them to bytes both parsers read back the
+    same way, not merely bytes that happen not to crash pyyaml. (A hash is
+    included here but NOT preceded by a space: `_strip_inline_comment` in
+    lib/artifact_core.py truncates on a literal " #" regardless of quoting,
+    which is a pre-existing stdlib-fallback limitation this test does not
+    exercise or attempt to fix.)"""
+    raw = 'Report#42: uses C:\\Users\\x and a "quoted" phrase'
+    quoted = g4.yaml_q(raw)
+    assert "\\" not in quoted, "no backslash may survive into the YAML text"
+    assert quoted.count('"') == 2, "only the wrapping pair of quotes"
+
+    out_dir = tmp_path / "diagrams"
+    path = g4.write_diagram(
+        str(out_dir), dia_id="DIA-999", title=raw, level="context",
+        container=None, description=raw, traces_from=[], confidence="high",
+        created_at="2026-08-22", block="C4Context",
+    )
+
+    assert g4.core.HAVE_YAML, "pyyaml must be installed to exercise both paths"
+    pyyaml_data, err = g4.parse_frontmatter(path)
+    assert err is None, err
+
+    monkeypatch.setattr(g4.core, "HAVE_YAML", False)
+    stdlib_data, err = g4.parse_frontmatter(path)
+    assert err is None, err
+
+    assert pyyaml_data["title"] == stdlib_data["title"]
+    assert pyyaml_data["description"] == stdlib_data["description"]
+    assert pyyaml_data["title"] == "Report#42: uses C:/Users/x and a 'quoted' phrase"
 
 
 def test_model_actor_entrypoint_naming_unknown_container_is_rejected():
