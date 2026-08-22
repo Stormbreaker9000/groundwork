@@ -255,6 +255,63 @@ def render_context(model: dict, dset: DesignSet) -> str:
     return "\n".join(lines)
 
 
+def container_of(model: dict) -> Dict[str, str]:
+    """``{component id: container key}`` for every placed component."""
+    out = {}
+    for container in model.get("containers") or []:
+        for cmp_id in container.get("components") or []:
+            out[cmp_id] = container["key"]
+    return out
+
+
+def render_container(model: dict, dset: DesignSet) -> str:
+    """C4Container: the deployable units, and every edge that leaves one."""
+    placement = container_of(model)
+    lines = ["C4Container", f"  title Container View — {model['system_name']}"]
+    for actor in sorted(model.get("actors") or [], key=lambda a: a["key"]):
+        lines.append(
+            f"  Person({actor_alias(actor['key'])}, {q(actor['name'])}, "
+            f"{q(actor.get('description'))})"
+        )
+    lines.append(f"  System_Boundary({SYSTEM_ALIAS}, {q(model['system_name'])}) {{")
+    for container in sorted(model.get("containers") or [], key=lambda c: c["key"]):
+        lines.append(
+            f"    Container({container_alias(container['key'])}, "
+            f"{q(container['name'])}, {q(container.get('technology'))}, "
+            f"{q(container.get('description'))})"
+        )
+    lines.append("  }")
+    for cmp_id in sorted(dset.components):
+        if dset.boundary(cmp_id) != "external":
+            continue
+        record = dset.components[cmp_id]
+        lines.append(
+            f"  System_Ext({dset.alias(cmp_id)}, {q(record.get('title'))}, "
+            f"{q(record.get('responsibility'))})"
+        )
+    for actor in sorted(model.get("actors") or [], key=lambda a: a["key"]):
+        if actor.get("entrypoint"):
+            lines.append(
+                f"  Rel({actor_alias(actor['key'])}, "
+                f"{container_alias(actor['entrypoint'])}, "
+                f"{q(actor.get('relationship', 'uses'))})"
+            )
+    seen = set()
+    for consumer, provider, if_id in dset.edges():
+        src = (container_alias(placement[consumer]) if consumer in placement
+               else dset.alias(consumer))
+        dst = (container_alias(placement[provider]) if provider in placement
+               else dset.alias(provider))
+        if src == dst:
+            continue  # intra-container: not a container-level fact
+        key = (src, dst, if_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        lines.append(f"  Rel({src}, {dst}, {q(dset.title(if_id))}, {q(if_id)})")
+    return "\n".join(lines)
+
+
 def write_diagram(out_dir, *, dia_id, title, level, container, description,
                   traces_from, confidence, created_at, block) -> str:
     """Write one diagram artifact. Frontmatter key order is fixed, so a
@@ -310,6 +367,26 @@ def generate(design_dir: str, model: dict, created_at: str) -> dict:
         block=render_context(model, dset),
     )
     written.append({"id": "DIA-001", "path": path, "level": "context",
+                    "depicts": externals})
+
+    path = write_diagram(
+        out_dir,
+        dia_id="DIA-002",
+        title="Container View",
+        level="container",
+        container=None,
+        description=(
+            f"The deployable units of {model['system_name']} and the edges "
+            f"that cross between them."
+        ),
+        traces_from=dset.traces_for(
+            [c for c in dset.components if dset.boundary(c) == "internal"]
+        ),
+        confidence=confidence,
+        created_at=created_at,
+        block=render_container(model, dset),
+    )
+    written.append({"id": "DIA-002", "path": path, "level": "container",
                     "depicts": externals})
 
     back_fill: Dict[str, List[str]] = {}

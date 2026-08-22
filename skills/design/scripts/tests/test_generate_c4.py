@@ -201,6 +201,39 @@ def test_model_actor_entrypoint_naming_unknown_container_is_rejected():
     assert any("does-not-exist" in e for e in errors)
 
 
+def test_container_view_matches_golden(tmp_path):
+    for name in ("single-container", "multi-container"):
+        design_dir, model_path, expected = case(name)
+        out = tmp_path / name
+        shutil.copytree(design_dir, out)
+        g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+        written = (out / "diagrams" / "DIA-002-container-view.md").read_text()
+        golden = open(os.path.join(expected, "DIA-002-container-view.md")).read()
+        assert written == golden, name
+
+
+def test_intra_container_edges_are_not_container_level(tmp_path):
+    """CMP-001 -> IF-001 -> CMP-002 lives entirely inside `app`; drawing it
+    between containers would assert a boundary crossing that does not exist."""
+    design_dir, model_path, _ = case("single-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+    body = (out / "diagrams" / "DIA-002-container-view.md").read_text()
+    assert "IF-001" not in body
+    assert "IF-002" in body  # app -> the external gateway still crosses
+
+
+def test_cross_container_edge_is_drawn(tmp_path):
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+    body = (out / "diagrams" / "DIA-002-container-view.md").read_text()
+    assert "Rel(ctr_worker, ctr_app," in body
+    assert "IF-001" in body
+
+
 def test_model_container_without_a_key_is_rejected():
     design_dir, model_path, _ = case("single-container")
     dset = g4.DesignSet.load(design_dir)
