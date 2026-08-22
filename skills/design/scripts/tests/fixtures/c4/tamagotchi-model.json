@@ -1,0 +1,25 @@
+{
+  "system_name": "Tamagotchi Desktop Pet",
+  "system_description": "An offline desktop pet whose state decays over real elapsed time.",
+  "actors": [
+    {
+      "key": "owner",
+      "name": "Pet Owner",
+      "description": "The single local user who cares for the pet.",
+      "relationship": "feeds, plays with and cleans the pet",
+      "entrypoint": "desktop-app"
+    }
+  ],
+  "containers": [
+    {
+      "key": "desktop-app",
+      "name": "Desktop App",
+      "technology": "Tauri (Rust core + system webview)",
+      "description": "One local process: simulation, persistence and UI.",
+      "components": ["CMP-001", "CMP-002", "CMP-003", "CMP-004", "CMP-005",
+                     "CMP-006", "CMP-007", "CMP-008", "CMP-009"]
+    }
+  ],
+  "confidence": "high",
+  "reason": "Q-4 resolved to Tauri: a single desktop process, no deployable split."
+}

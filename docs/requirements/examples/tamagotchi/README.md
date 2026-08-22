@@ -44,7 +44,9 @@ python3 skills/design/scripts/lint_design_content.py \
 ```
 
 Expected: requirements validator **22/22 pass**, content linter **clean**, design
-validator **23/23 pass**. The design content linter is **not** clean: it reports
+validator **26/26 pass** (11 components, 12 interfaces, 3 diagrams — see *The
+diagrams were generated after the fact* above). The design content linter is
+**not** clean: it reports
 exactly one `warn` — `dependency-cycle` on `CMP-003` — and still exits 0, because
 the tool is advisory. See *The open findings, and why they are still here* below
 for what that finding is and why it is left in place.
@@ -64,12 +66,12 @@ example root — the same reason `requirements/` has none either.
 - Per-requirement `confidence` with a low-confidence `review_queue` for human triage —
   including the runtime/footprint decision (`NFR-002`, `CON-001` → open question Q-4).
 
-## How this set was produced — two deviations from the documented pipeline
+## How this set was produced — three deviations from the documented pipeline
 
 Read this before treating the `design/` folder as a reference run. It is a faithful
 example of what the artifacts look like, but it is **not** reproducible by following the
-agent instructions, and two things about it are deliberate exceptions rather than normal
-behaviour.
+agent instructions, and three things about it are deliberate exceptions rather than
+normal behaviour.
 
 **The set was written on a failing gate, by human override.** The pipeline's hardest
 invariant is that nothing is written until the critic returns `gate: pass` —
@@ -92,6 +94,15 @@ in-flight hand-off between the critic and the orchestrator; it is consumed and t
 gone. It was serialised to disk here so the findings could be published rather than
 described second-hand. A real `.sdlc/design/` will not contain this file, and the
 formatter should not start emitting one.
+
+**The diagrams were generated after the fact.** `diagrams/` was produced by
+running `generate_c4.py` (STO-101) over this set, which was itself generated
+before that tool existed. The diagrams are a projection of the component and
+interface frontmatter, so they cannot contradict the artifacts — but they were
+not part of the run that produced the rest of the set, and `traces_to.diagrams`
+is deliberately not back-filled onto the components, because that would make a
+second writer of a set nothing else was rewriting. STO-219 regenerates the
+whole set with the back-fill in place.
 
 ## What the design set demonstrates
 

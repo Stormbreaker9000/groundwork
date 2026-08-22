@@ -299,3 +299,61 @@ def test_generated_set_passes_the_structural_validator(tmp_path):
     assert g4.main([str(out), "--model", model_path,
                     "--created-at", "2026-08-22"]) == 0
     assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+
+
+def test_context_view_dedupes_when_several_internals_share_an_external_edge():
+    """Found against the tamagotchi worked example (STO-101 Task 10): five
+    internal components (CMP-001, CMP-003, CMP-004, CMP-007, CMP-009) all
+    depend on IF-001, provided by the external System Clock. At context
+    level every one of those collapses to the same fact -- "the system
+    depends on the clock" -- but `render_context` had no dedup, unlike
+    `render_container` and `render_component`, so it emitted the identical
+    `Rel(sys, ext_cmp_011, ...)` line once per consumer. No shipped fixture
+    had two internal components sharing one external interface, so nothing
+    caught it until a real design set did. This pins the fix: one Rel per
+    distinct (source, destination, interface) triple, however many internal
+    components share it."""
+    dset = g4.DesignSet(
+        components={
+            "CMP-001": {"boundary": "internal", "depends_on": ["IF-001"],
+                       "title": "A", "responsibility": "…"},
+            "CMP-002": {"boundary": "internal", "depends_on": ["IF-001"],
+                       "title": "B", "responsibility": "…"},
+            "CMP-003": {"boundary": "external", "depends_on": [],
+                       "title": "Clock", "responsibility": "…"},
+        },
+        interfaces={
+            "IF-001": {"provider": "CMP-003", "title": "Time Source"},
+        },
+        asrs=[],
+    )
+    model = {
+        "system_name": "Sys",
+        "system_description": "…",
+        "actors": [],
+        "containers": [{"key": "app", "name": "App", "technology": "…",
+                        "description": "…",
+                        "components": ["CMP-001", "CMP-002"]}],
+    }
+    block = g4.render_context(model, dset)
+    assert block.count("Rel(sys, ext_cmp_003,") == 1
+
+
+def test_worked_example_generates_a_valid_diagram_set(tmp_path):
+    """The shipped tamagotchi set: 9 internal components, 2 external, one
+    container. Pinned because it is the only real set this tool is exercised
+    against, and STO-219 will regenerate it."""
+    import validate_design as vd
+
+    repo_root = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+    example = os.path.join(repo_root, "docs", "requirements", "examples",
+                           "tamagotchi", "design")
+    out = tmp_path / "design"
+    shutil.copytree(example, out)
+    shutil.rmtree(out / "diagrams")
+    model = os.path.join(FIXTURES, "tamagotchi-model.json")
+    assert g4.main([str(out), "--model", model, "--created-at", "2026-08-22"]) == 0
+    assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+    for name in ("DIA-001-system-context.md", "DIA-002-container-view.md",
+                 "DIA-003-component-view-desktop-app.md"):
+        assert (out / "diagrams" / name).exists()

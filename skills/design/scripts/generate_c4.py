@@ -244,6 +244,7 @@ def render_context(model: dict, dset: DesignSet) -> str:
             f"  Rel({actor_alias(actor['key'])}, {SYSTEM_ALIAS}, "
             f"{q(actor.get('relationship', 'uses'))})"
         )
+    seen = set()
     for consumer, provider, if_id in dset.edges():
         c_ext = dset.boundary(consumer) == "external"
         p_ext = dset.boundary(provider) == "external"
@@ -251,6 +252,10 @@ def render_context(model: dict, dset: DesignSet) -> str:
             continue  # wholly inside or wholly outside: not a context-level fact
         src = dset.alias(consumer) if c_ext else SYSTEM_ALIAS
         dst = dset.alias(provider) if p_ext else SYSTEM_ALIAS
+        key = (src, dst, if_id)
+        if key in seen:
+            continue  # multiple internal components share this external fact
+        seen.add(key)
         lines.append(f"  Rel({src}, {dst}, {q(dset.title(if_id))}, {q(if_id)})")
     return "\n".join(lines)
 
