@@ -228,14 +228,24 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
    alternatives can't be recovered stays in `drivers.md` and is reported in
    `skipped` instead. Returns `draft_adrs` — an empty set is legal and means
    nothing qualified.
-6. **design-formatter** — writes the atomic component/interface/ADR files plus
+6. **c4-generator** — dispatched at Stage 9.6, after the ADR generator.
+   Supplies the two judgments the component and interface frontmatter cannot
+   carry — which components group into which deployable container, and who
+   the system's external actors are. Writes no file and authors no Mermaid;
+   it returns a `draft_diagram_model` that `generate_c4.py` projects into
+   the three C4 views inside the formatter's write.
+7. **design-formatter** — writes the atomic component/interface/ADR files plus
    `assumptions.md` and `drivers.md`, and `index.yaml`'s `review_queue`,
-   back-fills `traces_to.adr` on the artifacts each ADR affects, then re-runs
-   `validate_design.py` against what it just wrote — the pipeline's single
-   structural gate (see Step 4). **Runs only on `gate: pass`.** Do not advance
-   past the critic on a failing or partial gate — the orchestrator
-   re-dispatches only the affected artifacts back to their owning specialist
-   and re-runs the critic.
+   back-fills `traces_to.adr` on the artifacts each ADR affects, runs
+   `generate_c4.py` against the `draft_diagram_model` to project the C4
+   views into `diagrams/`, back-fills `traces_to.diagrams` on the components
+   each diagram depicts, indexes the diagrams alongside every other artifact
+   in `index.yaml`, then re-runs `validate_design.py` against everything it
+   just wrote, diagrams included — the pipeline's single structural gate
+   (see Step 4). **Runs only on `gate: pass`.** Do not advance past the
+   critic on a failing or partial gate — the orchestrator re-dispatches only
+   the affected artifacts back to their owning specialist and re-runs the
+   critic.
 
 **Step 2 — Render in-conversation summary (before writing anything):**
 
