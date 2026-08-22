@@ -28,6 +28,13 @@ def run(design_dir):
     return vd.main([design_dir, "--schema", SCHEMA])
 
 
+def _copy_valid(tmp_path):
+    """A writable copy of the valid fixture set, for mutate-then-fail cases."""
+    design_dir = tmp_path / "design"
+    shutil.copytree(VALID_DIR, design_dir)
+    return design_dir
+
+
 # ---------------------------------------------------------------------------
 # Valid fixtures
 # ---------------------------------------------------------------------------
@@ -55,15 +62,15 @@ def test_zero_adr_run_passes(tmp_path):
 
 
 def test_skip_files_and_subtrees_are_ignored(capsys):
-    """assumptions.md, index.yaml and the diagrams/ subtree must not be
-    validated as artifacts. adr/ IS validated as of STO-100."""
+    """assumptions.md, drivers.md and index.yaml must not be validated as
+    artifacts. adr/ IS validated as of STO-100, and diagrams/ as of STO-101."""
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
     assert "drivers.md" not in out
     assert "index.yaml" not in out
-    assert "c4-container" not in out
     assert "ADR-001" in out
+    assert "DIA-002" in out
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +114,7 @@ def test_prefix_to_type_mapping():
         "CMP": "component",
         "IF": "interface",
         "ADR": "adr",
+        "DIA": "diagram",
     }
 
 
@@ -692,3 +700,53 @@ def test_shipped_tamagotchi_example_passes_structural_gate(capsys):
     code = run(example)
     out = capsys.readouterr().out
     assert code == 0, out
+
+
+# ---------------------------------------------------------------------------
+# Diagram artifacts (STO-101)
+# ---------------------------------------------------------------------------
+def test_valid_diagram_is_discovered_and_passes(capsys):
+    """diagrams/ is no longer skipped: a well-formed DIA- artifact validates."""
+    code = run(VALID_DIR)
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "DIA-002" in out
+
+
+def test_diagram_bad_level_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("level: container", "level: deployment"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "level" in capsys.readouterr().out
+
+
+def test_component_level_diagram_requires_container(tmp_path, capsys):
+    """level: component names the container it depicts; without it the file
+    claims to show the internals of nothing in particular."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("level: container", "level: component"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "container" in capsys.readouterr().out
+
+
+def test_non_component_level_rejects_container(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace("level: container", "level: container\ncontainer: app")
+    )
+    code = run(str(design_dir))
+    assert code != 0
+
+
+def test_diagram_prefix_type_mismatch_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("type: diagram", "type: component"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "prefix" in capsys.readouterr().out

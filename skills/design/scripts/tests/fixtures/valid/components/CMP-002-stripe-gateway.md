@@ -7,7 +7,7 @@ traces_from: []
 traces_to:
   adr: []
   diagrams:
-    - c4-container
+    - DIA-002
   code: []
   tests: []
 status: reviewed
