@@ -89,9 +89,14 @@ as `draft_diagram_model`, and every field below is read by name in
   - `entrypoint` — the `key` of the container this actor reaches first. Must
     name a real container.
 - `containers[]`, each with:
-  - `key` — kebab-case, stable. It becomes part of a diagram filename and a
-    Mermaid alias — do not rename one once assigned.
-  - `name` — display name. Becomes the `Container()` label.
+  - `key` — kebab-case, stable. It becomes the Mermaid alias
+    (`container_alias()`) — do not rename one once assigned. The on-disk
+    diagram filename is not derived from `key`: `write_diagram` slugs the
+    diagram `title`, and a component view's title is
+    `f"Component View — {container['name']}"`, so the filename carries the
+    container's `name`, not its `key`.
+  - `name` — display name. Becomes the `Container()` label, and — via the
+    component view's title — the diagram filename's slug.
   - `technology` — the stack label, e.g. "Python". Rendered on `Container()`
     and reused as every member component's technology in that container's
     component view.
