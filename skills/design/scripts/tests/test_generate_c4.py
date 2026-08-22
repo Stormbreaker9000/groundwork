@@ -355,7 +355,19 @@ def test_context_view_dedupes_when_several_internals_share_an_external_edge():
 def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     """The shipped tamagotchi set: 9 internal components, 2 external, one
     container. Pinned because it is the only real set this tool is exercised
-    against, and STO-219 will regenerate it."""
+    against, and STO-219 will regenerate it.
+
+    Asserts byte-identical output against the committed
+    `docs/requirements/examples/tamagotchi/design/diagrams/` files, not just
+    exit 0 and existence — an exit-0-and-exists check would stay green even
+    if a Rel-dedup or self-edge guard were reverted and started emitting
+    duplicate lines, since the file would still exist and still validate (a
+    duplicate `Rel` line is not itself a schema or structural violation).
+    The real tamagotchi graph has five internal components sharing one
+    external interface (IF-001, the System Clock), which is exactly the
+    shape `render_container`'s Rel dedup exists to collapse — reverting that
+    guard changes DIA-002's byte content, which this comparison catches and
+    a mere exit-0 check would not."""
     import validate_design as vd
 
     repo_root = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
@@ -367,9 +379,98 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     model = os.path.join(FIXTURES, "tamagotchi-model.json")
     assert g4.main([str(out), "--model", model, "--created-at", "2026-08-22"]) == 0
     assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+
     for name in ("DIA-001-system-context.md", "DIA-002-container-view.md",
                  "DIA-003-component-view-desktop-app.md"):
-        assert (out / "diagrams" / name).exists()
+        written = (out / "diagrams" / name).read_text()
+        golden = open(os.path.join(example, "diagrams", name)).read()
+        assert written == golden, name
+
+
+def test_container_order_in_the_model_does_not_affect_dia_numbering(tmp_path):
+    """DIA- IDs are allocated in `sorted(containers, key=lambda c: c["key"])`
+    order (generate_c4.py `generate()`), not in the model's array order —
+    that sort is the "one DIA- per container in key order" determinism
+    guarantee `agents/c4-generator.md`, the spec, and SKILL.md all state.
+    Reversing the model's container array must not move which container
+    gets which DIA- ID."""
+    design_dir, model_path, _ = case("multi-container")
+    model = load_model(model_path)
+    model["containers"] = list(reversed(model["containers"]))
+    reversed_model_path = os.path.join(str(tmp_path), "reversed-model.json")
+    with open(reversed_model_path, "w", encoding="utf-8") as handle:
+        json.dump(model, handle)
+
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", reversed_model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    assert (out / "diagrams" / "DIA-003-component-view-order-app.md").exists()
+    assert (out / "diagrams" / "DIA-004-component-view-worker.md").exists()
+
+
+def test_component_view_dedupes_two_members_of_another_container_sharing_one_if():
+    """Rendering container A's component view: two DIFFERENT members of
+    container B (CMP-002, CMP-003) both depend on IF-001, provided by
+    CMP-001, a member of A. Both edges' non-member endpoint collapses to the
+    same `container_alias("b")` (`endpoint()` in `render_component`), so
+    without the `key in seen` dedup at `render_component:369` this emits two
+    identical `Rel(ctr_b, cmp_001, ...)` lines instead of one — the same bug
+    class Task 10 found and fixed in `render_context`."""
+    dset = g4.DesignSet(
+        components={
+            "CMP-001": {"boundary": "internal", "depends_on": [],
+                       "title": "Provider", "responsibility": "…"},
+            "CMP-002": {"boundary": "internal", "depends_on": ["IF-001"],
+                       "title": "Consumer One", "responsibility": "…"},
+            "CMP-003": {"boundary": "internal", "depends_on": ["IF-001"],
+                       "title": "Consumer Two", "responsibility": "…"},
+        },
+        interfaces={
+            "IF-001": {"provider": "CMP-001", "title": "Shared Interface"},
+        },
+        asrs=[],
+    )
+    model = {
+        "system_name": "Sys",
+        "system_description": "…",
+        "actors": [],
+        "containers": [
+            {"key": "a", "name": "A", "technology": "…", "description": "…",
+             "components": ["CMP-001"]},
+            {"key": "b", "name": "B", "technology": "…", "description": "…",
+             "components": ["CMP-002", "CMP-003"]},
+        ],
+    }
+    container_a = model["containers"][0]
+    block = g4.render_component(model, dset, container_a)
+    assert block.count("Rel(ctr_b, cmp_001,") == 1
+
+
+def test_component_view_skips_a_self_referential_edge():
+    """A component that both consumes and provides the same interface
+    produces a `(consumer, provider)` pair that resolves to the same
+    endpoint alias on both sides. `render_component:369`'s `key[0] ==
+    key[1]` guard drops it rather than emitting a nonsensical
+    `Rel(cmp_001, cmp_001, ...)` self-loop."""
+    dset = g4.DesignSet(
+        components={
+            "CMP-001": {"boundary": "internal", "depends_on": ["IF-001"],
+                       "title": "Self", "responsibility": "…"},
+        },
+        interfaces={"IF-001": {"provider": "CMP-001", "title": "Loopback"}},
+        asrs=[],
+    )
+    model = {
+        "system_name": "Sys",
+        "system_description": "…",
+        "actors": [],
+        "containers": [{"key": "a", "name": "A", "technology": "…",
+                        "description": "…", "components": ["CMP-001"]}],
+    }
+    block = g4.render_component(model, dset, model["containers"][0])
+    assert "Rel(cmp_001, cmp_001" not in block
+
 
 def test_unbalanced_parens_in_prose_still_pass_the_validator(tmp_path):
     """A component's `responsibility` is free-form prose the model is not
