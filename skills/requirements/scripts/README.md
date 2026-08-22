@@ -72,3 +72,8 @@ Exit codes: `0` always (advisory), except `--strict` returns `1` when an
 `error`-severity finding exists, and `2` on a missing directory. It reuses
 `validate_requirements.discover_files`/`parse_frontmatter`, so it sees exactly the
 same atomic requirement files and skips the same non-atomic files.
+
+The `--json` payload is a list of findings, each with `rule`, `severity`,
+`artifact_id`, `field`, `excerpt`, `message`, and `suggested_rewrite_hint`.
+The record is shared with the design stage's linter via `lib/lint_core.py`,
+which is why the id field is stage-agnostic rather than `req_id`.

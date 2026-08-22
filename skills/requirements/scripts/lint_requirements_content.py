@@ -19,45 +19,29 @@ Usage
 """
 from __future__ import annotations
 
-import argparse
-import json
 import os
 import re
 import sys
-from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import validate_requirements as vr
+# Shared linter core lives at the repo root in ``lib/``; add it to the path
+# before importing. Resolved relative to this file, so cwd does not matter.
+# Mirrors validate_design.py's bootstrap.
+_REPO_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
+_LIB_DIR = os.path.join(_REPO_ROOT, "lib")
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
 
+import lint_core as core  # noqa: E402
+from lint_core import (  # noqa: E402  (re-exported for tests)
+    ACTION_VERBS,
+    VAGUE_TERMS,
+    Finding,
+)
 
-@dataclass
-class Finding:
-    rule: str
-    severity: str  # "error" | "warn" | "info"
-    req_id: str
-    field: str
-    excerpt: str
-    message: str
-    suggested_rewrite_hint: str
-
-
-def _text(value: Any) -> str:
-    """Coerce a frontmatter value to a clean single-space-joined string."""
-    if value is None:
-        return ""
-    return re.sub(r"\s+", " ", str(value)).strip()
-
-
-VAGUE_TERMS = {
-    "fast", "rapid", "quick", "user-friendly", "easy", "intuitive", "seamless",
-    "efficient", "robust", "flexible", "scalable", "secure", "reliable",
-    "performant", "minimize", "maximize", "optimize", "approximately",
-    "appropriate", "adequate", "sufficient", "state-of-the-art", "modern", "tbd",
-}
-
-
-def _sentences(text: str) -> List[str]:
-    return [s for s in re.split(r"[.;\n]+", text) if s.strip()]
+import validate_requirements as vr  # noqa: E402
 
 
 # --- Glossary (STO-135) -----------------------------------------------------
@@ -137,7 +121,7 @@ def check_glossary_unused(
         return []
 
     corpus = " ".join(
-        _text(fm.get(field)) for fm in frontmatters for field in GLOSSARY_SEARCH_FIELDS
+        core.flatten_text(fm.get(field)) for fm in frontmatters for field in GLOSSARY_SEARCH_FIELDS
     )
 
     findings: List[Finding] = []
@@ -147,7 +131,7 @@ def check_glossary_unused(
         findings.append(Finding(
             rule="glossary-unused",
             severity="warn",
-            req_id=vr.GLOSSARY_ARTIFACT,
+            artifact_id=vr.GLOSSARY_ARTIFACT,
             field="terms",
             excerpt=term,
             message=f"glossary term '{term}' is used by no requirement",
@@ -162,8 +146,8 @@ def check_glossary_unused(
 def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     findings: List[Finding] = []
     for field in ("title", "description"):
-        text = _text(fm.get(field))
-        for sentence in _sentences(text):
+        text = core.flatten_text(fm.get(field))
+        for sentence in core.sentences(text):
             low = sentence.lower()
             quantified = bool(re.search(r"\d", sentence))
             for term in sorted(VAGUE_TERMS):
@@ -171,7 +155,7 @@ def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
                     findings.append(Finding(
                         rule="vague-qualifier",
                         severity="info" if quantified else "warn",
-                        req_id=req_id,
+                        artifact_id=req_id,
                         field=field,
                         excerpt=sentence.strip()[:120],
                         message=f"vague qualifier '{term}' without a concrete metric",
@@ -182,16 +166,6 @@ def check_vague_qualifiers(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
                     ))
     return findings
 
-
-ACTION_VERBS = {
-    "create", "update", "delete", "remove", "send", "display", "show", "store",
-    "save", "validate", "verify", "notify", "alert", "log", "record", "generate",
-    "transition", "publish", "return", "reject", "accept", "allow", "prevent",
-    "block", "provide", "calculate", "compute", "export", "import", "retry",
-    "cancel", "archive", "encrypt", "decrypt", "authenticate", "authorize",
-    "render", "email", "persist", "enqueue", "dispatch", "present", "list",
-    "filter", "sort", "redirect", "set", "mark", "flag", "assign",
-}
 
 # ears_pattern -> required leading keyword (None = must have NO condition lead;
 # "SKIP" = combination pattern, no single-lead rule).
@@ -214,7 +188,7 @@ _PASSIVE_RE = re.compile(r"shall be \w+(?:ed|en)\b")
 
 
 def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
-    text = _text(fm.get("description"))
+    text = core.flatten_text(fm.get("description"))
     low = text.lower()
     idx = low.find("shall")
     if idx == -1:
@@ -226,7 +200,7 @@ def check_compound(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     return [Finding(
         rule="compound",
         severity="warn",
-        req_id=req_id,
+        artifact_id=req_id,
         field="description",
         excerpt=text.strip()[:120],
         message=(
@@ -241,7 +215,7 @@ def _ears_finding(req_id: str, desc: str, message: str) -> Finding:
     return Finding(
         rule="ears-conformance",
         severity="warn",
-        req_id=req_id,
+        artifact_id=req_id,
         field="description",
         excerpt=desc.strip()[:120],
         message=message,
@@ -252,7 +226,7 @@ def _ears_finding(req_id: str, desc: str, message: str) -> Finding:
 def check_ears(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
     if fm.get("type") != "functional":
         return []
-    desc = _text(fm.get("description"))
+    desc = core.flatten_text(fm.get("description"))
     low = desc.lower()
     if "shall" not in low:
         return [_ears_finding(
@@ -288,7 +262,7 @@ def check_ears(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
 
 
 def check_passive(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
-    desc = _text(fm.get("description"))
+    desc = core.flatten_text(fm.get("description"))
     low = desc.lower()
     for match in _PASSIVE_RE.finditer(low):
         tail = low[match.end():match.end() + 40]
@@ -297,7 +271,7 @@ def check_passive(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
         return [Finding(
             rule="passive-nameless",
             severity="warn",
-            req_id=req_id,
+            artifact_id=req_id,
             field="description",
             excerpt=desc.strip()[:120],
             message="passive voice hides the responsible actor",
@@ -321,14 +295,14 @@ def check_impl_bias(req_id: str, fm: Dict[str, Any]) -> List[Finding]:
         return []
     tier = fm.get("tier")
     for field in ("title", "description"):
-        text = _text(fm.get(field))
+        text = core.flatten_text(fm.get(field))
         low = text.lower()
         for term in sorted(TECH_TERMS):
             if re.search(rf"\b{re.escape(term)}\b", low):
                 return [Finding(
                     rule="impl-bias",
                     severity="info",
-                    req_id=req_id,
+                    artifact_id=req_id,
                     field=field,
                     excerpt=text.strip()[:120],
                     message=(
@@ -377,57 +351,16 @@ def lint_dir(reqs_dir: str) -> List[Finding]:
     return findings
 
 
-def _print_report(findings: List[Finding], reqs_dir: str, quiet: bool) -> None:
-    by_req: Dict[str, List[Finding]] = {}
-    for f in findings:
-        by_req.setdefault(f.req_id, []).append(f)
-
-    print(f"Content-linting requirements in: {reqs_dir}")
-    if not findings:
-        print("No content anti-patterns found.")
-        return
-    for req_id in sorted(by_req):
-        print(f"\n{req_id}")
-        for f in by_req[req_id]:
-            print(f"  [{f.severity}] {f.rule} ({f.field}): {f.message}")
-            if not quiet:
-                print(f"        excerpt: {f.excerpt}")
-                print(f"        suggest: {f.suggested_rewrite_hint}")
-    counts = {sev: sum(1 for f in findings if f.severity == sev)
-              for sev in ("error", "warn", "info")}
-    print(
-        f"\nSummary: {len(findings)} finding(s) "
-        f"({counts['error']} error, {counts['warn']} warn, {counts['info']} info)."
-    )
-
-
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Content-quality linter for Groundwork requirement artifacts."
+    return core.run_cli(
+        argv,
+        default_dir=".sdlc/requirements",
+        noun="requirement",
+        lint_dir=lint_dir,
+        description=(
+            "Content-quality linter for Groundwork requirement artifacts."
+        ),
     )
-    parser.add_argument("requirements_dir", nargs="?", default=".sdlc/requirements")
-    parser.add_argument("--json", action="store_true", help="Emit findings as JSON.")
-    parser.add_argument("--strict", action="store_true",
-                        help="Exit non-zero if any error-severity finding exists.")
-    parser.add_argument("--quiet", action="store_true",
-                        help="Print one line per finding (no excerpt/suggestion).")
-    args = parser.parse_args(argv)
-
-    reqs_dir = args.requirements_dir
-    if not os.path.isdir(reqs_dir):
-        print(f"ERROR: requirements directory not found: {reqs_dir}", file=sys.stderr)
-        return 2
-
-    findings = lint_dir(reqs_dir)
-
-    if args.json:
-        print(json.dumps([asdict(f) for f in findings], indent=2))
-    else:
-        _print_report(findings, reqs_dir, args.quiet)
-
-    if args.strict and any(f.severity == "error" for f in findings):
-        return 1
-    return 0
 
 
 if __name__ == "__main__":

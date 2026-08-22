@@ -39,10 +39,15 @@ python3 skills/requirements/scripts/lint_requirements_content.py \
 # M2 — design
 python3 skills/design/scripts/validate_design.py \
   docs/requirements/examples/tamagotchi/design
+python3 skills/design/scripts/lint_design_content.py \
+  docs/requirements/examples/tamagotchi/design
 ```
 
 Expected: requirements validator **22/22 pass**, content linter **clean**, design
-validator **23/23 pass**.
+validator **23/23 pass**. The design content linter is **not** clean: it reports
+exactly one `warn` — `dependency-cycle` on `CMP-003` — and still exits 0, because
+the tool is advisory. See *The open findings, and why they are still here* below
+for what that finding is and why it is left in place.
 
 Note that the design set deliberately has no `README.md` of its own. Anything under
 `design/` that is not a skipped companion is discovered as an artifact and must parse as
@@ -111,7 +116,7 @@ its unfinished business.
   real output against this set. It returned `gate: fail`, and the set is shipped with that
   visible rather than tidied away — which took the human override described above.
 
-### The open critic findings, and why they are still here
+### The open findings, and why they are still here
 
 Two findings were correctness faults and were fixed: `CMP-004` and `IF-008` traced from
 `BR-001` while asserting the opposite of its statement text. Both now pass.
@@ -125,12 +130,31 @@ silently followed it. The critic caught the mismatch. The resolution recorded he
 `design/assumptions.md`. Architecture found a latent defect in the requirements it was
 built from.
 
-Five findings remain open and are deliberately preserved as genuine critic output:
+Six findings remain open and are deliberately preserved. Five are genuine critic
+output; the sixth — the dependency cycle below — is not: the design critic never
+found it (cycle detection is explicitly out of its scope; see
+`agents/design-critic.md`), and it surfaced only once the STO-208 content linter
+started checking the set structurally.
 
 - **Three responsibility phrasings** (`CMP-003`, `CMP-006`, `CMP-008`) trip the
   single-responsibility rule. `CMP-006` is arguably a false positive — the rule greps the
   sentence for "and" rather than judging cohesion, and a UI surface that presents and
   accepts input is one duty by most readings.
+
+  The STO-208 content linter's `god-component` rule, run over this same set, flags
+  none of the three, and not for one reason. `CMP-006`'s responsibility genuinely
+  conjoins two verbs, and the conjoined one — `turns` — is absent from
+  `ACTION_VERBS` (`lib/lint_core.py`), a list tuned for EARS requirement predicates
+  rather than component responsibility prose: a real vocabulary miss. `CMP-003` and
+  `CMP-008` are not vocabulary misses at all — their `responsibility` fields are
+  single-clause, and the critic's second-duty findings for those two came from
+  fields the rule never reads (`CMP-003`'s rationale, `CMP-008`'s description);
+  `check_god_component` scans `responsibility` only. So this rule's recall on the
+  only real data available is 0/3, by two different mechanisms. Neither is a
+  defect — the verb anchoring is deliberately quiet, and the `responsibility`-only
+  scan is the rule's stated scope — but a clean `god-component` run over this set
+  should not be read as clearing these three; a richer verb list and a wider field
+  scan are both principled fixes, and neither is this ticket's.
 - **One interface** (`IF-006`) carries a blocking read and a push whose consumers want
   different halves of it: `CMP-003` uses only `current_lifecycle_state`, `CMP-005` and
   `CMP-006` only `subscribe_to_transitions`. Divergent consumer sets are a split under
@@ -148,15 +172,24 @@ Five findings remain open and are deliberately preserved as genuine critic outpu
   says so. That a whole-contract field let one instance argue its way past the gate is
   the clearest evidence for why the field moved.
 - **One `traces_from` plausibility** flag on `CMP-001`.
+- **`CMP-003` and `CMP-004` are mutually dependent.** The Pet State Manager
+  consumes `IF-006` (Pet Lifecycle State, provided by `CMP-004`) to gate stat
+  mutations; the Pet Lifecycle Manager consumes `IF-005` (Pet Stat Observation,
+  provided by `CMP-003`) to decide transitions. Both structural validators exit
+  0 over this — every edge resolves — and STO-208's `dependency-cycle` rule is
+  what surfaces it. It is left in place deliberately: breaking the loop means
+  re-deciding how the two managers talk to each other, which is a design change
+  to a worked example, and worked-example regeneration is STO-219. A
+  regenerated set should either break this cycle or state why it keeps it.
 
-They are left in place because a worked example showing a critic that found nothing would
-teach nothing about whether the critic works.
+They are left in place because a worked example whose tooling found nothing would teach
+nothing about whether that tooling works.
 
 ### Two granularity artifacts, recorded rather than fixed
 
 This set was generated before the capability and interface granularity heuristics
 existed. Two divergences from what the pipeline now teaches are left in place, for
-the same reason the critic findings above are.
+the same reason the findings above are.
 
 - **`IF-003` should have been two interfaces.** *Durable Pet State Persistence*
   carries `load` and `commit`. `CMP-007` needs both — it restores at launch and

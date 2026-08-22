@@ -148,7 +148,10 @@ def test_json_output_is_parseable(capsys):
     data = json.loads(out)
     assert code == 0
     assert isinstance(data, list) and data
-    assert {"rule", "severity", "req_id", "field", "message"} <= set(data[0])
+    # STO-208: the finding record is shared with the design linter, so the id
+    # field is stage-agnostic. `validate_traceability.Finding` already spells it
+    # this way; this is the M1 linter converging on it, not a new convention.
+    assert {"rule", "severity", "artifact_id", "field", "message"} <= set(data[0])
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +186,7 @@ def test_glossary_term_matched_through_inflection():
     fm = {"description": "The system shall apply decay while the app is closed."}
     assert lc._mentions("the pet's hunger decays over time", "Decay")
     assert lc._mentions("applying stat decay on launch", "stat decay")
-    assert not lc._mentions(lc._text(fm.get("description")), "Quarantine")
+    assert not lc._mentions(lc.core.flatten_text(fm.get("description")), "Quarantine")
 
 
 def test_alias_counts_as_usage(tmp_path):

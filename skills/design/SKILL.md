@@ -370,6 +370,22 @@ Those warnings arrive **after** the write, not at the Step 3 sign-off. That
 ordering is inherent — nothing is on disk before the formatter runs, and
 computing coverage over drafts is the unreachable-gate mistake STO-215 fixed.
 
+Then run the advisory content-quality linter and address any `warn`-severity
+findings (the two validators above are the hard gates; the content linter guides
+prose and shape). This is the only script-backed lint run in the stage — the
+critic applied the same checks by inspection at gate time, because the files did
+not exist yet. Route anything it turns up back through the critique loop to the
+owning specialist rather than editing the written files by hand:
+
+```bash
+python3 skills/design/scripts/lint_design_content.py .sdlc/design
+```
+
+It always exits 0. `dependency-cycle` is the finding most worth acting on: it
+means two components each need the other, which no structural check can see
+because every individual edge resolves. Breaking it is a decomposition change,
+so it re-dispatches to the component specialist, not the interface specialist.
+
 **Step 4b — Report traceability warnings:**
 
 Read `formatter_result.traceability_rerun.warnings` (empty if the sweep was
@@ -412,6 +428,7 @@ Cross-artifact traceability *is* resolved, but not by this skill's judgment —
 `traces_from` resolution, FR coverage, ADR decision-driver resolution, and
 `traces_to.design` resolution.
 
-What is still not produced here: dependency-cycle detection, orphan-interface
-detection, and prose-quality sweeps over design artifacts. Those are STO-208's
-content linter, per `agents/design-critic.md`'s *Scope boundaries*.
+Dependency-cycle detection, orphan-interface detection, and prose-quality
+sweeps over design artifacts *are* produced, but not by this skill's judgment
+either — `lint_design_content.py` runs at Step 4, advisory, once the files
+exist, per `agents/design-critic.md`'s *Scope boundaries*.
