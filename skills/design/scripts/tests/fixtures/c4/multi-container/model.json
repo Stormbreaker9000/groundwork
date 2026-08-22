@@ -27,5 +27,5 @@
     }
   ],
   "confidence": "high",
-  "reason": "One deployable; no split."
+  "reason": "Two deployables: the app handles requests inline, the worker sends confirmations out of band."
 }
