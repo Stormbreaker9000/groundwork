@@ -67,7 +67,7 @@ import argparse
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Shared core lives at the repo root in ``lib/``; add it to the path before
 # importing. Resolved relative to this file, so cwd does not matter.
@@ -183,6 +183,12 @@ RETIRED_INTERACTION_MIGRATION_MSG = (
 
 class DesignFile(ArtifactFile):
     """A parsed design artifact. ``design_id`` reads the generic ``artifact_id``."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(path)
+        # Populated for `type: diagram` only, by check_diagram_body (STO-101).
+        self.diagram_aliases: Set[str] = set()
+        self.diagram_interface_refs: Set[str] = set()
 
     @property
     def design_id(self) -> Optional[str]:
@@ -420,6 +426,92 @@ def check_adr_headings(path: str) -> List[str]:
     return errors
 
 
+# Mermaid C4 body checks (STO-101). The header directive each `level` must
+# open with — a file that disagrees with itself is two claims about one
+# diagram.
+LEVEL_TO_HEADER = {
+    "context": "C4Context",
+    "container": "C4Container",
+    "component": "C4Component",
+}
+
+_MERMAID_BLOCK_RE = re.compile(
+    r"^```mermaid\s*\n(.*?)^```\s*$", re.DOTALL | re.MULTILINE
+)
+
+# Element declarations introduce an alias; relations consume one. Both are
+# `Keyword(alias, ...)`, so one regex with a keyword group serves both.
+_DECL_RE = re.compile(
+    r"^\s*(Person|Person_Ext|System|System_Ext|System_Boundary|Container"
+    r"|Container_Ext|Container_Boundary|Component|Component_Ext)"
+    r"\(\s*([A-Za-z0-9_]+)\s*,"
+)
+_REL_RE = re.compile(
+    r"^\s*(?:Rel|BiRel|Rel_Back|Rel_U|Rel_D|Rel_L|Rel_R|Rel_Up|Rel_Down"
+    r"|Rel_Left|Rel_Right)"
+    r"\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*[,)]"
+)
+_INTERFACE_REF_RE = re.compile(r"\b(IF(?:-[A-Z0-9]+)*-[0-9]{3,})\b")
+
+
+def check_diagram_body(
+    path: str, level: Optional[str]
+) -> Tuple[List[str], Set[str], Set[str]]:
+    """Gate one diagram body's Mermaid block.
+
+    Returns ``(errors, declared_aliases, interface_refs)``. The last two are
+    what ``cross_file_checks`` resolves against the artifact set — parsed here
+    because this is the only pass that reads the body.
+    """
+    errors = []
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        return [f"could not read diagram body: {exc}"], set(), set()
+
+    blocks = _MERMAID_BLOCK_RE.findall(text)
+    if not blocks:
+        return ["body has no ```mermaid block"], set(), set()
+    if len(blocks) > 1:
+        errors.append(
+            f"body has {len(blocks)} ```mermaid blocks — one diagram per file"
+        )
+    block = blocks[0]
+
+    lines = [ln for ln in block.splitlines() if ln.strip()]
+    expected_header = LEVEL_TO_HEADER.get(level) if level else None
+    header = lines[0].strip() if lines else ""
+    if expected_header and header != expected_header:
+        errors.append(
+            f"level '{level}' requires header '{expected_header}', "
+            f"but the block opens with '{header or '(empty)'}'"
+        )
+
+    declared = set()
+    refs = set()
+    endpoints = []
+    for line in lines:
+        if line.count("(") != line.count(")") or line.count('"') % 2:
+            errors.append(f"unbalanced quotes or parentheses: {line.strip()}")
+            continue
+        decl = _DECL_RE.match(line)
+        if decl:
+            declared.add(decl.group(2))
+        rel = _REL_RE.match(line)
+        if rel:
+            endpoints.extend([rel.group(1), rel.group(2)])
+            refs.update(_INTERFACE_REF_RE.findall(line))
+
+    for alias in sorted(set(endpoints)):
+        if alias not in declared:
+            errors.append(
+                f"relation endpoint '{alias}' is not declared in this diagram"
+            )
+
+    return errors, declared, refs
+
+
 # ---------------------------------------------------------------------------
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -457,6 +549,11 @@ def validate(design_dir: str, schema_path: str) -> Tuple[List[DesignFile], List[
             df.errors.extend(_fallback_validate(data))
         if data.get("type") == "adr":
             df.errors.extend(check_adr_headings(path))
+        if data.get("type") == "diagram":
+            body_errors, aliases, refs = check_diagram_body(path, data.get("level"))
+            df.errors.extend(body_errors)
+            df.diagram_aliases = aliases
+            df.diagram_interface_refs = refs
         files.append(df)
 
     global_errors = cross_file_checks(files)

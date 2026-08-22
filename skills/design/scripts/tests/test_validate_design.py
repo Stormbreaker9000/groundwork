@@ -750,3 +750,61 @@ def test_diagram_prefix_type_mismatch_fails(tmp_path, capsys):
     code = run(str(design_dir))
     assert code != 0
     assert "prefix" in capsys.readouterr().out
+
+
+def test_diagram_without_mermaid_block_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    body = path.read_text().split("```mermaid")[0]
+    path.write_text(body)
+    code = run(str(design_dir))
+    assert code != 0
+    assert "mermaid" in capsys.readouterr().out
+
+
+def test_diagram_header_must_match_level(tmp_path, capsys):
+    """A file that says level: container and draws a C4Context is two
+    different claims about the same diagram."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("C4Container", "C4Context"))
+    code = run(str(design_dir))
+    assert code != 0
+    out = capsys.readouterr().out
+    assert "C4Container" in out and "C4Context" in out
+
+
+def test_diagram_rel_to_undeclared_alias_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace(
+            'Rel(actor_customer, ctr_app, "places orders")',
+            'Rel(actor_customer, ctr_ghost, "places orders")',
+        )
+    )
+    code = run(str(design_dir))
+    assert code != 0
+    assert "ctr_ghost" in capsys.readouterr().out
+
+
+def test_diagram_unbalanced_delimiters_fail(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace(
+            '"stripe-gateway", "Charge cards',
+            '"stripe-gateway, "Charge cards',
+        )
+    )
+    code = run(str(design_dir))
+    assert code != 0
+
+
+def test_two_mermaid_blocks_fail(tmp_path, capsys):
+    """One diagram per file is the atomic-artifact rule, applied to bodies."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text() + "\n```mermaid\nC4Container\n```\n")
+    code = run(str(design_dir))
+    assert code != 0
