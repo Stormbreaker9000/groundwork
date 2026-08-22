@@ -75,6 +75,21 @@ def q(text: Any) -> str:
     return '"' + str(text or "").replace('"', "'").replace("\n", " ").strip() + '"'
 
 
+def yaml_q(text: Any) -> str:
+    """A safe double-quoted YAML scalar for frontmatter values that may
+    contain a colon (e.g. a generated description like "System context for
+    Order System: its actors..."), which breaks YAML plain-scalar parsing.
+
+    Sanitize-then-quote, not escape: `lib/artifact_core.py`'s
+    `_coerce_scalar` strips surrounding quotes on the stdlib fallback path but
+    does NOT unescape, while pyyaml does unescape — a backslash-escaped quote
+    would survive into the value differently on each path. Sanitizing first
+    (inner double quotes become single quotes, newlines collapse to spaces)
+    means both parse paths see identical bytes, which the determinism
+    constraint requires."""
+    return '"' + str(text or "").replace('"', "'").replace("\n", " ").strip() + '"'
+
+
 class DesignSet:
     """The components, interfaces and ASRs of one design directory."""
 
@@ -230,8 +245,8 @@ def write_diagram(out_dir, *, dia_id, title, level, container, description,
         "---",
         f"id: {dia_id}",
         "type: diagram",
-        f"title: {title}",
-        f"description: {description}",
+        f"title: {yaml_q(title)}",
+        f"description: {yaml_q(description)}",
         f"level: {level}",
     ]
     if container:

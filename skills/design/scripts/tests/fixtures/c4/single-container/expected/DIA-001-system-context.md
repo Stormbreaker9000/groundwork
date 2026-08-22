@@ -1,8 +1,8 @@
 ---
 id: DIA-001
 type: diagram
-title: System Context
-description: System context for Order System: its actors, its boundary, and the external systems it depends on.
+title: "System Context"
+description: "System context for Order System: its actors, its boundary, and the external systems it depends on."
 level: context
 traces_from: [FR-001, NFR-001]
 traces_to: {}

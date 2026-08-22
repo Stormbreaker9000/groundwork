@@ -7,7 +7,7 @@ provider: CMP-003
 operations:
   - name: authorize
     interaction: synchronous
-    description: Authorize a card payment for an order.
+    summary: Authorize a card payment for an order.
 error_modes:
   - The card is declined; the caller receives a non-retryable failure.
 traces_from: [FR-001]

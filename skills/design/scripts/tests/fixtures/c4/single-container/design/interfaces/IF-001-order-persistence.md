@@ -7,10 +7,10 @@ provider: CMP-002
 operations:
   - name: commit
     interaction: synchronous
-    description: Write an order durably.
+    summary: Write an order durably.
   - name: load
     interaction: synchronous
-    description: Read an order by id.
+    summary: Read an order by id.
 error_modes:
   - Storage is unavailable; the caller receives a retryable failure.
 traces_from: [FR-002]
