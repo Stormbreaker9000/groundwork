@@ -153,5 +153,42 @@ The `--json` payload matches the M1 linter's: `rule`, `severity`, `artifact_id`,
 `lib/lint_core.py`.
 
 It reuses `validate_design.discover_files`/`parse_frontmatter`, so it sees
-exactly the same atomic artifacts as the structural validator and skips the same
-non-atomic files and the `diagrams/` subtree.
+exactly the same atomic artifacts as the structural validator — the
+`diagrams/` subtree included, as of STO-101 — and skips the same non-atomic
+files (`assumptions.md`, `drivers.md`, `index.yaml`).
+
+## C4 diagram generator — `generate_c4.py`
+
+Projects the already-approved component graph (`CMP.depends_on -> IF.provider`)
+into the three C4 views — System Context, Container, and one Component view
+per internal container — as a deterministic function of the design set plus
+a `draft_diagram_model`. It does not decide anything: container grouping and
+actors are the `c4-generator` agent's judgment, supplied as the model; this
+script only projects.
+
+```bash
+python3 generate_c4.py DESIGN_DIR --model MODEL.json --created-at YYYY-MM-DD
+```
+
+`design_dir` defaults to `.sdlc/design`, same convention as the two
+validators above. `--model` is required: the path to the `draft_diagram_model`
+JSON the `c4-generator` returned. `--created-at` is required too, so every
+diagram carries the same date as the rest of the set — there is no default.
+
+Prints a JSON summary on stdout: the diagrams written (`id`, `path`, `level`)
+and the `traces_to.diagrams` back-fill the formatter applies to the named
+components.
+
+Exit codes: `0` diagrams written, `1` the model contradicts the design set
+(re-dispatch to the `c4-generator`, do not repair the model or hand-write a
+diagram), `2` environment error (missing `design_dir`, unreadable model) —
+not a design failure.
+
+It is normally run by the design formatter, inside its write, after
+`drivers.md` (whose `## Architecturally Significant Requirements` section the
+Context view's `traces_from` is parsed from) and before `validate_design.py`,
+which then runs once over the CMP/IF/ADR files and the diagrams together —
+see `agents/design-formatter.md`'s "Diagrams" section. Running it by hand is
+mainly useful for regenerating an existing set's views; a design set fully on
+disk regenerates the same `DIA-` IDs from the same model, since they are
+assigned deterministically from emission order rather than hand-allocated.

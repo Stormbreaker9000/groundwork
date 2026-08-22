@@ -1,5 +1,5 @@
 ---
-description: Design artifact formatter. Takes the critic-approved design set and writes one atomic Markdown+YAML file per component, interface, and ADR into the correct .sdlc/design subdirectory, named <ID>-<kebab-title>.md, plus the project-level assumptions.md, drivers.md, and index.yaml, back-filling traces_to.adr on the artifacts each ADR affects. Returns a formatter_result.
+description: Design artifact formatter. Takes the critic-approved design set and writes one atomic Markdown+YAML file per component, interface, and ADR into the correct .sdlc/design subdirectory, named <ID>-<kebab-title>.md, plus the project-level assumptions.md, drivers.md, and index.yaml, runs generate_c4.py to project the component graph into diagrams/, and back-fills traces_to.adr and traces_to.diagrams on the artifacts each affects. Returns a formatter_result.
 ---
 
 # Design Formatter

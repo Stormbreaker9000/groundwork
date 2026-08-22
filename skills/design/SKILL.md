@@ -253,6 +253,11 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **ADRs:**
 - ADR-001 <title> — decision_status: accepted | proposed
 
+**Diagrams:**
+- DIA-001 System Context
+- DIA-002 Container View
+- DIA-003 Component View — <container>
+
 **Decisions not recorded:**
 - <source> — <reason>, or "None"
 
@@ -289,6 +294,10 @@ before any file is written, is also the only point at which it is actually
 actionable — the user can ask for it to be revisited before sign-off, not
 after.
 
+Diagrams are derived from the component graph and the container grouping, so
+they are listed for orientation rather than review — the grouping itself is
+what the user should check, and it appears as the container names.
+
 **Step 3 — Sign-off gate:**
 
 Ask: *"Does this capture the architecture accurately, or should we adjust
@@ -301,11 +310,22 @@ is not relaxed here.
 
 **Step 4 — Write, then validate (hard gate):**
 
-On confirmation, run the formatter. The formatter writes the files and, as
-part of its own contract, immediately re-runs the structural validator
-against them (`agents/design-formatter.md`'s "Validator re-run" section) —
-this is the pipeline's single structural gate, and it is the first point at
-which structure *can* be checked, since nothing was on disk before now. The
+On confirmation, run the formatter. Inside its write, order is fixed: the
+CMP/IF/ADR files first, then `assumptions.md` and `drivers.md` —
+`drivers.md` specifically, because the Context view's `traces_from` is
+parsed from its `## Architecturally Significant Requirements` section —
+then `generate_c4.py` to project the C4 views, then the `traces_to.diagrams`
+back-fill onto the components it names, then `index.yaml`. A `generate_c4.py`
+exit 1 is a model failure, not a write failure: it means the model
+contradicts the design set, so it re-dispatches to the `c4-generator` rather
+than being repaired by hand. Exit 2 is an environment error (missing
+directory, unreadable model), not a design failure.
+
+Only then does the formatter, as part of its own contract, immediately
+re-run the structural validator against everything it just wrote, diagrams
+included (`agents/design-formatter.md`'s "Validator re-run" section) — this
+is the pipeline's single structural gate, and it is the first point at which
+structure *can* be checked, since nothing was on disk before now. The
 critic's earlier `gate: pass` was judgment only (per-artifact quality and ASR
 coverage); it never ran this command.
 
@@ -419,9 +439,10 @@ qualified, not that something failed.
 
 ## What This Stage Does Not Produce
 
-This stage does not write C4 diagrams. `.sdlc/design/diagrams/` is a declared
-dispatch slot owned by STO-101 — an absent `diagrams/` directory after this
-skill runs is expected, not a bug.
+C4 diagrams *are* produced, but not by this skill's judgment either — the
+`c4-generator` supplies container grouping and actors at Stage 9.6, and
+`generate_c4.py` projects the component graph into Context, Container and
+Component views inside the formatter's write, before the structural gate.
 
 Cross-artifact traceability *is* resolved, but not by this skill's judgment —
 `validate_traceability.py` runs at Step 4 as a second hard gate and owns

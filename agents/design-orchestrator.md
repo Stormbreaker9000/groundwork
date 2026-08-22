@@ -1,5 +1,5 @@
 ---
-description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF/ADR IDs, dispatches to the component and interface specialists and to the adr-generator, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
+description: Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF/ADR IDs, dispatches to the component and interface specialists, the adr-generator, and the c4-generator, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
 ---
 
 # Design Orchestrator
