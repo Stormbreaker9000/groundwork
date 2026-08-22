@@ -39,18 +39,18 @@ design_context  (from the interview)
         ▼  on pass: orchestrator synthesises assumptions + drivers
    [ adr-generator ]   resolved Q- decisions + deferred ASRs → draft_adrs
         │
+   [ c4-generator ]    containers + actors → draft_diagram_model
+        │
         ▼
 [ design-formatter ]   CMP/IF/ADR files + assumptions.md + drivers.md + index.yaml
                     + traces_to.adr back-fill
+                    + generate_c4.py → diagrams/ + traces_to.diagrams back-fill
                     + validate_design.py hard gate (the structural gate)
-        │
-        ▼
-   [c4-generator]  ← STO-101 slot
 ```
 
 `component-specialist`, `interface-specialist`, `design-critic`,
-`adr-generator`, and `design-formatter` are the agents you dispatch to.
-`c4-generator` does not exist yet; Stage 12 declares its slot.
+`adr-generator`, `c4-generator`, and `design-formatter` are the agents you
+dispatch to.
 
 ## Stage 1 — Consume the design context
 
@@ -532,12 +532,46 @@ question visible in `assumptions.md`. Stage 9's rule that a
 additional, not a replacement. They are two views of one gap: what must be
 decided, and the record that will hold the decision.
 
+## Stage 9.6 — C4 diagram generation
+
+Dispatch `c4-generator` after Stage 9.5, once the critic has already returned
+`gate: pass`. It needs the merged, back-filled `draft_components` +
+`draft_interfaces` set and the `design_context` from Stage 1 — the same
+component graph the critic reviewed, plus `deployment_target` and
+`runtime_and_stack` for the container judgment it makes.
+
+It returns a `draft_diagram_model`. The shape is `agents/c4-generator.md`'s
+contract, not this file's — one copy, read there rather than duplicated here.
+
+**The invariant you enforce before forwarding the model:** every
+`boundary: internal` component sits in exactly one container's `components`
+list; no `boundary: external` component sits in any container; every actor's
+`entrypoint` names a real container `key`. On a violation, re-dispatch to
+`c4-generator` with the finding attached. Never repair the model yourself,
+and never edit a component to fit a grouping the generator got wrong — the
+grouping is its judgment to redo, not yours to patch.
+
+An empty `containers` list is not a legal model. A design set with at least
+one internal component has at least one deployable unit for that component
+to belong to, even if the answer is a single container holding the whole
+decomposition — see `agents/c4-generator.md`'s note that one container is a
+normal answer, not a missing decomposition.
+
+Forward `draft_diagram_model` to the formatter alongside `draft_adrs` at
+Stage 10. You allocate no `DIA-` IDs here: `generate_c4.py` assigns them
+deterministically from emission order (`DIA-001` for the context view,
+`DIA-002` for the container view, then one per container in `key` order),
+unlike every other prefix in this pipeline, which you allocate before
+dispatch. That is also why a regeneration never renumbers the set — the
+same model, run twice, emits the same IDs.
+
 ## Stage 10 — Format: the `formatter_result` hand-off
 
-Hand the approved artifact set, the `design_context_artifact`, and
-`draft_adrs` to `design-formatter` — all three. Omitting `draft_adrs` leaves
-the formatter with no ADRs to write and no `affects` data to back-fill
-`traces_to.adr` from. It returns:
+Hand the approved artifact set, the `design_context_artifact`, `draft_adrs`,
+and `draft_diagram_model` to `design-formatter` — all four. Omitting
+`draft_adrs` leaves the formatter with no ADRs to write and no `affects`
+data to back-fill `traces_to.adr` from; omitting `draft_diagram_model`
+leaves it with nothing to hand `generate_c4.py`. It returns:
 
 ```yaml
 formatter_result:
@@ -546,9 +580,17 @@ formatter_result:
   review_queue_count: 0
   context_artifact: ".sdlc/design/assumptions.md"
   drivers: ".sdlc/design/drivers.md"
+  diagrams:
+    generated: [ "DIA-001", "DIA-002", "DIA-003" ]
+    exit_code: 0
   validator_rerun: { exit_code: 0 }
   traceability_rerun: { exit_code: 0, warnings: [] }
 ```
+
+`diagrams.generated` is every `DIA-` ID `generate_c4.py` wrote; a non-zero
+`diagrams.exit_code` is a hard failure — it re-opens the loop at the
+`c4-generator`, the same way a non-zero `validator_rerun` re-opens it at the
+owning specialist, per Stage 9.6.
 
 Report the `formatter_result` back to the caller (the skill), which owns the
 sign-off and the commit. **You never commit.** This is conditional on BOTH
@@ -622,11 +664,18 @@ formatter the single writer and the single structural gate. Everything the
 generator needs exists at Stage 9, and nothing it produces is needed before
 Stage 10, so the earlier placement costs nothing and keeps one writer.
 
-## Stage 12 — C4 diagram generation (SLOT — owned by STO-101)
+## Stage 12 — (retired)
 
-Not implemented. When STO-101 lands, this stage receives the component and
-interface set and returns the diagram files it wrote for `traces_to.diagrams`
-back-population. Do not invent diagram files.
+C4 diagram generation was originally slotted here, after the formatter. It runs
+at Stage 9.6 instead, before it, for exactly the reason Stage 11 was retired:
+a post-formatter generator is a second writer. It would write `diagrams/`, then
+re-open the CMP files the formatter had already written and the validator had
+already passed to patch `traces_to.diagrams` into them, and re-run the gate.
+
+The judgment the generator supplies — container grouping and actors — needs
+nothing the formatter produces, and the projection itself needs the files on
+disk. So the agent runs before the formatter and the script runs inside it:
+one writer, one gate, over a set that includes the diagrams.
 
 ## Gotchas
 
