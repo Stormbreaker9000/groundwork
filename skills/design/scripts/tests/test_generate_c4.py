@@ -160,17 +160,30 @@ def test_generated_title_and_description_parse_identically_both_ways(
 
 def test_yaml_q_agrees_across_parsers_on_hostile_characters(tmp_path, monkeypatch):
     """A title or description a human wrote freely can contain a colon, a
-    quote, a hashtag, and — a Windows path is not exotic — a backslash.
-    yaml_q must sanitize all of them to bytes both parsers read back the
-    same way, not merely bytes that happen not to crash pyyaml. (A hash is
-    included here but NOT preceded by a space: `_strip_inline_comment` in
-    lib/artifact_core.py truncates on a literal " #" regardless of quoting,
-    which is a pre-existing stdlib-fallback limitation this test does not
-    exercise or attempt to fix.)"""
-    raw = 'Report#42: uses C:\\Users\\x and a "quoted" phrase'
+    quote, a hashtag preceded by a space, a backslash, a stray carriage
+    return, and a raw control character — all bytes an ordinary prose
+    editor will happily save. yaml_q must sanitize every one of them to
+    bytes both parsers read back the same way, not merely bytes that happen
+    not to crash pyyaml.
+
+    ``" #"`` (space then hash) is included and IS preceded by a space this
+    time: `_strip_inline_comment` in lib/artifact_core.py truncates a value
+    at a literal " #" regardless of quoting, so an unfolded one is read
+    differently by the two parsers — the exact divergence sanitize-not-
+    escape exists to prevent. `\\r`, `\\x0b` (a C0 control) and `\\x7f`
+    (DEL) are included because the stdlib fallback's frontmatter parser
+    splits the block on ``str.splitlines()``, which treats all three as a
+    line break — any one surviving into a value would silently split a
+    single field into two rows."""
+    raw = 'Report #42: uses C:\\Users\\x and a "quoted" phrase\r\x0b\x7f'
     quoted = g4.yaml_q(raw)
     assert "\\" not in quoted, "no backslash may survive into the YAML text"
     assert quoted.count('"') == 2, "only the wrapping pair of quotes"
+    assert " #" not in quoted, (
+        "a literal space-hash reads as a comment introducer to the stdlib fallback"
+    )
+    for hostile in ("\r", "\x0b", "\x7f"):
+        assert hostile not in quoted, f"{hostile!r} must not survive into the YAML text"
 
     out_dir = tmp_path / "diagrams"
     path = g4.write_diagram(
@@ -189,7 +202,7 @@ def test_yaml_q_agrees_across_parsers_on_hostile_characters(tmp_path, monkeypatc
 
     assert pyyaml_data["title"] == stdlib_data["title"]
     assert pyyaml_data["description"] == stdlib_data["description"]
-    assert pyyaml_data["title"] == "Report#42: uses C:/Users/x and a 'quoted' phrase"
+    assert pyyaml_data["title"] == "Report 42: uses C:/Users/x and a 'quoted' phrase"
 
 
 def test_model_actor_entrypoint_naming_unknown_container_is_rejected():

@@ -68,15 +68,32 @@ def actor_alias(key: str) -> str:
     return "actor_" + key.lower().replace("-", "_")
 
 
+# Bytes that corrupt one of the two downstream parsers if they survive into
+# a quoted literal. C0 (0x00-0x1F — where a literal CR or LF live) and C1
+# (0x80-0x9F — where NEL/U+0085 lives) control characters, DEL (0x7F), and
+# the two multi-byte Unicode line-breaking characters (U+2028, U+2029) are
+# every code point Python's ``str.splitlines()`` treats as a line break.
+# `parse_frontmatter`'s stdlib fallback (`lib/artifact_core.py`) uses
+# ``splitlines()`` to cut the frontmatter block into rows, so any one of
+# these surviving into a value silently splits one field into two rows
+# instead of raising — a title becomes a truncated value plus a stray
+# sibling line. Folded to a space, not dropped, so word boundaries survive.
+_HOSTILE_CONTROL_RE = re.compile("[\x00-\x1f\x7f\u0080-\u009f\u2028\u2029]")
+
+
 def _sanitized(text: Any) -> str:
     """Baseline cleanup shared by every string literal this module emits:
     coerce to ``str``, fold an inner double quote to a single quote (both
     Mermaid and YAML use ``"`` as this module's literal delimiter, so a
-    passed-through inner ``"`` would terminate the literal early), collapse
-    newlines to spaces, and strip. Callers wrap the result in the delimiter
-    quotes themselves; `yaml_q` layers one more transform on top — see its
-    docstring for why it needs one and `q` does not."""
-    return str(text or "").replace('"', "'").replace("\n", " ").strip()
+    passed-through inner ``"`` would terminate the literal early), fold
+    every control character and Unicode line/paragraph separator
+    (`_HOSTILE_CONTROL_RE`, which includes an ordinary ``\\n``/``\\r``) to a
+    space, and strip. Callers wrap the result in the delimiter quotes
+    themselves; `q` and `yaml_q` each layer one more transform on top — see
+    their docstrings for what and why."""
+    value = str(text or "").replace('"', "'")
+    value = _HOSTILE_CONTROL_RE.sub(" ", value)
+    return value.strip()
 
 
 def q(text: Any) -> str:
@@ -107,8 +124,18 @@ def yaml_q(text: Any) -> str:
     quote — rather than escaped, because the two parsers can only ever agree
     on bytes that need no escaping at all. Do not "fix" this back to
     `\\"` / `\\\\` — that reintroduces the exact divergence this exists
-    to prevent."""
-    return '"' + _sanitized(text).replace("\\", "/") + '"'
+    to prevent.
+
+    A literal `` #`` (space then hash) gets the same treatment for the same
+    reason: `_strip_inline_comment` in the stdlib fallback truncates a value
+    at the first `` #`` it finds, quoted or not, so an unfolded one would
+    make pyyaml and the fallback read two different strings back — exactly
+    the divergence this function exists to prevent. Folded to a single
+    space rather than dropped, so a stray hash character alone (no leading
+    space) is left untouched — only the two-character sequence is hostile."""
+    value = _sanitized(text).replace("\\", "/")
+    value = value.replace(" #", " ")
+    return '"' + value + '"'
 
 
 class DesignSet:
