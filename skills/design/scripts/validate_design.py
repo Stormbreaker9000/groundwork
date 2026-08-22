@@ -294,6 +294,7 @@ def cross_file_checks(files: List[DesignFile]) -> List[str]:
     seen: Dict[str, str] = {}
     component_ids = set()
     interface_ids = set()
+    component_boundaries: Dict[str, str] = {}
     for f in parsed:
         did = f.design_id
         if not did:
@@ -306,6 +307,9 @@ def cross_file_checks(files: List[DesignFile]) -> List[str]:
             seen[did] = f.path
         if f.artifact_type == "component":
             component_ids.add(did)
+            boundary = f.frontmatter.get("boundary")
+            if isinstance(boundary, str):
+                component_boundaries[did] = boundary
         elif f.artifact_type == "interface":
             interface_ids.add(did)
 
@@ -369,6 +373,56 @@ def cross_file_checks(files: List[DesignFile]) -> List[str]:
                 f"chosen_option '{chosen_option}' is not in considered_options "
                 f"{considered_options}"
             )
+
+    # Diagram <-> artifact-set consistency (STO-101). The check STO-102's
+    # description named and could not ship, because there were no diagrams.
+    depicted_by_view: Dict[str, List[str]] = {}
+    has_component_view = False
+    for f in parsed:
+        if f.artifact_type != "diagram":
+            continue
+        if f.frontmatter.get("level") == "component":
+            has_component_view = True
+        for alias in sorted(f.diagram_aliases):
+            cmp_id, is_external = component_id_for_alias(alias)
+            if cmp_id is None:
+                continue  # containers, actors, the system box: not artifacts
+            if cmp_id not in component_ids:
+                f.errors.append(
+                    f"alias '{alias}' depicts '{cmp_id}', which is not a "
+                    f"known component id"
+                )
+                continue
+            actual = component_boundaries.get(cmp_id)
+            expected = "external" if is_external else "internal"
+            if actual is not None and actual != expected:
+                f.errors.append(
+                    f"alias '{alias}' declares boundary '{expected}' but "
+                    f"{cmp_id} is '{actual}'"
+                )
+            if f.frontmatter.get("level") == "component" and not is_external:
+                depicted_by_view.setdefault(cmp_id, []).append(f.design_id or "?")
+        for ref in sorted(f.diagram_interface_refs):
+            if ref not in interface_ids:
+                f.errors.append(
+                    f"relation cites '{ref}', which is not a known interface id"
+                )
+
+    if has_component_view:
+        for cmp_id in sorted(component_ids):
+            if component_boundaries.get(cmp_id) != "internal":
+                continue
+            views = depicted_by_view.get(cmp_id, [])
+            if not views:
+                global_errors.append(
+                    f"{cmp_id} appears in no component-level diagram"
+                )
+            elif len(views) > 1:
+                global_errors.append(
+                    f"{cmp_id} appears in {len(views)} component-level "
+                    f"diagrams ({', '.join(sorted(views))}) — a component "
+                    f"belongs to exactly one container"
+                )
 
     return global_errors
 
@@ -452,6 +506,21 @@ _REL_RE = re.compile(
     r"\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*[,)]"
 )
 _INTERFACE_REF_RE = re.compile(r"\b(IF(?:-[A-Z0-9]+)*-[0-9]{3,})\b")
+
+# Reverse of the generator's alias rule (spec D4): strip the external marker,
+# upper-case, swap underscores back to hyphens. Total and reversible, which is
+# what lets the validator map any node in a body back to the artifact it
+# claims to depict — no `depicts` frontmatter field, and so no second copy of
+# the mapping to drift.
+_COMPONENT_ALIAS_RE = re.compile(r"^(ext_)?(cmp(?:_[a-z0-9]+)*_[0-9]{3,})$")
+
+
+def component_id_for_alias(alias):
+    """``('CMP-001', is_external)`` for a component alias, else ``(None, False)``."""
+    match = _COMPONENT_ALIAS_RE.match(alias)
+    if not match:
+        return None, False
+    return match.group(2).upper().replace("_", "-"), bool(match.group(1))
 
 
 def check_diagram_body(
