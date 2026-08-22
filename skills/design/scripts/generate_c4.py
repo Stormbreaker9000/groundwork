@@ -312,6 +312,62 @@ def render_container(model: dict, dset: DesignSet) -> str:
     return "\n".join(lines)
 
 
+def render_component(model: dict, dset: DesignSet, container: dict) -> str:
+    """C4Component: one container's internals, with every edge that touches it.
+
+    An endpoint in another container renders as a ``Container()`` reference,
+    never as a ``Component()`` — drawing it as a component would place it in
+    two component views at once, which validate_design.py rejects.
+    """
+    placement = container_of(model)
+    by_key = {c["key"]: c for c in model.get("containers") or []}
+    members = sorted(container.get("components") or [])
+    lines = ["C4Component", f"  title Component View — {container['name']}"]
+    lines.append(
+        f"  Container_Boundary({container_alias(container['key'])}, "
+        f"{q(container['name'])}) {{"
+    )
+    for cmp_id in members:
+        record = dset.components[cmp_id]
+        lines.append(
+            f"    Component({dset.alias(cmp_id)}, {q(record.get('title'))}, "
+            f"{q(container.get('technology'))}, {q(record.get('responsibility'))})"
+        )
+    lines.append("  }")
+
+    member_set = set(members)
+    touching = [e for e in dset.edges() if e[0] in member_set or e[1] in member_set]
+
+    for key in sorted({placement[c] for e in touching for c in (e[0], e[1])
+                       if c in placement and placement[c] != container["key"]}):
+        other = by_key[key]
+        lines.append(
+            f"  Container({container_alias(key)}, {q(other['name'])}, "
+            f"{q(other.get('technology'))}, {q(other.get('description'))})"
+        )
+    for cmp_id in sorted({c for e in touching for c in (e[0], e[1])
+                          if dset.boundary(c) == "external"}):
+        record = dset.components[cmp_id]
+        lines.append(
+            f"  System_Ext({dset.alias(cmp_id)}, {q(record.get('title'))}, "
+            f"{q(record.get('responsibility'))})"
+        )
+
+    def endpoint(cmp_id):
+        if cmp_id in member_set or cmp_id not in placement:
+            return dset.alias(cmp_id)
+        return container_alias(placement[cmp_id])
+
+    seen = set()
+    for consumer, provider, if_id in touching:
+        key = (endpoint(consumer), endpoint(provider), if_id)
+        if key[0] == key[1] or key in seen:
+            continue
+        seen.add(key)
+        lines.append(f"  Rel({key[0]}, {key[1]}, {q(dset.title(if_id))}, {q(if_id)})")
+    return "\n".join(lines)
+
+
 def write_diagram(out_dir, *, dia_id, title, level, container, description,
                   traces_from, confidence, created_at, block) -> str:
     """Write one diagram artifact. Frontmatter key order is fixed, so a
@@ -388,6 +444,26 @@ def generate(design_dir: str, model: dict, created_at: str) -> dict:
     )
     written.append({"id": "DIA-002", "path": path, "level": "container",
                     "depicts": externals})
+
+    for index, container in enumerate(
+        sorted(model.get("containers") or [], key=lambda c: c["key"])
+    ):
+        dia_id = f"DIA-{index + 3:03d}"
+        members = sorted(container.get("components") or [])
+        path = write_diagram(
+            out_dir,
+            dia_id=dia_id,
+            title=f"Component View — {container['name']}",
+            level="component",
+            container=container["key"],
+            description=f"Internal structure of the {container['name']} container.",
+            traces_from=dset.traces_for(members),
+            confidence=confidence,
+            created_at=created_at,
+            block=render_component(model, dset, container),
+        )
+        written.append({"id": dia_id, "path": path, "level": "component",
+                        "depicts": members})
 
     back_fill: Dict[str, List[str]] = {}
     for entry in written:

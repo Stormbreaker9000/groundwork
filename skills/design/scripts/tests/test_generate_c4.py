@@ -244,3 +244,58 @@ def test_model_container_without_a_key_is_rejected():
     })
     errors = g4.validate_model(model, dset)
     assert any("no 'key'" in e for e in errors)
+
+
+def test_component_views_match_golden(tmp_path):
+    for name, files in (
+        ("single-container", ["DIA-003-component-view-order-app.md"]),
+        ("multi-container", ["DIA-003-component-view-order-app.md",
+                             "DIA-004-component-view-worker.md"]),
+    ):
+        design_dir, model_path, expected = case(name)
+        out = tmp_path / name
+        shutil.copytree(design_dir, out)
+        g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+        for filename in files:
+            written = (out / "diagrams" / filename).read_text()
+            golden = open(os.path.join(expected, filename)).read()
+            assert written == golden, filename
+
+
+def test_cross_container_endpoint_renders_as_a_container(tmp_path):
+    """The worker's edge lands on a component in another container. Drawing
+    that component here would place it in two component views at once, which
+    validate_design.py rejects — so it renders as the container instead."""
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+    body = (out / "diagrams" / "DIA-004-component-view-worker.md").read_text()
+    assert "Container(ctr_app," in body
+    assert "Component(cmp_002," not in body
+
+
+def test_back_fill_maps_components_to_the_view_they_appear_in(tmp_path, capsys):
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"])
+    summary = json.loads(capsys.readouterr().out)
+    back_fill = summary["traces_to_diagrams"]
+    assert back_fill["CMP-001"] == ["DIA-003"]
+    assert back_fill["CMP-004"] == ["DIA-004"]
+    # An external appears at context and container level, never in a component view.
+    assert back_fill["CMP-003"] == ["DIA-001", "DIA-002"]
+
+
+def test_generated_set_passes_the_structural_validator(tmp_path):
+    """The gate this whole feature has to survive: everything the generator
+    writes is a valid artifact, consistent with the set it was drawn from."""
+    import validate_design as vd
+
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
