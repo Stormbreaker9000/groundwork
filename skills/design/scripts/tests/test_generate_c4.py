@@ -357,3 +357,103 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     for name in ("DIA-001-system-context.md", "DIA-002-container-view.md",
                  "DIA-003-component-view-desktop-app.md"):
         assert (out / "diagrams" / name).exists()
+
+def test_regeneration_removes_a_stale_diagram_file(tmp_path):
+    """C1 regression: renaming a container's `name` (same `key`) changes the
+    component view's filename — `write_diagram` slugs the diagram's
+    `title`, and a component view's title embeds `container["name"]` — so
+    regenerating over an existing set must delete the OLD filename, not
+    just write the new one alongside it. Left stale, `DIA-004` is claimed
+    by two files at once and `validate_design.py` fails with `duplicate id
+    'DIA-004'` plus `CMP-004 appears in 2 component-level diagrams`."""
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    stale = out / "diagrams" / "DIA-004-component-view-worker.md"
+    assert stale.exists()
+
+    model = load_model(model_path)
+    model["containers"][1]["name"] = "Notification Worker"
+    assert model["containers"][1]["key"] == "worker"
+    renamed_model_path = os.path.join(str(tmp_path), "renamed-model.json")
+    with open(renamed_model_path, "w", encoding="utf-8") as handle:
+        json.dump(model, handle)
+
+    code = g4.main([str(out), "--model", renamed_model_path,
+                    "--created-at", "2026-08-22"])
+    assert code == 0
+
+    renamed = out / "diagrams" / "DIA-004-component-view-notification-worker.md"
+    assert renamed.exists()
+    assert not stale.exists(), "the old DIA-004 filename must not survive regeneration"
+
+    other_files = {p.name for p in (out / "diagrams").iterdir()}
+    assert "DIA-004-component-view-worker.md" not in other_files
+
+    import validate_design as vd
+    assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+
+
+def test_regeneration_reports_the_removed_stale_file_in_the_summary(tmp_path, capsys):
+    """The JSON summary's `removed` list is how the formatter (and a human
+    re-running the tool by hand) learns a rename actually cleaned up after
+    itself, rather than silently deleting files with no record."""
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    capsys.readouterr()  # discard the first run's summary
+
+    stale = out / "diagrams" / "DIA-004-component-view-worker.md"
+    model = load_model(model_path)
+    model["containers"][1]["name"] = "Notification Worker"
+    renamed_model_path = os.path.join(str(tmp_path), "renamed-model.json")
+    with open(renamed_model_path, "w", encoding="utf-8") as handle:
+        json.dump(model, handle)
+
+    assert g4.main([str(out), "--model", renamed_model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["removed"] == [str(stale)]
+
+
+def test_generate_does_not_touch_files_outside_the_diagrams_directory(tmp_path):
+    """The stale-file guard is deliberately narrow: it must never reach for
+    anything that is not a `DIA-*.md` file directly inside `out_dir`. A
+    component file that happens to start with `DIA` in its title-derived
+    slug, or a subdirectory, must survive a regeneration untouched."""
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+
+    diagrams_dir = out / "diagrams"
+    decoy_file = diagrams_dir / "DIA-NOTES.txt"
+    decoy_file.write_text("not a diagram")
+    decoy_dir = diagrams_dir / "DIA-999-subdir"
+    decoy_dir.mkdir()
+    (decoy_dir / "DIA-999-nested.md").write_text("nested, must not be touched")
+
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    assert decoy_file.exists()
+    assert decoy_dir.exists()
+    assert (decoy_dir / "DIA-999-nested.md").exists()
+
+
+def test_created_at_is_required_at_the_argparse_level(tmp_path):
+    """A run missing `--created-at` must exit 2 (usage error), not fall
+    through to `validate_model` and exit 1 — the two mean different things
+    to the caller (agents/design-formatter.md re-dispatches a model failure
+    to c4-generator; an environment/usage error is not that)."""
+    design_dir, model_path, _ = case("single-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    with pytest.raises(SystemExit) as excinfo:
+        g4.main([str(out), "--model", model_path])
+    assert excinfo.value.code == 2
+

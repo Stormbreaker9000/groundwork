@@ -373,6 +373,42 @@ def render_component(model: dict, dset: DesignSet, container: dict) -> str:
     return "\n".join(lines)
 
 
+# A regenerated diagram file is named from the model's current `title` (see
+# write_diagram), so any rename — a container's `name`, a component's
+# `title` feeding a component-view title — leaves the OLD filename behind
+# under a NEW one written alongside it. Both then sit in `out_dir`: one
+# `DIA-004-...md` claiming an ID the other file also claims, and
+# validate_design.py rejects the duplicate. Deliberately narrow: only files
+# directly in `out_dir` (`os.listdir`, never a recursive walk) whose
+# basename matches this pattern, and only when this run did not just write
+# them. This script runs inside real user projects, so widening this glob —
+# by pattern or by recursion — is not a refactor to make casually; if it
+# ever needs to change, re-justify it here.
+_STALE_DIAGRAM_RE = re.compile(r"^DIA-\d+.*\.md$")
+
+
+def _remove_stale_diagrams(out_dir: str, written_paths: Set[str]) -> List[str]:
+    """Delete a prior run's ``DIA-*.md`` files this run did not just write.
+
+    See the module-level comment on `_STALE_DIAGRAM_RE` for the narrow
+    deletion guard. Returns the removed paths, sorted, for the JSON summary.
+    """
+    removed: List[str] = []
+    if not os.path.isdir(out_dir):
+        return removed
+    for name in sorted(os.listdir(out_dir)):
+        path = os.path.join(out_dir, name)
+        if path in written_paths:
+            continue
+        if not os.path.isfile(path):
+            continue  # narrow to files; never descend into a subdirectory
+        if not _STALE_DIAGRAM_RE.match(name):
+            continue
+        os.remove(path)
+        removed.append(path)
+    return removed
+
+
 def write_diagram(out_dir, *, dia_id, title, level, container, description,
                   traces_from, confidence, created_at, block) -> str:
     """Write one diagram artifact. Frontmatter key order is fixed, so a
@@ -404,13 +440,30 @@ def write_diagram(out_dir, *, dia_id, title, level, container, description,
     return path
 
 
-def generate(design_dir: str, model: dict, created_at: str) -> dict:
-    """Write every view and return the JSON summary."""
-    dset = DesignSet.load(design_dir)
+def generate(
+    design_dir: str, model: dict, created_at: str, dset: Optional["DesignSet"] = None
+) -> dict:
+    """Write every view and return the JSON summary.
+
+    ``dset`` lets a caller that already loaded the design set (``main`` does,
+    to run `validate_model`) pass it through instead of re-reading every file
+    a second time; a fresh caller may omit it and let this load its own.
+    """
+    if dset is None:
+        dset = DesignSet.load(design_dir)
     out_dir = os.path.join(design_dir, "diagrams")
     confidence = model.get("confidence", "high")
     written = []
 
+    # `depicts` drives the `traces_to.diagrams` back-fill below, and it is
+    # deliberately asymmetric: every external component is recorded against
+    # BOTH DIA-001 and DIA-002 (it is drawn as a `System_Ext` in each), but
+    # an internal component is recorded only against its own component
+    # view, never against DIA-001/DIA-002 too, even though it also appears
+    # there (inside the `System`/`Container` box, not as its own node — it
+    # has no alias of its own to point back at in those two views). The
+    # asymmetry tracks what each view actually names as a distinct element,
+    # not merely what it draws.
     externals = [c for c in sorted(dset.components) if dset.boundary(c) == "external"]
     path = write_diagram(
         out_dir,
@@ -470,11 +523,13 @@ def generate(design_dir: str, model: dict, created_at: str) -> dict:
         written.append({"id": dia_id, "path": path, "level": "component",
                         "depicts": members})
 
+    removed = _remove_stale_diagrams(out_dir, {entry["path"] for entry in written})
+
     back_fill: Dict[str, List[str]] = {}
     for entry in written:
         for cmp_id in entry["depicts"]:
             back_fill.setdefault(cmp_id, []).append(entry["id"])
-    return {"diagrams": written, "traces_to_diagrams":
+    return {"diagrams": written, "removed": removed, "traces_to_diagrams":
             {k: sorted(v) for k, v in sorted(back_fill.items())}}
 
 
@@ -482,9 +537,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Generate C4 views for a design set.")
     parser.add_argument("design_dir", nargs="?", default=".sdlc/design")
     parser.add_argument("--model", required=True, help="draft_diagram_model JSON")
-    parser.add_argument("--created-at", default=None,
-                        help="YYYY-MM-DD stamped on every diagram")
+    parser.add_argument(
+        "--created-at", required=True,
+        help="YYYY-MM-DD stamped on every diagram (diagrams must carry the "
+             "same date as the rest of the set)",
+    )
     args = parser.parse_args(argv)
+    if not args.created_at:
+        parser.error("argument --created-at: must not be empty")
 
     if not os.path.isdir(args.design_dir):
         print(f"error: no such design directory: {args.design_dir}", file=sys.stderr)
@@ -503,13 +563,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"model: {err}", file=sys.stderr)
         return 1
 
-    created_at = args.created_at or ""
-    if not created_at:
-        print("error: --created-at is required (diagrams must carry the same "
-              "date as the rest of the set)", file=sys.stderr)
-        return 2
-
-    print(json.dumps(generate(args.design_dir, model, created_at), indent=2))
+    print(json.dumps(generate(args.design_dir, model, args.created_at, dset), indent=2))
     return 0
 
 
