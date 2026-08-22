@@ -371,6 +371,34 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
                  "DIA-003-component-view-desktop-app.md"):
         assert (out / "diagrams" / name).exists()
 
+def test_unbalanced_parens_in_prose_still_pass_the_validator(tmp_path):
+    """A component's `responsibility` is free-form prose the model is not
+    wrong to write with a lone, unmatched paren (`Owns the order lifecycle
+    (submission to settlement.`) — no documented recovery fits, because the
+    content is not a defect: re-dispatching c4-generator cannot help, and
+    nothing forbids a lone paren in prose. `q()` strips parens from Mermaid
+    label text so the emitted line stays balanced regardless of what the
+    source prose did."""
+    import validate_design as vd
+
+    design_dir, model_path, _ = case("single-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    cmp_path = out / "components" / "CMP-001-order-service.md"
+    original = "responsibility: Owns the order lifecycle from submission to settlement."
+    unbalanced = "responsibility: Owns the order lifecycle (submission to settlement."
+    text = cmp_path.read_text()
+    assert original in text
+    cmp_path.write_text(text.replace(original, unbalanced))
+
+    assert g4.main([str(out), "--model", model_path, "--created-at", "2026-08-22"]) == 0
+    body = (out / "diagrams" / "DIA-003-component-view-order-app.md").read_text()
+    assert "lifecycle submission" in body, "'(' must be stripped, not balanced"
+    for line in body.split("```mermaid")[1].splitlines():
+        assert line.count("(") == line.count(")"), line
+    assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
+
+
 def test_regeneration_removes_a_stale_diagram_file(tmp_path):
     """C1 regression: renaming a container's `name` (same `key`) changes the
     component view's filename — `write_diagram` slugs the diagram's

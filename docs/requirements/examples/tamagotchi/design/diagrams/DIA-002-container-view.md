@@ -18,7 +18,7 @@ C4Container
   title Container View — Tamagotchi Desktop Pet
   Person(actor_owner, "Pet Owner", "The single local user who cares for the pet.")
   System_Boundary(sys, "Tamagotchi Desktop Pet") {
-    Container(ctr_desktop_app, "Desktop App", "Tauri (Rust core + system webview)", "One local process: simulation, persistence and UI.")
+    Container(ctr_desktop_app, "Desktop App", "Tauri Rust core + system webview", "One local process: simulation, persistence and UI.")
   }
   System_Ext(ext_cmp_010, "OS Notification Service", "Presents a message to the owner on behalf of an application that is not in focus.")
   System_Ext(ext_cmp_011, "System Clock", "Reports the current wall-clock instant.")

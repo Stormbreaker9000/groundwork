@@ -102,8 +102,19 @@ def q(text: Any) -> str:
     itself), so there is no second parser to stay in agreement with — inner
     quotes become single quotes rather than escapes because Mermaid has no
     escape syntax inside these, and an unbalanced quote is exactly what
-    validate_design.py rejects."""
-    return '"' + _sanitized(text) + '"'
+    validate_design.py rejects.
+
+    A literal ``(`` or ``)`` is stripped, not preserved: `check_diagram_body`
+    counts parens across the WHOLE rendered line — the surrounding
+    ``Component(...)``/``Rel(...)`` call syntax included, not just this
+    literal — so one stray paren in free-form source prose (a component's
+    `responsibility`, an interface's title, ...) is enough to make an
+    otherwise-correct line fail that check, and the error names the diagram
+    rather than the prose that caused it. Mermaid does not require the
+    character inside a label, and this generator is the only legitimate
+    writer of a diagram body, so there is no hand-authored parenthesization
+    in this text to preserve."""
+    return '"' + _sanitized(text).replace("(", "").replace(")", "") + '"'
 
 
 def yaml_q(text: Any) -> str:

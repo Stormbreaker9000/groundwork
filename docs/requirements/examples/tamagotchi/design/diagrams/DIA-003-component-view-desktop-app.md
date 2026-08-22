@@ -18,15 +18,15 @@ created_at: 2026-08-22
 C4Component
   title Component View — Desktop App
   Container_Boundary(ctr_desktop_app, "Desktop App") {
-    Component(cmp_001, "Local State Store", "Tauri (Rust core + system webview)", "Owns the application's durable local state as the single source of truth across process lifetimes.")
-    Component(cmp_002, "Decay Engine", "Tauri (Rust core + system webview)", "Computes the Decay accrued by a pet's Stats over a given elapsed interval.")
-    Component(cmp_003, "Pet State Manager", "Tauri (Rust core + system webview)", "Owns the pet's current Stat values as the single in-session authority over them.")
-    Component(cmp_004, "Pet Lifecycle Manager", "Tauri (Rust core + system webview)", "Owns the pet's lifecycle state and every transition between its values.")
-    Component(cmp_005, "Mood Evaluator", "Tauri (Rust core + system webview)", "Derives the pet's current Mood as a named semantic value.")
-    Component(cmp_006, "Pet Window", "Tauri (Rust core + system webview)", "Presents the pet to the owner and turns the owner's input into care actions.")
-    Component(cmp_007, "Session Coordinator", "Tauri (Rust core + system webview)", "Owns the order in which the pet is restored at launch, caught up to the present, and committed at shutdown.")
-    Component(cmp_008, "Care Reminder Scheduler", "Tauri (Rust core + system webview)", "Decides when a care reminder is due for the owner.")
-    Component(cmp_009, "Diagnostic Log", "Tauri (Rust core + system webview)", "Owns the application's local diagnostic record.")
+    Component(cmp_001, "Local State Store", "Tauri Rust core + system webview", "Owns the application's durable local state as the single source of truth across process lifetimes.")
+    Component(cmp_002, "Decay Engine", "Tauri Rust core + system webview", "Computes the Decay accrued by a pet's Stats over a given elapsed interval.")
+    Component(cmp_003, "Pet State Manager", "Tauri Rust core + system webview", "Owns the pet's current Stat values as the single in-session authority over them.")
+    Component(cmp_004, "Pet Lifecycle Manager", "Tauri Rust core + system webview", "Owns the pet's lifecycle state and every transition between its values.")
+    Component(cmp_005, "Mood Evaluator", "Tauri Rust core + system webview", "Derives the pet's current Mood as a named semantic value.")
+    Component(cmp_006, "Pet Window", "Tauri Rust core + system webview", "Presents the pet to the owner and turns the owner's input into care actions.")
+    Component(cmp_007, "Session Coordinator", "Tauri Rust core + system webview", "Owns the order in which the pet is restored at launch, caught up to the present, and committed at shutdown.")
+    Component(cmp_008, "Care Reminder Scheduler", "Tauri Rust core + system webview", "Decides when a care reminder is due for the owner.")
+    Component(cmp_009, "Diagnostic Log", "Tauri Rust core + system webview", "Owns the application's local diagnostic record.")
   }
   System_Ext(ext_cmp_010, "OS Notification Service", "Presents a message to the owner on behalf of an application that is not in focus.")
   System_Ext(ext_cmp_011, "System Clock", "Reports the current wall-clock instant.")
