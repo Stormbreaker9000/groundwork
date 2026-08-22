@@ -155,7 +155,7 @@ draft_diagram_model:
       description: Out-of-band confirmation sender.
       components: [CMP-004]
   confidence: high
-  reason: One deployable; no split.
+  reason: Two deployables — inline requests vs. out-of-band notification.
 ```
 
 `CMP-003` — the fixture's third component — is `boundary: external` and

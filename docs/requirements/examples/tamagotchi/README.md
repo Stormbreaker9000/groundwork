@@ -101,8 +101,11 @@ before that tool existed. The diagrams are a projection of the component and
 interface frontmatter, so they cannot contradict the artifacts — but they were
 not part of the run that produced the rest of the set, and `traces_to.diagrams`
 is deliberately not back-filled onto the components, because that would make a
-second writer of a set nothing else was rewriting. STO-219 regenerates the
-whole set with the back-fill in place.
+second writer of a set nothing else was rewriting. For the same reason,
+`index.yaml` still lists the 23 CMP/IF artifacts and none of the 3 diagrams —
+a real formatter run indexes them alongside everything else, but adding those
+entries here by hand would be the same second-writer problem. STO-219
+regenerates the whole set with the back-fill and the index entries in place.
 
 ## What the design set demonstrates
 

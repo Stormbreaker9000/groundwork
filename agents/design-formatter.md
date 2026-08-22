@@ -375,6 +375,12 @@ artifacts:
     status: draft
     confidence: medium
     path: interfaces/IF-001-order-placement-api.md
+  - id: DIA-001
+    type: diagram
+    title: System Context
+    status: draft
+    confidence: high
+    path: diagrams/DIA-001-system-context.md
 review_queue:
   - id: IF-001
     confidence: low

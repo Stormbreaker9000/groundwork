@@ -156,8 +156,8 @@ Mermaid node aliases are computed from artifact IDs by a fixed rule:
 
 | Element | Alias | Example |
 |---|---|---|
-| Internal component | `cmp` + digits | `CMP-001` → `cmp001` |
-| External component | `ext_cmp` + digits | `CMP-010` → `ext_cmp010` |
+| Internal component | `cmp_` + digits | `CMP-001` → `cmp_001` |
+| External component | `ext_cmp_` + digits | `CMP-010` → `ext_cmp_010` |
 | Container | `ctr_` + key | `desktop-app` → `ctr_desktop_app` |
 | Actor | `actor_` + key | `owner` → `actor_owner` |
 | The system itself | `sys` | — |

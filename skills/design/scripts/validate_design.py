@@ -22,7 +22,7 @@ This tool:
   4. Runs cross-file (set-level) checks:
        - IDs are globally unique.
        - The ID prefix matches ``type`` (CMP->component, IF->interface,
-         ADR->adr).
+         ADR->adr, DIA->diagram).
        - ``depends_on`` resolves: every interface a component consumes exists
          in this set.
        - ``provider`` resolves: every interface's provider is a known component
