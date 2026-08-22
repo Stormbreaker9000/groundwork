@@ -259,6 +259,34 @@ def test_model_container_without_a_key_is_rejected():
     assert any("no 'key'" in e for e in errors)
 
 
+def test_model_duplicate_container_keys_are_rejected():
+    """Two containers keyed `app` would otherwise emit a Container view
+    declaring `ctr_app` twice with contradicting labels, and two component
+    views both claiming `container: app` — both structural gates were
+    passing over that before this check existed."""
+    design_dir, model_path, _ = case("single-container")
+    dset = g4.DesignSet.load(design_dir)
+    model = load_model(model_path)
+    model["containers"].append({
+        "key": model["containers"][0]["key"], "name": "Duplicate",
+        "technology": "Python", "description": "…", "components": [],
+    })
+    errors = g4.validate_model(model, dset)
+    assert any("used by more than one container" in e for e in errors)
+
+
+def test_model_container_with_no_components_is_rejected():
+    design_dir, model_path, _ = case("single-container")
+    dset = g4.DesignSet.load(design_dir)
+    model = load_model(model_path)
+    model["containers"].append({
+        "key": "empty", "name": "Empty", "technology": "Python",
+        "description": "…", "components": [],
+    })
+    errors = g4.validate_model(model, dset)
+    assert any("empty 'components' list" in e for e in errors)
+
+
 def test_component_views_match_golden(tmp_path):
     for name, files in (
         ("single-container", ["DIA-003-component-view-order-app.md"]),

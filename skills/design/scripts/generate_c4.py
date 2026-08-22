@@ -240,11 +240,24 @@ def validate_model(model: dict, dset: DesignSet) -> List[str]:
     container, and nothing else placed in one."""
     errors: List[str] = []
     placement: Dict[str, List[str]] = {}
+    seen_keys: Set[str] = set()
     for container in model.get("containers") or []:
         key = container.get("key")
         if not key:
             errors.append("a container has no 'key'")
             continue
+        if key in seen_keys:
+            errors.append(
+                f"container key '{key}' is used by more than one container "
+                f"— every container needs a distinct key"
+            )
+        else:
+            seen_keys.add(key)
+        if not container.get("components"):
+            errors.append(
+                f"container '{key}' has an empty 'components' list — a "
+                f"container with nothing placed in it is not a deployable unit"
+            )
         for cmp_id in container.get("components") or []:
             placement.setdefault(cmp_id, []).append(key)
 
