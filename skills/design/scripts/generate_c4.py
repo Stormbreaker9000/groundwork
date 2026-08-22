@@ -175,14 +175,29 @@ class DesignSet:
 
     @staticmethod
     def _read_asrs(design_dir: str) -> List[str]:
+        """Every ASR ID in `drivers.md`'s ASR section, or ``[]``.
+
+        An honest "no ASRs" `drivers.md` (the heading present, `- None
+        identified.` under it) and a missing-or-unreadable `drivers.md` both
+        legitimately return `[]` — but only the first is a legal outcome.
+        The second is a malformed set silently shipping DIA-001 with an
+        empty `traces_from`, so it gets a stderr warning distinguishing it
+        from the honest case. This never changes the return value or this
+        tool's exit code — `generate()` still runs on whatever ASRs it
+        found, same as before; the warning is the only difference.
+        """
         path = os.path.join(design_dir, "drivers.md")
         try:
             with open(path, "r", encoding="utf-8") as handle:
                 text = handle.read()
-        except OSError:
+        except OSError as exc:
+            print(f"warning: could not read {path} ({exc}) — diagram "
+                  "traces_from will be empty", file=sys.stderr)
             return []
         section = text.split(ASR_HEADING, 1)
         if len(section) < 2:
+            print(f"warning: {path} has no '{ASR_HEADING}' heading — "
+                  "diagram traces_from will be empty", file=sys.stderr)
             return []
         out: List[str] = []
         for line in section[1].splitlines():

@@ -599,3 +599,53 @@ def test_created_at_is_required_at_the_argparse_level(tmp_path):
         g4.main([str(out), "--model", model_path])
     assert excinfo.value.code == 2
 
+
+def test_missing_asr_heading_warns_on_stderr(tmp_path, capsys):
+    """A `drivers.md` with no `## Architecturally Significant Requirements`
+    heading at all is indistinguishable, by return value, from a legal
+    `drivers.md` whose ASR section exists but is empty ("None identified")
+    — `_read_asrs` returns `[]` for both. Only the missing-heading case is a
+    problem worth a human's attention: DIA-001 will silently ship with an
+    empty `traces_from` because of a malformed file, not a genuine "no ASRs"
+    answer. Distinguish them on stderr without changing either's return
+    value or exit code."""
+    design_dir, _, _ = case("single-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    (out / "drivers.md").write_text("# Architecture Drivers\n\nNothing here.\n")
+
+    capsys.readouterr()
+    asrs = g4.DesignSet._read_asrs(str(out))
+    captured = capsys.readouterr()
+    assert asrs == []
+    assert "drivers.md" in captured.err
+    assert "Architecturally Significant Requirements" in captured.err
+
+
+def test_missing_drivers_file_warns_on_stderr(tmp_path):
+    """An unreadable/absent `drivers.md` is the same silent-empty-list
+    failure mode as a missing heading, and gets the same stderr warning."""
+    out = tmp_path / "design"
+    out.mkdir()
+    asrs = g4.DesignSet._read_asrs(str(out))
+    assert asrs == []
+
+
+def test_empty_asr_section_is_silent(tmp_path, capsys):
+    """A `drivers.md` whose ASR heading is present but has no bullets under
+    it ("None identified.") is a legal, honest answer — this must NOT warn,
+    or every project with genuinely zero ASRs would get a spurious warning
+    on every run."""
+    out = tmp_path / "design"
+    out.mkdir()
+    (out / "drivers.md").write_text(
+        "# Architecture Drivers\n\n"
+        "## Architecturally Significant Requirements\n\n"
+        "- None identified.\n\n"
+        "## Tradeoffs\n\n- None identified.\n"
+    )
+    capsys.readouterr()
+    asrs = g4.DesignSet._read_asrs(str(out))
+    captured = capsys.readouterr()
+    assert asrs == []
+    assert captured.err == ""
