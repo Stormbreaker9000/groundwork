@@ -253,6 +253,7 @@ result:
 | `docs/requirements/examples/tamagotchi/REGENERATION.md` | The divergence record (D8) |
 | `docs/requirements/examples/tamagotchi/clarification-context.yaml` | The committed M1 replay input (D1) |
 | `docs/requirements/examples/gdpr/clarification-context.yaml` | The committed M1 replay input (D1) |
+| `docs/requirements/examples/tamagotchi/design-context.yaml` | The M2 replay input, rescued from gitignored scratch and committed so the design stage is replayable too (D1) |
 
 **Modified**
 
