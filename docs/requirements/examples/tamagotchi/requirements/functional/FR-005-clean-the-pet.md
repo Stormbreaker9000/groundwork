@@ -3,15 +3,15 @@ id: FR-005
 type: functional
 tier: solution
 title: Clean the pet
-description: When the owner selects the clean action, the system shall reset the pet's cleanliness stat to its maximum value.
-rationale: Cleaning is a distinct care need whose neglect contributes to sickness; giving it a dedicated restorative action keeps the care loop varied and legible.
-fit_criterion: Each clean action sets the cleanliness stat to exactly its maximum value regardless of the prior value, verified from starting values of 0, mid-range, and near-maximum.
+description: When the owner selects the clean action, the system shall increase the pet's hygiene stat by the clean interaction's defined increment, up to the stat's maximum value.
+rationale: Clean is one of the four care interactions the owner performs to counteract stat decay; without it sustained hygiene neglect cannot be remedied, and unresolved hygiene decay is one of the inputs to the sickness progression this pet must be protected from.
+fit_criterion: The hygiene stat increases by the configured clean increment (or is unchanged if already at maximum) in 100% of clean action invocations in acceptance tests.
 priority: must
-confidence: high
+confidence: medium
 verification_method: test
 ears_pattern: event
 status: draft
-created_at: 2026-07-10
+created_at: 2026-08-24
 traces_from: []
 traces_to:
   design: []
@@ -24,22 +24,31 @@ parent_scope: null
 # FR-005 — Clean the pet
 
 ## Description
-When the owner selects the clean action, the system shall reset the pet's
-cleanliness stat to its maximum value.
+When the owner selects the clean action, the system shall increase the pet's
+hygiene stat by the clean interaction's defined increment, up to the stat's maximum
+value.
 
 ## Rationale
-Cleaning is a distinct care need whose neglect contributes to sickness; giving it a
-dedicated restorative action keeps the care loop varied and legible.
+Clean is one of the four care interactions the owner performs to counteract stat
+decay; without it sustained hygiene neglect cannot be remedied, and unresolved
+hygiene decay is one of the inputs to the sickness progression this pet must be
+protected from.
 
 ## Acceptance Criteria
-### AC-1 — Cleaning restores cleanliness fully
+### AC-1 — Cleaning increases hygiene below maximum
 ```gherkin
-Given a pet with cleanliness below its maximum
+Given the pet's hygiene stat is below its maximum value
 When the owner selects the clean action
-Then the cleanliness stat is set to its maximum value
+Then the hygiene stat increases by the clean interaction's defined increment, not exceeding the maximum value
+```
+
+### AC-2 — Cleaning at maximum hygiene has no further effect
+```gherkin
+Given the pet's hygiene stat is already at its maximum value
+When the owner selects the clean action
+Then the hygiene stat remains at its maximum value with no error
 ```
 
 ## Fit Criterion
-Each clean action sets the cleanliness stat to exactly its maximum value regardless
-of the prior value, verified from starting values of 0, mid-range, and
-near-maximum.
+The hygiene stat increases by the configured clean increment (or is unchanged if
+already at maximum) in 100% of clean action invocations in acceptance tests.

@@ -1,0 +1,91 @@
+# Reconstructed replay (STO-219) of skills/requirements/SKILL.md Phase 4.5's
+# "Elicitation context" block, from what the published tamagotchi requirement
+# set already records — not a re-interview. Every value below is traceable to
+# requirements/assumptions.md, requirements/glossary.md, the requirement
+# bodies under requirements/{functional,non-functional,constraints,
+# business-rules}/, and CONSOLIDATED.md.
+#
+# Input to agents/requirements-orchestrator.md Stage 1 (clarification_context,
+# defined at requirements-orchestrator.md:53).
+clarification_context:
+  problem_domain: >
+    A desktop virtual pet ("tamagotchi") for a single local owner, built so
+    that caring for it forms a genuine ongoing habit rather than an
+    in-session game: the pet persists between sessions and decays in real
+    time whether or not the application is running, so the owner must return
+    periodically to keep it well (FR-001 rationale, FR-002 rationale). The
+    underlying business/user goal is the attachment and daily-return loop
+    that FR-001 and FR-002 both name as the reason the product exists.
+  stakeholders_and_users: >
+    Primary user: a single local desktop owner per installation — A-1 states
+    explicitly that no multi-user, account, server, or operator roles apply.
+    Every interaction in the functional requirements is first-person ("the
+    owner selects the feed action" — FR-003, FR-004, FR-005, FR-006).
+    Secondary users: keyboard-only and screen-reader (assistive-technology)
+    users, named explicitly in scope by NFR-003 ("Keyboard and screen-reader
+    users are explicitly in scope"). No admin, support, auditor, or
+    third-party role is described anywhere in the published set.
+  core_functionality: >
+    Persist pet state to local storage on every stat change or app close
+    (FR-001); apply offline-elapsed decay on launch, computed from real
+    wall-clock time since the last save (FR-002); four care interactions —
+    feed (FR-003), play (FR-004), clean (FR-005), and put the pet to sleep
+    (FR-006); display a pet mood expression that tracks current stat
+    thresholds (FR-007); progress sustained neglect through sickness toward
+    death (FR-008); optional local, non-network care-reminder notifications
+    (FR-009); and recover from a missing or corrupted save file by starting a
+    fresh default pet while quarantining the unreadable file (FR-010).
+  success_criteria: >
+    FR-001's rationale names "the attachment and daily-return loop" as "the
+    core success criterion." FR-002's rationale frames the same goal as "the
+    periodic check-in habit the product exists to create," and NFR-006's
+    rationale calls it "the habit-formation network effect." Each
+    requirement also carries its own measurable fit criterion, e.g.: FR-001—
+    100% of restarts restore exact state across 50 restart cycles; FR-002 /
+    NFR-001 — decay within +/-1 stat unit of the reference model for offline
+    intervals from 1 minute to 30 days; NFR-002 — idle CPU <=1% of one core
+    and <=150 MB resident memory over a 10-minute window; NFR-004 — 100%
+    recovery across 200 fault-injection trials with 0 corrupt loads.
+  non_functional_concerns: >
+    Functional correctness of offline-elapsed decay (NFR-001); an idle CPU
+    and memory footprint budget for an always-on background process
+    (NFR-002); keyboard and screen-reader accessibility of every control and
+    mood indicator (NFR-003); crash-safe, atomic state recovery after a
+    forced termination or power loss (NFR-004); local-only data handling
+    with no network transmission absent explicit opt-in (NFR-005);
+    cross-platform desktop support across Windows, macOS, and Linux from one
+    codebase (NFR-006); and local diagnostic logging of every decay
+    computation and lifecycle transition (NFR-007).
+  constraints: >
+    The delivered runtime must fit an idle-footprint budget on the reference
+    machine, excluding any runtime whose baseline overhead alone would
+    exceed it — e.g., a full Chromium/Electron shell (CON-001). The
+    application must operate fully offline, with no outbound network
+    connection for any core pet-simulation functionality (CON-002). The
+    product must target Windows, macOS, and Linux desktop environments, with
+    no design decision that forecloses shipping on any of the three, though
+    which platforms ship first in v1 is a separate open question (CON-003,
+    Q-3).
+  out_of_scope: >
+    Multi-user, account, server, or operator functionality — A-1 states a
+    single local desktop owner per installation. Any network or cloud
+    dependency for core pet-simulation function, and any telemetry beyond an
+    explicit opt-in (CON-002, NFR-005). Mobile or other non-desktop
+    platforms — the stated target is Windows, macOS, and Linux desktop only
+    (NFR-006, CON-003). A user-tunable color palette in v1 — A-4 treats
+    colorblind-safe palettes plus shape/text redundancy as sufficient
+    without one.
+  open_questions: >
+    Q-1: What is the exact decay-curve and balance tuning (rates,
+    thresholds, increments)? (owner: product/design) — A-5 notes the
+    reference decay model and its balance values are placeholders pending
+    tuning.
+    Q-2: Is death permanent, or a configurable soft reset? (owner: product)
+    — still open. BR-001 and FR-008 are held at low confidence pending this
+    answer.
+    Q-3: Which platforms ship in v1 — all three, or Windows-first? (owner:
+    product) — still open. CON-003 and NFR-006 are held at low/medium
+    confidence pending this answer.
+    Q-4: Which framework/runtime is chosen given the footprint constraint
+    (Electron vs Tauri vs native)? (owner: engineering) — still open. CON-001
+    and NFR-002 are held at low confidence pending this answer.
