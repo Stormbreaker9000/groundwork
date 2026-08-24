@@ -378,6 +378,43 @@ def test_context_view_dedupes_when_several_internals_share_an_external_edge():
     }
     block = g4.render_context(model, dset)
     assert block.count("Rel(sys, ext_cmp_003,") == 1
+def test_container_view_dedupes_two_members_of_one_container_sharing_an_edge():
+    """Container level collapses each component into its container, so two
+    members of one container depending on the same interface become the
+    same fact -- "this container depends on that one" -- and
+    `render_container` dedupes on `(source, destination, interface)` to
+    state it once.
+
+    `render_context` and `render_component` each already pin their own
+    collapse. `render_container`'s was pinned only indirectly, by the
+    tamagotchi golden, where five internal components share IF-001; that
+    made the guard's coverage a side effect of one worked example rather
+    than a stated rule. Removing the `key in seen` guard must fail here."""
+    dset = g4.DesignSet(
+        components={
+            "CMP-001": {"boundary": "internal", "depends_on": ["IF-001"],
+                        "title": "Consumer One", "responsibility": "…"},
+            "CMP-002": {"boundary": "internal", "depends_on": ["IF-001"],
+                        "title": "Consumer Two", "responsibility": "…"},
+            "CMP-003": {"boundary": "external", "depends_on": [],
+                        "title": "Clock", "responsibility": "…"},
+        },
+        interfaces={
+            "IF-001": {"provider": "CMP-003", "title": "Time Source"},
+        },
+        asrs=[],
+    )
+    model = {
+        "system_name": "Sys",
+        "system_description": "…",
+        "actors": [],
+        "containers": [{"key": "app", "name": "App", "technology": "…",
+                        "description": "…",
+                        "components": ["CMP-001", "CMP-002"]}],
+    }
+    block = g4.render_container(model, dset)
+    assert block.count("Rel(ctr_app, ext_cmp_003,") == 1
+
 
 
 def test_worked_example_generates_a_valid_diagram_set(tmp_path):
