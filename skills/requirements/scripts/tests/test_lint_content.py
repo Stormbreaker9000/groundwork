@@ -2,6 +2,8 @@
 import json
 import os
 
+import pytest
+
 import lint_requirements_content as lc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -241,3 +243,17 @@ def test_mentions_matches_parenthesised_multiword_term():
 def test_mentions_cat_does_not_match_inside_category():
     """Regression guard: word-boundary anchoring must still hold for plain terms."""
     assert not lc._mentions("assign a Category to each item", "Cat")
+
+
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+EXAMPLES = os.path.join(REPO_ROOT, "docs", "requirements", "examples")
+
+
+@pytest.mark.parametrize("name", ["tamagotchi", "gdpr"])
+def test_shipped_example_has_no_error_findings(name):
+    """Deliberately not "has no findings". The linter always exits 0 and
+    the GDPR set carries one known `passive-nameless` warn, so `clean` is
+    not a state this pins. This catches a future rule promoted to `error`
+    silently invalidating a published set."""
+    findings = lc.lint_dir(os.path.join(EXAMPLES, name, "requirements"))
+    assert [f for f in findings if f.severity == "error"] == []
