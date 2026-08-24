@@ -28,6 +28,13 @@ def run(design_dir):
     return vd.main([design_dir, "--schema", SCHEMA])
 
 
+def _copy_valid(tmp_path):
+    """A writable copy of the valid fixture set, for mutate-then-fail cases."""
+    design_dir = tmp_path / "design"
+    shutil.copytree(VALID_DIR, design_dir)
+    return design_dir
+
+
 # ---------------------------------------------------------------------------
 # Valid fixtures
 # ---------------------------------------------------------------------------
@@ -55,15 +62,15 @@ def test_zero_adr_run_passes(tmp_path):
 
 
 def test_skip_files_and_subtrees_are_ignored(capsys):
-    """assumptions.md, index.yaml and the diagrams/ subtree must not be
-    validated as artifacts. adr/ IS validated as of STO-100."""
+    """assumptions.md, drivers.md and index.yaml must not be validated as
+    artifacts. adr/ IS validated as of STO-100, and diagrams/ as of STO-101."""
     run(VALID_DIR)
     out = capsys.readouterr().out
     assert "assumptions.md" not in out
     assert "drivers.md" not in out
     assert "index.yaml" not in out
-    assert "c4-container" not in out
     assert "ADR-001" in out
+    assert "DIA-002" in out
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +114,7 @@ def test_prefix_to_type_mapping():
         "CMP": "component",
         "IF": "interface",
         "ADR": "adr",
+        "DIA": "diagram",
     }
 
 
@@ -692,3 +700,207 @@ def test_shipped_tamagotchi_example_passes_structural_gate(capsys):
     code = run(example)
     out = capsys.readouterr().out
     assert code == 0, out
+
+
+# ---------------------------------------------------------------------------
+# Diagram artifacts (STO-101)
+# ---------------------------------------------------------------------------
+_COMPONENT_VIEW_FIXTURE = '''---
+id: DIA-003
+type: diagram
+title: Component View — Order App
+description: Internal structure of the Order App container.
+level: component
+container: order-app
+traces_from: [FR-001]
+traces_to: {}
+status: draft
+confidence: high
+created_at: 2026-08-22
+---
+
+# Component View — Order App
+
+```mermaid
+C4Component
+  title Component View — Order App
+  Container_Boundary(ctr_order_app, "Order App") {
+    Component(cmp_001, "order-service", "Python", "Accepts orders")
+  }
+```
+'''
+
+
+def test_valid_diagram_is_discovered_and_passes(capsys):
+    """diagrams/ is no longer skipped: a well-formed DIA- artifact validates."""
+    code = run(VALID_DIR)
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "DIA-002" in out
+
+
+def test_diagram_bad_level_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("level: container", "level: deployment"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "level" in capsys.readouterr().out
+
+
+def test_component_level_diagram_requires_container(tmp_path, capsys):
+    """level: component names the container it depicts; without it the file
+    claims to show the internals of nothing in particular."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("level: container", "level: component"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "container" in capsys.readouterr().out
+
+
+def test_non_component_level_rejects_container(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace("level: container", "level: container\ncontainer: app")
+    )
+    code = run(str(design_dir))
+    assert code != 0
+
+
+def test_diagram_prefix_type_mismatch_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("type: diagram", "type: component"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "prefix" in capsys.readouterr().out
+
+
+def test_diagram_without_mermaid_block_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    body = path.read_text().split("```mermaid")[0]
+    path.write_text(body)
+    code = run(str(design_dir))
+    assert code != 0
+    assert "mermaid" in capsys.readouterr().out
+
+
+def test_diagram_header_must_match_level(tmp_path, capsys):
+    """A file that says level: container and draws a C4Context is two
+    different claims about the same diagram."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("C4Container", "C4Context"))
+    code = run(str(design_dir))
+    assert code != 0
+    out = capsys.readouterr().out
+    assert "C4Container" in out and "C4Context" in out
+
+
+def test_diagram_rel_to_undeclared_alias_fails(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace(
+            'Rel(actor_customer, ctr_app, "places orders")',
+            'Rel(actor_customer, ctr_ghost, "places orders")',
+        )
+    )
+    code = run(str(design_dir))
+    assert code != 0
+    assert "ctr_ghost" in capsys.readouterr().out
+
+
+def test_diagram_unbalanced_delimiters_fail(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(
+        path.read_text().replace(
+            '"stripe-gateway", "Charge cards',
+            '"stripe-gateway, "Charge cards',
+        )
+    )
+    code = run(str(design_dir))
+    assert code != 0
+
+
+def test_two_mermaid_blocks_fail(tmp_path, capsys):
+    """One diagram per file is the atomic-artifact rule, applied to bodies."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text() + "\n```mermaid\nC4Container\n```\n")
+    code = run(str(design_dir))
+    assert code != 0
+
+
+def test_diagram_alias_must_resolve_to_a_component(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("ext_cmp_002", "ext_cmp_404"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "CMP-404" in capsys.readouterr().out
+
+
+def test_diagram_alias_boundary_must_match(tmp_path, capsys):
+    """ext_ claims the component is external. CMP-001 is internal, so the
+    diagram and the set disagree about where the boundary runs."""
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace("ext_cmp_002", "ext_cmp_001"))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "boundary" in capsys.readouterr().out
+
+
+def test_diagram_interface_ref_must_resolve(tmp_path, capsys):
+    design_dir = _copy_valid(tmp_path)
+    path = design_dir / "diagrams" / "DIA-002-container-view.md"
+    path.write_text(path.read_text().replace('"IF-001"', '"IF-999"'))
+    code = run(str(design_dir))
+    assert code != 0
+    assert "IF-999" in capsys.readouterr().out
+
+
+def test_component_view_covering_every_component_passes(tmp_path):
+    """CMP-001 is the set's only internal component, and this view draws it."""
+    design_dir = _copy_valid(tmp_path)
+    (design_dir / "diagrams" / "DIA-003-component-view-order-app.md").write_text(
+        _COMPONENT_VIEW_FIXTURE
+    )
+    assert run(str(design_dir)) == 0
+
+
+def test_component_drawn_in_no_component_view_fails(tmp_path, capsys):
+    """Once any component view exists, a component in none of them is
+    invisible — the set claims a decomposition it never draws."""
+    design_dir = _copy_valid(tmp_path)
+    (design_dir / "diagrams" / "DIA-003-component-view-order-app.md").write_text(
+        _COMPONENT_VIEW_FIXTURE.replace(
+            '    Component(cmp_001, "order-service", "Python", "Accepts orders")\n',
+            "",
+        )
+    )
+    code = run(str(design_dir))
+    assert code != 0
+    assert "CMP-001" in capsys.readouterr().out
+
+
+def test_component_drawn_in_two_component_views_fails(tmp_path, capsys):
+    """A component in two component views is in two containers at once."""
+    design_dir = _copy_valid(tmp_path)
+    (design_dir / "diagrams" / "DIA-003-component-view-order-app.md").write_text(
+        _COMPONENT_VIEW_FIXTURE
+    )
+    (design_dir / "diagrams" / "DIA-004-component-view-worker.md").write_text(
+        _COMPONENT_VIEW_FIXTURE.replace("DIA-003", "DIA-004")
+        .replace("container: order-app", "container: worker")
+        .replace("ctr_order_app", "ctr_worker")
+    )
+    code = run(str(design_dir))
+    assert code != 0
+    out = capsys.readouterr().out
+    assert "CMP-001" in out and "DIA-004" in out

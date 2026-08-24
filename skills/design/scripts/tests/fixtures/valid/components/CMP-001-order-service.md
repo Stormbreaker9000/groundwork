@@ -9,7 +9,7 @@ traces_to:
   adr:
     - ADR-001
   diagrams:
-    - c4-container
+    - DIA-002
   code: []
   tests: []
 status: reviewed

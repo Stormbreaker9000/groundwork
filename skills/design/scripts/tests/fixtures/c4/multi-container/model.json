@@ -1,0 +1,31 @@
+{
+  "system_name": "Order System",
+  "system_description": "Accepts customer orders and settles them.",
+  "actors": [
+    {
+      "key": "customer",
+      "name": "Customer",
+      "description": "Places orders.",
+      "relationship": "places orders",
+      "entrypoint": "app"
+    }
+  ],
+  "containers": [
+    {
+      "key": "app",
+      "name": "Order App",
+      "technology": "Python",
+      "description": "Single deployable service.",
+      "components": ["CMP-001", "CMP-002"]
+    },
+    {
+      "key": "worker",
+      "name": "Worker",
+      "technology": "Python",
+      "description": "Out-of-band confirmation sender.",
+      "components": ["CMP-004"]
+    }
+  ],
+  "confidence": "high",
+  "reason": "Two deployables: the app handles requests inline, the worker sends confirmations out of band."
+}
