@@ -380,6 +380,44 @@ def test_context_view_dedupes_when_several_internals_share_an_external_edge():
     assert block.count("Rel(sys, ext_cmp_003,") == 1
 
 
+def test_container_view_dedupes_two_members_of_one_container_sharing_an_edge():
+    """Container level collapses each component into its container, so two
+    members of one container depending on the same interface become the
+    same fact -- "this container depends on that one" -- and
+    `render_container` dedupes on `(source, destination, interface)` to
+    state it once.
+
+    `render_context` and `render_component` each already pin their own
+    collapse. `render_container`'s was pinned only indirectly, by the
+    tamagotchi golden, where five internal components share IF-001; that
+    made the guard's coverage a side effect of one worked example rather
+    than a stated rule. Removing the `key in seen` guard must fail here."""
+    dset = g4.DesignSet(
+        components={
+            "CMP-001": {"boundary": "internal", "depends_on": ["IF-001"],
+                        "title": "Consumer One", "responsibility": "…"},
+            "CMP-002": {"boundary": "internal", "depends_on": ["IF-001"],
+                        "title": "Consumer Two", "responsibility": "…"},
+            "CMP-003": {"boundary": "external", "depends_on": [],
+                        "title": "Clock", "responsibility": "…"},
+        },
+        interfaces={
+            "IF-001": {"provider": "CMP-003", "title": "Time Source"},
+        },
+        asrs=[],
+    )
+    model = {
+        "system_name": "Sys",
+        "system_description": "…",
+        "actors": [],
+        "containers": [{"key": "app", "name": "App", "technology": "…",
+                        "description": "…",
+                        "components": ["CMP-001", "CMP-002"]}],
+    }
+    block = g4.render_container(model, dset)
+    assert block.count("Rel(ctr_app, ext_cmp_003,") == 1
+
+
 def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     """The shipped tamagotchi set: 9 internal components, 2 external, one
     container. Pinned because it is the only real set this tool is exercised
@@ -613,6 +651,43 @@ def test_generate_does_not_touch_files_outside_the_diagrams_directory(tmp_path):
     assert decoy_file.exists()
     assert decoy_dir.exists()
     assert (decoy_dir / "DIA-999-nested.md").exists()
+
+
+def test_regeneration_never_deletes_a_file_this_run_just_wrote(tmp_path):
+    """The guard's rule is "delete a `DIA-` file this run did not write",
+    but `written_paths` holds the names the run chose while `os.listdir`
+    reports the names the directory actually holds. Those two diverge on a
+    case-insensitive filesystem: rename a diagram to
+    `DIA-004-Component-View-Worker.md` on macOS and the next run's `open()`
+    of the lower-cased name reopens that very file, while the directory
+    still lists the old casing. Compared by spelling, that entry reads as
+    stale and gets removed -- deleting the diagram the run had just
+    written, and leaving a container with no component view.
+
+    A case-insensitive directory cannot be created on this platform, so the
+    second name here is a hard link: one inode, two directory entries --
+    the same divergence between chosen name and listed name, reachable on
+    Linux. What is pinned is that the guard compares file identity rather
+    than spelling, so no name the just-written inode answers to is ever
+    removed."""
+    design_dir, model_path, _ = case("multi-container")
+    out = tmp_path / "design"
+    shutil.copytree(design_dir, out)
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+
+    written = out / "diagrams" / "DIA-004-component-view-worker.md"
+    assert written.exists()
+    other_name = out / "diagrams" / "DIA-004-Component-View-Worker.md"
+    os.link(str(written), str(other_name))
+
+    assert g4.main([str(out), "--model", model_path,
+                    "--created-at", "2026-08-22"]) == 0
+    assert written.exists(), "the diagram this run wrote must survive"
+    assert other_name.exists(), (
+        "a second name for the just-written inode is that same file, "
+        "not a stale leftover"
+    )
 
 
 def test_created_at_is_required_at_the_argparse_level(tmp_path):

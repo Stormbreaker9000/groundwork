@@ -450,7 +450,25 @@ def render_component(model: dict, dset: DesignSet, container: dict) -> str:
 # them. This script runs inside real user projects, so widening this glob —
 # by pattern or by recursion — is not a refactor to make casually; if it
 # ever needs to change, re-justify it here.
+#
+# "Did not just write" is decided by file identity, not by spelling. The
+# run knows the names it chose; `os.listdir` reports the names the
+# directory holds, and on a case-insensitive filesystem those differ: a
+# diagram manually renamed to `DIA-004-Component-View-Worker.md` is
+# reopened and rewritten by `open()` under the lower-cased name, yet still
+# listed under the old casing. Matched by name it reads as stale, and
+# deleting it would destroy the file this run had just written.
 _STALE_DIAGRAM_RE = re.compile(r"^DIA-\d+.*\.md$")
+
+
+def _file_identity(path: str) -> Optional[Tuple[int, int]]:
+    """``(device, inode)`` — what makes two names the same file. ``None``
+    when the path cannot be stat'd."""
+    try:
+        info = os.stat(path)
+    except OSError:
+        return None
+    return (info.st_dev, info.st_ino)
 
 
 def _remove_stale_diagrams(out_dir: str, written_paths: Set[str]) -> List[str]:
@@ -462,14 +480,16 @@ def _remove_stale_diagrams(out_dir: str, written_paths: Set[str]) -> List[str]:
     removed: List[str] = []
     if not os.path.isdir(out_dir):
         return removed
+    written_ids = {ident for ident in map(_file_identity, written_paths)
+                   if ident is not None}
     for name in sorted(os.listdir(out_dir)):
         path = os.path.join(out_dir, name)
-        if path in written_paths:
-            continue
         if not os.path.isfile(path):
             continue  # narrow to files; never descend into a subdirectory
         if not _STALE_DIAGRAM_RE.match(name):
             continue
+        if _file_identity(path) in written_ids:
+            continue  # this run's own file, under whatever name it is listed
         os.remove(path)
         removed.append(path)
     return removed
