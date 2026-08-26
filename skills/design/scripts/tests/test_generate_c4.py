@@ -419,9 +419,10 @@ def test_container_view_dedupes_two_members_of_one_container_sharing_an_edge():
 
 
 def test_worked_example_generates_a_valid_diagram_set(tmp_path):
-    """The shipped tamagotchi set: 9 internal components, 2 external, one
-    container. Pinned because it is the only real set this tool is exercised
-    against, and STO-219 will regenerate it.
+    """The shipped tamagotchi set as STO-219 regenerated it: 19 components
+    (17 internal, 2 external) across TWO containers, so four views — one
+    context, one container, and one component view per container. Pinned
+    because it is the only real set this tool is exercised against.
 
     Asserts byte-identical output against the committed
     `docs/requirements/examples/tamagotchi/design/diagrams/` files, not just
@@ -429,11 +430,22 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     if a Rel-dedup or self-edge guard were reverted and started emitting
     duplicate lines, since the file would still exist and still validate (a
     duplicate `Rel` line is not itself a schema or structural violation).
-    The real tamagotchi graph has five internal components sharing one
-    external interface (IF-001, the System Clock), which is exactly the
-    shape `render_container`'s Rel dedup exists to collapse — reverting that
-    guard changes DIA-002's byte content, which this comparison catches and
-    a mere exit-0 check would not."""
+
+    What this pins changed with the regeneration. The pre-STO-219 set had
+    five internal components sharing one external interface (the system
+    clock), which made it an incidental witness for `render_context`'s and
+    `render_container`'s Rel dedup. The regenerated set routes every
+    platform edge through the single platform-adapter component NFR-006
+    requires, so each external interface now has exactly one internal
+    consumer and that shape is gone from here. It is not lost: both dedups
+    are pinned directly by
+    `test_context_view_dedupes_when_several_internals_share_an_external_edge`
+    and `test_container_view_dedupes_two_members_of_one_container_sharing_an_edge`,
+    which exist precisely so the guarantee is a stated rule rather than a
+    side effect of one worked example. What this golden now uniquely covers
+    is the multi-container projection over a real set: container-to-container
+    edges across the webview/core seam, and per-container DIA- allocation in
+    sorted key order."""
     import validate_design as vd
 
     repo_root = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
@@ -443,11 +455,12 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     shutil.copytree(example, out)
     shutil.rmtree(out / "diagrams")
     model = os.path.join(FIXTURES, "tamagotchi-model.json")
-    assert g4.main([str(out), "--model", model, "--created-at", "2026-08-22"]) == 0
+    assert g4.main([str(out), "--model", model, "--created-at", "2026-08-24"]) == 0
     assert vd.main([str(out), "--schema", vd.default_schema_path()]) == 0
 
     for name in ("DIA-001-system-context.md", "DIA-002-container-view.md",
-                 "DIA-003-component-view-desktop-app.md"):
+                 "DIA-003-component-view-pet-core.md",
+                 "DIA-004-component-view-pet-webview-ui.md"):
         written = (out / "diagrams" / name).read_text()
         golden = open(os.path.join(example, "diagrams", name)).read()
         assert written == golden, name

@@ -1,112 +1,160 @@
 artifacts:
 - id: CMP-001
   type: component
-  title: Local State Store
+  title: Pet State Model
   status: draft
-  confidence: high
-  path: components/CMP-001-local-state-store.md
+  confidence: medium
+  path: components/CMP-001-pet-state-model.md
 - id: CMP-002
+  type: component
+  title: Balance Configuration
+  status: draft
+  confidence: low
+  path: components/CMP-002-balance-configuration.md
+- id: CMP-003
+  type: component
+  title: Pet Session
+  status: draft
+  confidence: medium
+  path: components/CMP-003-pet-session.md
+- id: CMP-004
   type: component
   title: Decay Engine
   status: draft
-  confidence: low
-  path: components/CMP-002-decay-engine.md
-- id: CMP-003
-  type: component
-  title: Pet State Manager
-  status: draft
   confidence: high
-  path: components/CMP-003-pet-state-manager.md
-- id: CMP-004
-  type: component
-  title: Pet Lifecycle Manager
-  status: draft
-  confidence: low
-  path: components/CMP-004-pet-lifecycle-manager.md
+  path: components/CMP-004-decay-engine.md
 - id: CMP-005
   type: component
-  title: Mood Evaluator
+  title: Health Progression
   status: draft
-  confidence: medium
-  path: components/CMP-005-mood-evaluator.md
+  confidence: low
+  path: components/CMP-005-health-progression.md
 - id: CMP-006
   type: component
-  title: Pet Window
+  title: Sleep Cycle
   status: draft
-  confidence: high
-  path: components/CMP-006-pet-window.md
+  confidence: medium
+  path: components/CMP-006-sleep-cycle.md
 - id: CMP-007
   type: component
-  title: Session Coordinator
+  title: Mood Expression Selector
   status: draft
   confidence: medium
-  path: components/CMP-007-session-coordinator.md
+  path: components/CMP-007-mood-expression-selector.md
 - id: CMP-008
   type: component
-  title: Care Reminder Scheduler
+  title: Care Interaction Handler
+  status: draft
+  confidence: high
+  path: components/CMP-008-care-interaction-handler.md
+- id: CMP-009
+  type: component
+  title: Pet State Evaluator
   status: draft
   confidence: medium
-  path: components/CMP-008-care-reminder-scheduler.md
-- id: CMP-009
+  path: components/CMP-009-pet-state-evaluator.md
+- id: CMP-010
+  type: component
+  title: Evaluation Scheduler
+  status: draft
+  confidence: low
+  path: components/CMP-010-evaluation-scheduler.md
+- id: CMP-011
+  type: component
+  title: Application Lifecycle Sequencer
+  status: draft
+  confidence: high
+  path: components/CMP-011-application-lifecycle-sequencer.md
+- id: CMP-012
+  type: component
+  title: Pet State Store
+  status: draft
+  confidence: high
+  path: components/CMP-012-pet-state-store.md
+- id: CMP-013
+  type: component
+  title: Save Integrity Validator
+  status: draft
+  confidence: medium
+  path: components/CMP-013-save-integrity-validator.md
+- id: CMP-014
+  type: component
+  title: Care Reminder Service
+  status: draft
+  confidence: medium
+  path: components/CMP-014-care-reminder-service.md
+- id: CMP-015
   type: component
   title: Diagnostic Log
   status: draft
-  confidence: medium
-  path: components/CMP-009-diagnostic-log.md
-- id: CMP-010
+  confidence: high
+  path: components/CMP-015-diagnostic-log.md
+- id: CMP-016
+  type: component
+  title: Presentation Shell
+  status: draft
+  confidence: low
+  path: components/CMP-016-presentation-shell.md
+- id: CMP-017
+  type: component
+  title: Platform Adapter
+  status: draft
+  confidence: high
+  path: components/CMP-017-platform-adapter.md
+- id: CMP-018
   type: component
   title: OS Notification Service
   status: draft
   confidence: high
-  path: components/CMP-010-os-notification-service.md
-- id: CMP-011
+  path: components/CMP-018-os-notification-service.md
+- id: CMP-019
   type: component
-  title: System Clock
+  title: Host Wall Clock
   status: draft
-  confidence: high
-  path: components/CMP-011-system-clock.md
+  confidence: medium
+  path: components/CMP-019-host-wall-clock.md
 - id: IF-001
   type: interface
-  title: Wall-Clock Time Source
+  title: Balance Parameter Read
   status: draft
-  confidence: high
-  path: interfaces/IF-001-wall-clock-time-source.md
+  confidence: medium
+  path: interfaces/IF-001-balance-parameter-read.md
 - id: IF-002
   type: interface
-  title: Diagnostic Log Recording
+  title: Live Pet State Access
   status: draft
   confidence: high
-  path: interfaces/IF-002-diagnostic-log-recording.md
+  path: interfaces/IF-002-live-pet-state-access.md
 - id: IF-003
-  type: interface
-  title: Durable Pet State Persistence
-  status: draft
-  confidence: high
-  path: interfaces/IF-003-durable-pet-state-persistence.md
-- id: IF-004
   type: interface
   title: Decay Computation
   status: draft
+  confidence: high
+  path: interfaces/IF-003-decay-computation.md
+- id: IF-004
+  type: interface
+  title: Health Progression Advance
+  status: draft
   confidence: low
-  path: interfaces/IF-004-decay-computation.md
+  path: interfaces/IF-004-health-progression-advance.md
 - id: IF-005
   type: interface
-  title: Pet Stat Observation
+  title: Sleep Entry
   status: draft
   confidence: medium
-  path: interfaces/IF-005-pet-stat-observation.md
+  path: interfaces/IF-005-sleep-entry.md
 - id: IF-006
   type: interface
-  title: Pet Lifecycle State
+  title: Wake Deadline Resolution
   status: draft
   confidence: medium
-  path: interfaces/IF-006-pet-lifecycle-state.md
+  path: interfaces/IF-006-wake-deadline-resolution.md
 - id: IF-007
   type: interface
-  title: Mood Evaluation
+  title: Mood Expression Selection
   status: draft
-  confidence: medium
-  path: interfaces/IF-007-mood-evaluation.md
+  confidence: high
+  path: interfaces/IF-007-mood-expression-selection.md
 - id: IF-008
   type: interface
   title: Care Action Application
@@ -115,35 +163,236 @@ artifacts:
   path: interfaces/IF-008-care-action-application.md
 - id: IF-009
   type: interface
-  title: Session State Seeding
+  title: Pet-State Evaluation
   status: draft
   confidence: high
-  path: interfaces/IF-009-session-state-seeding.md
+  path: interfaces/IF-009-pet-state-evaluation.md
 - id: IF-010
   type: interface
-  title: Care Reminder Preference Control
+  title: Recurring Evaluation Cadence
   status: draft
-  confidence: medium
-  path: interfaces/IF-010-care-reminder-preference-control.md
+  confidence: low
+  path: interfaces/IF-010-recurring-evaluation-cadence.md
 - id: IF-011
   type: interface
-  title: Reminder Preference Persistence
-  status: draft
-  confidence: medium
-  path: interfaces/IF-011-reminder-preference-persistence.md
-- id: IF-012
-  type: interface
-  title: Desktop Notification Delivery
+  title: Default Pet Construction
   status: draft
   confidence: high
-  path: interfaces/IF-012-desktop-notification-delivery.md
+  path: interfaces/IF-011-default-pet-construction.md
+- id: IF-012
+  type: interface
+  title: Committed Save Retrieval
+  status: draft
+  confidence: high
+  path: interfaces/IF-012-committed-save-retrieval.md
+- id: IF-013
+  type: interface
+  title: Pet State Commit
+  status: draft
+  confidence: high
+  path: interfaces/IF-013-pet-state-commit.md
+- id: IF-014
+  type: interface
+  title: Save Integrity Validation
+  status: draft
+  confidence: medium
+  path: interfaces/IF-014-save-integrity-validation.md
+- id: IF-015
+  type: interface
+  title: Care Reminder Raising
+  status: draft
+  confidence: medium
+  path: interfaces/IF-015-care-reminder-raising.md
+- id: IF-016
+  type: interface
+  title: Diagnostic Event Recording
+  status: draft
+  confidence: high
+  path: interfaces/IF-016-diagnostic-event-recording.md
+- id: IF-017
+  type: interface
+  title: First Pet Display
+  status: draft
+  confidence: medium
+  path: interfaces/IF-017-first-pet-display.md
+- id: IF-018
+  type: interface
+  title: Host Clock Access
+  status: draft
+  confidence: high
+  path: interfaces/IF-018-host-clock-access.md
+- id: IF-019
+  type: interface
+  title: Local Data Directory File Read
+  status: draft
+  confidence: high
+  path: interfaces/IF-019-local-data-directory-file-read.md
+- id: IF-020
+  type: interface
+  title: Save File Quarantine Move
+  status: draft
+  confidence: high
+  path: interfaces/IF-020-save-file-quarantine-move.md
+- id: IF-021
+  type: interface
+  title: Diagnostic Log File Append and Rotation
+  status: draft
+  confidence: high
+  path: interfaces/IF-021-diagnostic-log-file-append-and-rotation.md
+- id: IF-022
+  type: interface
+  title: Local Notification Presentation
+  status: draft
+  confidence: high
+  path: interfaces/IF-022-local-notification-presentation.md
+- id: IF-023
+  type: interface
+  title: OS Notification Posting
+  status: draft
+  confidence: high
+  path: interfaces/IF-023-os-notification-posting.md
+- id: IF-024
+  type: interface
+  title: Host Wall-Clock Reading
+  status: draft
+  confidence: high
+  path: interfaces/IF-024-host-wall-clock-reading.md
+- id: IF-025
+  type: interface
+  title: Local Data Directory Atomic File Replace
+  status: draft
+  confidence: high
+  path: interfaces/IF-025-local-data-directory-atomic-file-replace.md
+- id: IF-026
+  type: interface
+  title: Balance Configuration Load
+  status: draft
+  confidence: medium
+  path: interfaces/IF-026-balance-configuration-load.md
+- id: IF-027
+  type: interface
+  title: Platform Presentation Surface
+  status: draft
+  confidence: medium
+  path: interfaces/IF-027-platform-presentation-surface.md
+- id: IF-028
+  type: interface
+  title: Care Reminder Preference
+  status: draft
+  confidence: medium
+  path: interfaces/IF-028-care-reminder-preference.md
+- id: IF-029
+  type: interface
+  title: Session-End State Commit
+  status: draft
+  confidence: high
+  path: interfaces/IF-029-session-end-state-commit.md
+- id: IF-030
+  type: interface
+  title: Pet View Refresh
+  status: draft
+  confidence: medium
+  path: interfaces/IF-030-pet-view-refresh.md
+- id: IF-031
+  type: interface
+  title: Platform Recurring Timer
+  status: draft
+  confidence: low
+  path: interfaces/IF-031-platform-recurring-timer.md
+- id: ADR-001
+  type: adr
+  title: Permanent terminal end-of-life status
+  status: draft
+  confidence: high
+  path: adr/ADR-001-permanent-terminal-end-of-life-status.md
+- id: ADR-002
+  type: adr
+  title: Windows-first platform staging for v1
+  status: draft
+  confidence: high
+  path: adr/ADR-002-windows-first-platform-staging-for-v1.md
+- id: ADR-003
+  type: adr
+  title: Tauri as the desktop runtime and shell
+  status: draft
+  confidence: medium
+  path: adr/ADR-003-tauri-as-the-desktop-runtime-and-shell.md
+- id: ADR-004
+  type: adr
+  title: Single committed generation of the save file
+  status: draft
+  confidence: high
+  path: adr/ADR-004-single-committed-generation-of-the-save-file.md
+- id: ADR-005
+  type: adr
+  title: Storage of the per-stat below-threshold clock
+  status: draft
+  confidence: low
+  path: adr/ADR-005-storage-of-the-per-stat-below-threshold-clock.md
+- id: ADR-006
+  type: adr
+  title: Pet-state evaluation cadence period
+  status: draft
+  confidence: low
+  path: adr/ADR-006-pet-state-evaluation-cadence-period.md
+- id: ADR-007
+  type: adr
+  title: Runtime baseline-overhead exclusion screen and its decision record
+  status: draft
+  confidence: low
+  path: adr/ADR-007-runtime-baseline-overhead-exclusion-screen-and-its-decision-record.md
+- id: DIA-001
+  type: diagram
+  title: System Context
+  status: draft
+  confidence: medium
+  path: diagrams/DIA-001-system-context.md
+- id: DIA-002
+  type: diagram
+  title: Container View
+  status: draft
+  confidence: medium
+  path: diagrams/DIA-002-container-view.md
+- id: DIA-003
+  type: diagram
+  title: Component View — Pet Core
+  status: draft
+  confidence: medium
+  path: diagrams/DIA-003-component-view-pet-core.md
+- id: DIA-004
+  type: diagram
+  title: Component View — Pet Webview UI
+  status: draft
+  confidence: medium
+  path: diagrams/DIA-004-component-view-pet-webview-ui.md
 review_queue:
 - id: CMP-002
   confidence: low
-  reason: the decay curve this component evaluates is open question Q-1; the seam is settled, the model is not, and nothing here is verifiable against NFR-001's tolerance until Q-1 is answered
-- id: CMP-004
+  reason: Q-1 (still open) leaves every balance and tuning value this component carries unfixed; only its shape — a read-only parameter set with one owner, filled once at launch — is settled
+- id: CMP-005
   confidence: low
-  reason: the sustained-neglect, sickness and death thresholds are exactly the values open question Q-1 leaves untuned, so FR-008's boundary timings cannot yet be evaluated
+  reason: FR-008's per-stat below-threshold clock has no field in the Pet state enumeration, and whether it is reconstructed from the decay curve or persisted as a new field is open under Q-10/Q-11 (ADR-005, still proposed)
+- id: CMP-010
+  confidence: low
+  reason: Q-10 (still open) leaves the running re-evaluation interval unfixed, and NFR-002 — the constraint that would bound it from the other side — is not evaluable until Q-5 records a reference machine
+- id: CMP-016
+  confidence: low
+  reason: Q-8 (still open) — whether the Sleeping state is rendered to the owner — is a question about precisely this component's surface, and no requirement renders Sleeping today
 - id: IF-004
   confidence: low
-  reason: open question Q-1 may change apply_decay's arity — a path-dependent curve adds an input and moves both consumers (design sensitivity point 1)
+  reason: what `advance` can be given, and whether A-22's persisted enumeration must grow, follow from the undecided storage of FR-008's below-threshold clock (Q-10/Q-11, ADR-005 still proposed)
+- id: IF-010
+  confidence: low
+  reason: whether `start` carries a period at all, and whether that period is fixed, adaptive or event-driven, follows from Q-10's answer (still open), with NFR-002 constraining it from the other side
+- id: IF-031
+  confidence: low
+  reason: the fixed period `start_recurring` takes — and whether a recurring-tick primitive is the right seam at all — changes with Q-10's answer (still open), which NFR-002 constrains from the other side
+- id: ADR-005
+  confidence: low
+  reason: proposed, not accepted — the below-threshold-clock storage decision is deferred to open question Q-11
+- id: ADR-006
+  confidence: low
+  reason: proposed, not accepted — the evaluation-cadence period is deferred to open question Q-12, and cannot be measured until Q-5 records a reference machine
+- id: ADR-007
+  confidence: low
+  reason: proposed, not accepted — CON-001's exclusion screen cannot be run, nor a pass or fail recorded, until Q-5 records a reference machine (tracked as Q-13)

@@ -278,6 +278,21 @@ def test_dependency_cycle_message_names_components_and_interfaces():
         assert token in message
 
 
+def test_dependency_cycle_is_reported_with_its_rendered_path():
+    # The exact rendered path, not substring membership: a transposed lookup
+    # in the path renderer (`graph[nxt][node]` instead of `graph[node][nxt]`)
+    # would reverse the path while every ID-substring assertion above still
+    # passes. This assertion used to sit on the shipped tamagotchi example,
+    # whose CMP-003/CMP-004 cycle was this rule's only real-world input;
+    # STO-219's regeneration broke that cycle, so the assertion moved here,
+    # onto a synthetic fixture, rather than being deleted with it.
+    found = findings_for("cycle-one", "dependency-cycle")
+    assert len(found) == 1
+    assert found[0].message == (
+        "dependency cycle: CMP-001 -> IF-002 -> CMP-002 -> IF-001 -> CMP-001"
+    )
+
+
 def test_dependency_cycle_reported_on_lowest_component():
     found = findings_for("cycle-one", "dependency-cycle")
     assert found[0].artifact_id == "CMP-001"
@@ -345,16 +360,3 @@ def test_shipped_tamagotchi_example_survives_without_pyyaml(monkeypatch):
     assert [f for f in findings if f.severity == "error"] == []
 
 
-def test_shipped_tamagotchi_example_has_the_known_cycle():
-    # The CMP-003/CMP-004 cycle is the only real-world input this rule has.
-    # It is recorded as a named deviation in the example README, not fixed --
-    # breaking it is a design change, and regeneration is STO-219.
-    cycles = [f for f in ldc.lint_dir(TAMAGOTCHI_DESIGN)
-              if f.rule == "dependency-cycle"]
-    assert len(cycles) == 1
-    # The exact rendered path, not substring membership: a transposed lookup
-    # in the path renderer (`graph[nxt][node]` instead of `graph[node][nxt]`)
-    # would reverse the path while every ID-substring assertion still passes.
-    assert cycles[0].message == (
-        "dependency cycle: CMP-003 -> IF-006 -> CMP-004 -> IF-005 -> CMP-003"
-    )
