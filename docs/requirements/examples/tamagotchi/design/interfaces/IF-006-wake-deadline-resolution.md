@@ -23,7 +23,7 @@ error_modes:
 - Host clock reading unavailable — the deadline cannot be tested, and the pet is left Sleeping with its timestamp untouched, deferring the wake to the next evaluation rather than waking on an unknown reading.
 - A Sleeping pet carries no sleep-entry timestamp — the deadline has no origin, so the timestamp is re-based to the current reading, bounding the wake at one sleep duration instead of leaving the pet Sleeping without bound.
 - The balance parameter set has not been loaded — the sleep duration is unknown and no wake can be resolved; the pet is left Sleeping.
-- 'The interval computes as non-positive because the owner moved the clock backward — not a failure: the origin is re-based, which is what bounds the deadline where FR-002''s clamp alone would defer it indefinitely (A-6).'
+- 'The interval computes as non-positive because the owner moved the clock backward — not a failure: the origin is re-based, which is what bounds the deadline where FR-002''s clamp alone would defer it indefinitely (requirements A-6).'
 ---
 
 # IF-006 — Wake Deadline Resolution
@@ -41,7 +41,7 @@ FR-011's re-basing rule, which differs from the clamp the same evaluation applie
 Synchronous. FR-011's AC-3 requires the wake test at launch before the pet is displayed, so
 the evaluation blocks on it.
 
-This contract is one of the two places A-6's deadline rule lives — the other is IF-004's
+This contract is one of the two places requirements A-6's deadline rule lives — the other is IF-004's
 neglect clock. IF-018 hands out a signed interval and applies neither rule; IF-003 clamps it
 as a quantity; this operation and IF-004's re-base the origin as a deadline. The discriminator
 has to be named wherever the interval is consumed, and these are the namings.
@@ -60,7 +60,7 @@ has to be named wherever the interval is consumed, and these are the namings.
 ## Rationale
 Satisfies CMP-009's declared need to resolve a sleeping pet's wake deadline. Separate from
 IF-005 because the consumer sets are disjoint: the care handler enters sleep and never resolves
-a wake, and per A-8 no owner action wakes the pet. Confidence is medium — FR-011 is in the
+a wake, and per requirements A-8 no owner action wakes the pet. Confidence is medium — FR-011 is in the
 inherited review queue and its own confidence is low, but the residual uncertainty is the sleep
 duration's value (Q-1) and the evaluation cadence (Q-10), neither of which changes this
 operation's shape.

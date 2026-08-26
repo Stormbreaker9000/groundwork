@@ -36,7 +36,7 @@ claim inspectable. BR-002 is honoured by omission — no disposition of a termin
 is implemented anywhere, so the terminal status is a state this progression can reach
 and nothing downstream consumes.
 
-A-6 puts two rules over a non-positive elapsed interval, and this design names the
+Requirements assumption A-6 puts two rules over a non-positive elapsed interval, and this design names the
 discriminator wherever the interval is consumed rather than hiding it in the clock. This
 component is the third consumer, and it applies the DEADLINE rule: the interval since a
 stat's below-threshold-since origin is tested, and wherever that interval computes as
@@ -49,7 +49,7 @@ stat's clock outright and no accumulated total survives it, so there is no quant
 to clamp — there is an origin and a duration, which is the shape of a deadline. Clamping
 alone would leave the origin ahead of the clock after a backward jump and defer the
 Healthy -> Sick transition for as long as the jump lasted, which is deferral without
-bound: precisely the failure A-6 introduces the second rule to prevent. Re-basing bounds
+bound: precisely the failure requirements A-6 introduces the second rule to prevent. Re-basing bounds
 it, so that after a backward clock change the pet advances no later than one
 sustained-neglect duration after the first pet-state evaluation following the change —
 the same shape FR-011's own backward-clock criterion takes. Neither rule can produce an
@@ -59,5 +59,5 @@ is what decides it.
 Confidence is low. FR-008 requires a per-stat below-threshold clock that runs unbroken
 across an application close, while the Pet state enumeration carries no such field.
 Reconstructing that clock from the decay curve at each evaluation, or introducing a new
-persisted field (which would update A-22's enumeration and CMP-001's field set), is an
+persisted field (which would update requirements A-22's enumeration and CMP-001's field set), is an
 open structural decision tracked under Q-10, which is still_open.

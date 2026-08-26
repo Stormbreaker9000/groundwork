@@ -40,7 +40,7 @@ interval to the decayed pet state, in one bounded step.
 Synchronous. FR-002 forbids the pet being displayed before decay has been applied, so the
 launch path cannot proceed without the result.
 
-One operation, deliberately. A-17 and NFR-008 require this computation to be reachable as a
+One operation, deliberately. Requirements A-17 and NFR-008 require this computation to be reachable as a
 single unit callable 1,000 times in a loop against an in-memory starting state, with no save
 file read and no application launch. Every parameter it needs arrives as an argument or from
 IF-001, and IF-001 is now a pure memory read whose source-loading half lives in IF-026 — so

@@ -29,8 +29,8 @@ Presents notifications the application posts to the owner on the host desktop.
 
 ## Rationale
 FR-009 is the only requirement that crosses the process boundary out of the
-application, and A-19 records that reminders delivered through the host's local
+application, and requirements A-19 records that reminders delivered through the host's local
 notification service count as fully offline and do not violate CON-002 — there is no
-push service and no network hop. A-21 assumes each target platform provides a usable
+push service and no network hop. Requirements A-21 assumes each target platform provides a usable
 native notification API. Modelling the service as a component keeps the dependency
 graph total and makes the one outbound edge in the system visible rather than implicit.

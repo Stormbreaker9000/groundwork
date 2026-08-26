@@ -51,7 +51,7 @@ file — which its provider could not structurally have had, since nothing gave 
 to reach a file. The fix is not to delete the failures, which are real, but to give them a place:
 the load happens once, here, and the reads that follow are memory reads, there.
 
-The separation earns its keep against NFR-008 and A-17. Those require the decay computation to be
+The separation earns its keep against NFR-008 and requirements A-17. Those require the decay computation to be
 invocable 1,000 times against an in-memory starting state with no save file read and no
 application launch. The decay computation reads `decay_parameters` on each repetition, so if a
 parameter read could fall back to loading its source, the constraint would be unmeetable — every

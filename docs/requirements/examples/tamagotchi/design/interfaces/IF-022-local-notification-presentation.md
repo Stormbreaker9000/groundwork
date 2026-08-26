@@ -54,7 +54,7 @@ implementation note.
   platform while succeeding on the others.
 
 ## Rationale
-Satisfies CMP-014's declared need to present a local notification without network access. A-19
+Satisfies CMP-014's declared need to present a local notification without network access. Requirements A-19
 establishes that delivery through the host's local notification service counts as fully offline;
 this contract is the seam that keeps it that way, and it is the only path out of the process for
 FR-009. The permission failure named here is the same one IF-028 must be able to report to the

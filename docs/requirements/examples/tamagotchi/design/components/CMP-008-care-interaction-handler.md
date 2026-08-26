@@ -28,7 +28,7 @@ to the current pet, producing the resulting pet state.
 Applies an owner-selected care-loop action to the current pet.
 
 ## Rationale
-The care loop is the fixed set of four interactions the glossary names, and A-8 rules
+The care loop is the fixed set of four interactions the glossary names, and requirements A-8 rules
 out a fifth, so one component can own the whole set without an open-ended surface.
 Three of the four are the same shape — raise the corresponding stat by its configured
 increment, capped at the stat maximum by CMP-001's invariant — and the fourth delegates

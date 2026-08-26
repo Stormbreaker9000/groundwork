@@ -31,7 +31,7 @@ default pet.
 
 ## Rationale
 The glossary's Pet state entry is the single maintained enumeration of what the
-application persists (A-22), and FR-001 requires every one of those fields to
+application persists (requirements A-22), and FR-001 requires every one of those fields to
 round-trip unchanged; giving that enumeration one owner is what makes the round-trip
 testable as a property of a type rather than of a serialiser. The same owner holds
 the stat bounds that make FR-003, FR-004 and FR-005's "up to the stat's maximum
@@ -41,4 +41,4 @@ the recovery path.
 
 Confidence is medium rather than high because FR-008's per-stat below-threshold clock
 may require a new persisted field (see CMP-005); that decision, tied to Q-10, changes
-this component's field set and A-22's enumeration with it.
+this component's field set and requirements A-22's enumeration with it.

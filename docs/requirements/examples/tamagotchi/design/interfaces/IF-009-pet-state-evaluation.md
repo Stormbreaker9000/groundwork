@@ -64,6 +64,6 @@ evaluation itself asks for a redraw (IF-030) either way.
 
 ## Rationale
 Satisfies the identical capability declared by CMP-010 (the running cadence) and CMP-011 (the
-launch path). This is the one place the two non-positive-interval rules of A-6 meet: the
+launch path). This is the one place the two non-positive-interval rules of requirements A-6 meet: the
 evaluation passes the signed interval to IF-003, which clamps it, and to IF-006 and IF-004,
 which re-base against it, and applies neither rule itself.

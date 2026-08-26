@@ -30,13 +30,13 @@ Owns the pet's Awake/Sleeping transitions and the sleep-entry timestamp they tur
 
 ## Rationale
 FR-011 introduces a second, incompatible non-positive-interval rule alongside FR-002's
-(A-6): a deadline re-bases its origin where a quantity merely clamps. Two rules over
+(requirements A-6): a deadline re-bases its origin where a quantity merely clamps. Two rules over
 the same clock reading mean the clock contract cannot expose a single "elapsed since"
 and be done — the discriminator has to live somewhere the design names, and this is
 that place for the deadline half. The clock contract this component consumes therefore
 returns a signed interval and applies neither rule.
 
-Entry is idempotent per FR-006's fit criterion, and A-8 fixes that there is no
+Entry is idempotent per FR-006's fit criterion, and requirements A-8 fixes that there is no
 owner-initiated wake: the pet leaves Sleeping only on elapsed sleep duration, tested at
 launch before display and on the running cadence. Sleep does not alter stat decay, so
 nothing here touches CMP-004.

@@ -51,6 +51,6 @@ it one.
 ## Rationale
 Satisfies CMP-017's declared need to post to the host notification service. This is one of the
 edges leaving the process, and modelling the service as an external component keeps that edge
-inside the graph rather than pointing outside it. A-21 assumes each target platform provides a
+inside the graph rather than pointing outside it. Requirements A-21 assumes each target platform provides a
 usable native notification API — an assumption this contract's first failure mode is where it would
 show up if it did not hold.

@@ -21,9 +21,9 @@ operations:
   interaction: synchronous
 error_modes:
 - The host clock is uninitialised or unavailable — no reading can be returned, and no elapsed interval anywhere in the product can be derived.
-- The owner or the OS moves the clock backward between two readings — a reading earlier than a previously recorded timestamp is returned, which A-7 requires the host to expose observably rather than smooth into slow-forward time.
-- The host smooths a backward correction rather than exposing it — readings remain monotonic, no non-positive interval is ever observable, and both of A-6's rules are defeated with no failure visible to the application.
-- A time-sync correction moves the clock forward — an elapsed interval larger than the real absence is observed and decay is applied for the whole of it, bounded only by each stat's own scale (A-24 sets no cap on decay over long absences).
+- The owner or the OS moves the clock backward between two readings — a reading earlier than a previously recorded timestamp is returned, which requirements A-7 requires the host to expose observably rather than smooth into slow-forward time.
+- The host smooths a backward correction rather than exposing it — readings remain monotonic, no non-positive interval is ever observable, and both of requirements A-6's rules are defeated with no failure visible to the application.
+- A time-sync correction moves the clock forward — an elapsed interval larger than the real absence is observed and decay is applied for the whole of it, bounded only by each stat's own scale (requirements A-24 sets no cap on decay over long absences).
 ---
 
 # IF-024 — Host Wall-Clock Reading
@@ -46,14 +46,14 @@ in front of every internal consumer, which is precisely the seam NFR-006 counts 
 - The host clock is uninitialised or unavailable — no reading, and no elapsed interval anywhere in
   the product can be derived.
 - The clock is moved backward between two readings — a reading earlier than a recorded timestamp is
-  returned, which A-7 requires the host to expose observably.
+  returned, which requirements A-7 requires the host to expose observably.
 - The host smooths a backward correction instead — readings stay monotonic, no non-positive
-  interval is ever observable, and both of A-6's rules are defeated with no visible failure.
+  interval is ever observable, and both of requirements A-6's rules are defeated with no visible failure.
 - A time-sync correction moves the clock forward — a larger-than-real elapsed interval is observed
-  and decay applies for all of it, bounded only by each stat's scale (A-24).
+  and decay applies for all of it, bounded only by each stat's scale (requirements A-24).
 
 ## Rationale
 Satisfies CMP-017's declared need to read the operating system's wall-clock time. It is one of the
 edges leaving the process, modelled as an external component so the dependency stays inside the
-graph. Every elapsed-interval computation in the product originates here, which is why A-7's
+graph. Every elapsed-interval computation in the product originates here, which is why requirements A-7's
 observability assumption is stated as a failure mode of this contract rather than left implicit.

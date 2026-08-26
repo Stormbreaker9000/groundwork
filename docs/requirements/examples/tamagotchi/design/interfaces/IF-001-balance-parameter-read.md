@@ -77,7 +77,7 @@ increments, sleep the duration.
 
 **This contract does not read a file, and cannot.** The parameter set reaches memory exactly
 once, through IF-026, ordered by the launch sequence before any reader runs. That separation
-is not tidiness: NFR-008 and A-17 require the decay computation to be invocable 1,000 times
+is not tidiness: NFR-008 and requirements A-17 require the decay computation to be invocable 1,000 times
 in a loop against an in-memory starting state with no save file read and no application
 launch, and the decay engine reads `decay_parameters` on every one of those repetitions. If
 a parameter read could fall back to loading its source, those 1,000 repetitions would each
@@ -98,7 +98,7 @@ mode below reports the unloaded case rather than repairing it.
 Satisfies the identical capability declared by CMP-001, CMP-004, CMP-005, CMP-006, CMP-007,
 CMP-008 and CMP-014. Every numeric value behind these operations is unfixed pending Q-1
 (still_open), which is exactly why the indirection exists — but the operation set follows
-from the requirements that name the parameters (A-2 bounds, NFR-001's curve, FR-008's
+from the requirements that name the parameters (requirements A-2 bounds, NFR-001's curve, FR-008's
 thresholds and durations, FR-007's bands, FR-003/4/5's increments, FR-011's sleep duration)
 and not from Q-1's answer. Confidence is medium because the grouping is inferred, not
 because the values are open. Source-level failures — a missing or unparseable configuration

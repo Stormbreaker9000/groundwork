@@ -50,7 +50,7 @@ through three distinct native accessibility stacks (UI Automation, NSAccessibili
 AT-SPI). So both live here: this layer owns the host surface the owner-facing view is
 drawn onto, and the exposure of the pet's mood expression and health status as text to
 whichever native accessibility API the platform provides. CMP-016 supplies the semantic
-content; this layer decides what each platform does with it. A-21 assumes each target
+content; this layer decides what each platform does with it. Requirements A-21 assumes each target
 provides a usable native accessibility API, and NFR-003 is cited here for that reason.
 
 Recurring-timer access is the third seam of the same kind, and it is named in the same
@@ -80,4 +80,4 @@ the other end of the call.
 The clock contract it offers returns a signed interval and applies none of the
 non-positive-interval rules: FR-002's clamp belongs to CMP-004, FR-011's re-basing to
 CMP-006 and FR-008's re-basing to CMP-005, and a clock that pre-corrected any of them
-would defeat all three (A-6, A-7).
+would defeat all three (requirements A-6, A-7).

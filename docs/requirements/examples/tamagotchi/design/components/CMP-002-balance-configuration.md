@@ -43,7 +43,7 @@ unparseable source is a launch-time failure with a caller positioned to abandon 
 launch, while a parameter read after the load cannot fail on source grounds at all. It
 is also what keeps NFR-008's measure executable — the decay computation reads its curve
 parameters from memory, so invoking it a thousand times in a loop reads no file and
-starts no application, which is exactly what A-17 requires of it.
+starts no application, which is exactly what requirements A-17 requires of it.
 
 Confidence is low: Q-1 is still_open, so every value this component carries is
 unfixed. Only its shape — a read-only parameter set with one owner, filled once at

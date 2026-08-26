@@ -41,7 +41,7 @@ proceed without it.
 
 One operation, and deliberately separate from IF-006's wake resolution even though the same
 component provides both: the care interaction handler enters sleep and never resolves a wake,
-and the evaluator resolves wakes and never enters sleep. A-8 fixes that asymmetry — the pet
+and the evaluator resolves wakes and never enters sleep. Requirements A-8 fixes that asymmetry — the pet
 leaves Sleeping on elapsed duration, not by an owner action — so the two consumer sets are
 disjoint by requirement, not by accident.
 

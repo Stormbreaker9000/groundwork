@@ -28,7 +28,7 @@ decayed pet state, in one bounded step and without reading a clock.
 Computes the decayed pet state for a given starting pet state and elapsed interval.
 
 ## Rationale
-NFR-008 carries an explicit testability constraint on the design (A-17): the decay
+NFR-008 carries an explicit testability constraint on the design (requirements A-17): the decay
 computation must be invocable directly, a thousand times in a loop, with an in-memory
 starting state and no save file read and no application launch. That forbids decay
 being a stage inside the launch routine and makes it its own unit that the launch path
@@ -39,4 +39,4 @@ The elapsed interval arrives as a parameter, never from an ambient clock read: F
 clamp of a non-positive interval to zero elapsed time, and NFR-001's requirement to
 drive the computation through a negative-interval matrix, are both only executable if
 the interval is supplied. This component applies FR-002's clamp rule; it does not apply
-FR-011's re-basing rule, which belongs to a deadline rather than to a quantity (A-6).
+FR-011's re-basing rule, which belongs to a deadline rather than to a quantity (requirements A-6).

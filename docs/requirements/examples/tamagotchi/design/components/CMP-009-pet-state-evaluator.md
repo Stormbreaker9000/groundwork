@@ -30,7 +30,7 @@ Performs a pet-state evaluation, re-deriving the current pet state from the wall
 
 ## Rationale
 Pet-state evaluation is a named concept in the glossary, and FR-007's mood update,
-FR-008's neglect progression and FR-011's wake all presuppose one (A-23). Giving it a
+FR-008's neglect progression and FR-011's wake all presuppose one (requirements A-23). Giving it a
 component means the launch path and the running cadence drive the same derivation
 rather than two divergent ones, which is what makes FR-011's "including trials where
 the duration elapses entirely while the application is closed" the same code path as

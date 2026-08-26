@@ -20,7 +20,7 @@ operations:
   summary: Return the pet's health status advanced one step where at least one pet stat has remained below its neglect threshold continuously for the applicable sustained-neglect duration, measured from that stat's below-threshold-since origin against the current wall-clock reading, and unchanged otherwise; where the interval since an origin computes as non-positive, that origin is re-based to the current reading and no advancement is derived from it.
   interaction: synchronous
 error_modes:
-- 'The interval since a below-threshold-since origin computes as non-positive because the host clock now reads behind it — not a failure: this contract applies A-6''s deadline rule and re-bases the origin to the current reading, which bounds the progression at one further duration instead of either advancing on a negative interval or deferring the transition indefinitely, as the clamp rule alone would.'
+- 'The interval since a below-threshold-since origin computes as non-positive because the host clock now reads behind it — not a failure: this contract applies requirements A-6''s deadline rule and re-bases the origin to the current reading, which bounds the progression at one further duration instead of either advancing on a negative interval or deferring the transition indefinitely, as the clamp rule alone would.'
 - Host clock reading unavailable — no interval can be measured against any origin, so the health status is returned unchanged rather than advanced or retired on an unknown reading.
 - The per-stat below-threshold-since origin cannot be established for the supplied pet — the health status is left unchanged rather than advanced on incomplete evidence, because BR-001 forbids a terminal transition arising from an application fault.
 - The balance parameter set has not been loaded — neglect thresholds and sustained-neglect durations are unknown, so no advancement is computed and the status is returned unchanged.
@@ -49,7 +49,7 @@ One operation. The contract exposes no way to read the per-stat below-threshold 
 whether that clock exists as a persisted field or is reconstructed at each evaluation is
 undecided — see below.
 
-**Which of A-6's two rules this contract applies.** IF-018 hands out a signed interval and
+**Which of requirements A-6's two rules this contract applies.** IF-018 hands out a signed interval and
 applies neither rule, delegating the choice to each consumer; this is the third consumer, and
 the rule it applies is the **deadline rule**, the same one IF-006 applies to the wake test and
 not the clamp IF-003 applies to decay. A below-threshold-since origin is a deadline, not a
@@ -67,7 +67,7 @@ owner retires the progression permanently with one adjustment.
 
 ## Error Modes
 - The interval since an origin computes as non-positive — not a failure: the origin is
-  re-based under A-6's deadline rule, bounding the deferral at one further duration.
+  re-based under requirements A-6's deadline rule, bounding the deferral at one further duration.
 - Host clock reading unavailable — no interval can be measured and the status is returned
   unchanged rather than advanced or retired on an unknown reading.
 - The per-stat below-threshold-since origin cannot be established — the status is left
@@ -87,8 +87,8 @@ it.
 
 **Confidence is low.** FR-008 requires a per-stat below-threshold clock continuous across an
 application close, and the glossary's Pet state entry — the single maintained enumeration of
-what is persisted (A-22) — carries no such field. Reconstructing that clock from the decay
+what is persisted (requirements A-22) — carries no such field. Reconstructing that clock from the decay
 curve at each evaluation and persisting it as a new field are both open; the choice is tracked
-under Q-10 (still_open) by A-24 and is deferred by this stage. The operation's shape and the
+under Q-10 (still_open) by requirements A-24 and is deferred by this stage. The operation's shape and the
 deadline-rule choice above survive either answer, but what `advance` can be given, and whether
-A-22's enumeration must grow, does not.
+requirements A-22's enumeration must grow, does not.

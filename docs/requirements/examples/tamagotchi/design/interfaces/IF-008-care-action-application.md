@@ -57,7 +57,7 @@ the caller has been given. The announcement itself happens through IF-027, from 
 that called this contract.
 
 Four operations, not one action-typed operation. The care loop is a fixed set of exactly four
-(A-8 forbids a fifth), each named by its own requirement with its own configured increment, and
+(requirements A-8 forbids a fifth), each named by its own requirement with its own configured increment, and
 NFR-003's scripted screen-reader walkthrough exercises them one by one. Naming them separately
 is what lets FR-003, FR-004, FR-005 and FR-006 trace to distinct operations rather than to one
 switch statement.
