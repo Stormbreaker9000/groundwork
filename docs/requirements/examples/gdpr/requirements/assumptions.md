@@ -22,5 +22,5 @@
 - D-5: Product's answer to the maximum acceptable export turnaround (open question Q-1) is needed to replace NFR-003's assumed 72-hour target with a confirmed figure.
 
 ## Open Questions
-- Q-1: What is the maximum acceptable turnaround for an export request? (owner: product)
+- Q-1: What is the maximum acceptable turnaround for an export request? (The 30-day statutory ceiling in FR-001 is fixed and not in question; this asks for the practical operational target within that ceiling — currently assumed as a 72-hour p95 in NFR-003 — pending this answer.) (owner: product)
 - Q-2: Which regulated record types override erasure, beyond financial? (owner: legal)

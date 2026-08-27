@@ -9,10 +9,10 @@ requirements:
 - id: FR-002
   type: functional
   tier: solution
-  title: Erase account and personal data on confirmed deletion, excluding statutory retention records
+  title: Erase account and personal data on confirmed deletion request
   priority: must
   status: draft
-  path: functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-excluding-statutory-retention-records.md
+  path: functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-request.md
 - id: FR-003
   type: functional
   tier: solution
@@ -147,6 +147,9 @@ requirements:
   status: draft
   path: business-rules/BR-002-data-under-an-active-legal-retention-obligation-is-exempt-from-erasure-until-it-expires.md
 review_queue:
+- id: FR-002
+  confidence: low
+  reason: affected by open question Q-2 — statutory-retention set not fully bounded
 - id: NFR-003
   confidence: low
   reason: '72-hour p95 export turnaround is an assumed interim engineering target pending Q-1 (owner: product); no confirmed figure exists yet.'

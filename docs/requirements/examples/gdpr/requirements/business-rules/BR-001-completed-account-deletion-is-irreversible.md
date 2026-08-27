@@ -28,9 +28,9 @@ by any means. No administrative override, support process, or automated
 recovery path may bring back an erased account or its erased personal data.
 
 ## Implemented by
-FR-002 (Erase account and personal data on confirmed deletion) enforces
-this rule by performing erasure as a one-way operation with no restore
-path exposed anywhere in the system.
+FR-002 (Erase account and personal data on confirmed deletion request)
+enforces this rule by performing erasure as a one-way operation with no
+restore path exposed anywhere in the system.
 
 ## Rationale
 Irreversibility is what makes an erasure operation actually discharge the

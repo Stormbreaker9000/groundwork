@@ -29,14 +29,15 @@ authoritative, executable acceptance criteria.*
   test accounts spanning every data store in scope.
   Verification: test.
 
-- [ ] **FR-002 — Erase account and personal data on confirmed deletion, excluding
-  statutory retention records** (must): all acceptance-criteria scenarios in
-  `.sdlc/requirements/functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-excluding-statutory-retention-records.md`
+- [ ] **FR-002 — Erase account and personal data on confirmed deletion request**
+  (must): all acceptance-criteria scenarios in
+  `.sdlc/requirements/functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-request.md`
   pass.
-  Fit criterion: Following a confirmed deletion, a data audit conducted within
-  30 days of confirmation finds 0 personal-data records for the account outside
-  the documented statutory-retention set; 100% of authentication attempts
-  against the deleted account fail.
+  Fit criterion: For 100% of confirmed deletion requests sampled in acceptance
+  testing, a data audit conducted on or before day 30 after confirmation finds
+  0 personal-data records for the account outside the documented
+  statutory-retention set, and 100% of authentication attempts against the
+  deleted account fail.
   Verification: test.
 
 - [ ] **FR-003 — Cancel unconfirmed account deletion request within 24-hour
@@ -152,10 +153,12 @@ scenario (QAS). The **response measure** is the pass/fail oracle; the
 
 - [ ] **NFR-012 — Tamper-evident audit logging of export and deletion events**
   (must): meets response measure — 100% of lifecycle events captured with
-  actor, timestamp, and outcome; verified via log-integrity inspection and a
-  sample compliance audit — for the QAS *a request is created, confirmed,
-  cancelled, or completed* on *audit logging subsystem for export/deletion
-  events* under *normal operation*.
+  actor, timestamp, and outcome; entries are immutable/tamper-evident and
+  retained for 7 years from the event date; verified via log-integrity
+  inspection, retention-configuration inspection, and a sample compliance
+  audit — for the QAS *a request is created, confirmed, cancelled, or
+  completed* on *audit logging subsystem for export/deletion events* under
+  *normal operation*.
   Verification: inspection.
   Source: `.sdlc/requirements/non-functional/NFR-012-tamper-evident-audit-logging-of-export-and-deletion-events.md`.
 

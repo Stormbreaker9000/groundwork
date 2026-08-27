@@ -4,7 +4,7 @@ type: non_functional
 tier: solution
 title: Monitoring and alerting on requests approaching the statutory deadline
 description: Operations shall be alerted when an export or deletion request approaches the 30-day statutory ceiling without completion, so it can be remediated before breach.
-rationale: The brief's audit-logging concern establishes that export/deletion events must be observable; alerting on at-risk requests is the natural operational extension needed to actually prevent, not just record, a missed 30-day deadline. Not stated explicitly — inferred gap-fill.
+rationale: The 100%-within-30-days success criterion is a compliance-critical target with no tolerance; achieving it in practice requires visibility into at-risk requests early enough for a human to intervene, not only an after-the-fact audit. This inference sits directly beneath a fixed, high-confidence legal constraint (FR-001's 30-day ceiling) rather than a speculative failure mode absent from the brief — unlike NFR-016's deployment-safety inference — which is why it is held at medium rather than low confidence.
 fit_criterion: 100% of export/deletion requests within an assumed 5-day margin of the 30-day ceiling without completion trigger an operational alert, verified via test of the monitoring pipeline; 0 silent breaches.
 priority: should
 confidence: medium
@@ -42,4 +42,8 @@ Extension: Observability
 The 100%-within-30-days success criterion is a compliance-critical
 target with no tolerance; achieving it in practice requires visibility
 into at-risk requests early enough for a human to intervene, not only
-an after-the-fact audit.
+an after-the-fact audit. This inference sits directly beneath a fixed,
+high-confidence legal constraint (FR-001's 30-day ceiling) rather than
+a speculative failure mode absent from the brief — unlike NFR-016's
+deployment-safety inference — which is why it is held at medium rather
+than low confidence.
