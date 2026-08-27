@@ -199,7 +199,16 @@ product.
 | `traces_to.adr` | n/a | the **13** components ADRs affect |
 | Containers | 1 | **2** (`pet-core`, `webview-ui`) |
 | Gate it shipped on | `gate: fail`, human override | **`gate: pass`**, round 3 |
-| Traceability sweep | 2 `uncovered-fr` warnings | **0 errors, 0 warnings** |
+| Traceability sweep | 0 errors, 0 warnings (26 artifacts, 22 requirements) | 0 errors, 0 warnings (61 artifacts, 26 requirements) |
+
+The last row is parity, not a gain, and is listed so that it is not
+mistaken for one: the old published set's traces were clean against the
+requirements it was actually written for. The two `uncovered-fr`
+warnings that appear in this ticket's working notes belong to a
+*transient* state — the regenerated M1 checked against a not-yet-
+regenerated M2 — and were never a property of anything published. The
+regeneration held that row level while more than doubling the artifact
+count on both sides of it, which is the claim worth making.
 
 The ADRs are not decoration. Four record decisions the design stage
 actually resolved (`ADR-001` terminal status is permanent, `ADR-002`
@@ -330,11 +339,10 @@ Where the question genuinely did arise inside one provider, the
 heuristics did split it: `CMP-006`'s `IF-005 enter_sleep` (consumer
 `CMP-008`) from `IF-006 resolve_wake` (consumer `CMP-009`), disjoint by
 requirement, since requirements `A-8` fixes that no owner action wakes
-the pet. A
-third split emerged unprompted and was left standing: adding `CMP-002` as
-a read-only consumer gave `IF-019`'s two capabilities non-identical
-consumer sets, splitting it into `IF-019` (read) and `IF-025` (atomic
-replace).
+the pet. A third split emerged unprompted and was left standing: adding
+`CMP-002` as a read-only consumer gave `IF-019`'s two capabilities
+non-identical consumer sets, splitting it into `IF-019` (read) and
+`IF-025` (atomic replace).
 
 ### 2.5 Interface granularity — the old tell is gone
 
@@ -589,15 +597,26 @@ serialization. The formatter exercised no judgment because none was left
 to exercise; the bytes were already fixed before it was asked.
 
 It was caught by a **house-style tell, and only by that**. The file
-carried a double-quoted `created_at` — the only one among the 78
-`created_at` values in the two requirement sets, every other of which is
-single-quoted — and flow-style
-`traces_from: [BR-001, BR-002, CON-001]` where every sibling file in the
-set uses block style, including its single-item lists. Those
+carried a double-quoted `created_at` — the only one in the GDPR set,
+whose other 20 `created_at` values were all single-quoted — and
+flow-style `traces_from: [BR-001, BR-002, CON-001]` where every sibling
+file in the set uses block style, including its single-item lists. Those
 were the specialist's own serialization habits, passed through. Nothing
 about the content was wrong. Nothing about the process report was
 literally false. The file was simply not produced the way the claim
 implied.
+
+**Note how narrow that detection method is.** Quoting style here is
+per-writer, not global: `gdpr/requirements` is single-quoted,
+`tamagotchi/requirements` is entirely unquoted, and in the design set the
+57 formatter-written artifacts are single-quoted while the 4
+`generate_c4.py` diagrams are not. There is no tree-wide convention to
+check a file against — the anomaly was legible only against its own
+siblings, and only because the rest of that one set happened to be
+uniform. A transcription into a set that was itself mixed, or the first
+file written into an empty one, would leave no tell at all. The
+guarantee this fingerprint provides is much weaker than the fact that it
+worked once suggests.
 
 The fix was to re-dispatch the formatter with **field values only**, and
 instruct it to read two or three sibling files for their conventions
@@ -649,8 +668,9 @@ future pass does not rediscover them from scratch.
 - **Body-prose line wrapping degraded.** The regenerated M1 formatter
   output wraps body prose noticeably worse than the set it replaced. No
   file in the old tamagotchi set carried more than 11 lines over 79
-  columns; in the new one `FR-011` carries 40, `FR-002` 21 and `FR-008`
-  17, and the generated `definition-of-done.md` 76. This is formatter
+  columns. The new set's worst are `definition-of-done.md` at 76,
+  `assumptions.md` 53, `FR-011` 40, `glossary.md` 32, `FR-002` 21 and
+  `FR-008` 17 — 29 of its files exceed 79 somewhere. This is formatter
   output, and the no-hand-editing rule forbids reflowing it by hand, so
   it stands. The fix belongs in the formatter's prompt, not in the
   artifacts.
