@@ -414,7 +414,7 @@ still carries the 30-day figure (it is a statutory ceiling, not a product
 choice, and it is not in question) and `NFR-003` states a 72-hour p95
 operational target — but that figure is labelled as an *assumed*
 placeholder at `confidence: low`, pending `Q-1`, in its description, its
-rationale, `assumptions.md` `A-5` and `dependencies.md` `D-5`. `Q-1`'s
+rationale, and `assumptions.md`'s `A-5` and `D-5`. `Q-1`'s
 own text was rewritten to say what it is actually asking: not the legal
 ceiling, which is fixed, but the practical target inside it.
 
@@ -536,7 +536,7 @@ prose sites that mention it argue the new meaning.
 downstream trace, and no gate in this repository will tell you.** Either
 regenerate the downstream stage or re-read every trace by hand.
 
-### 4.2 Assumption IDs collide across stages
+### 4.2 Assumption and dependency IDs collide across stages
 
 The design set maintains its own `A-1`, `A-2`, … in
 `design/assumptions.md`, and the requirements set maintains a completely
@@ -544,6 +544,29 @@ separate `A-1`, `A-2`, … in `requirements/assumptions.md`. Design
 artifacts cite both. An unqualified "A-8" in a component spec is
 therefore ambiguous, and the ambiguity is invisible — both IDs exist,
 both resolve to something, and neither namespace knows about the other.
+
+**`D-N` collides in exactly the same shape**, and it is worth naming
+because the obvious dismissal of it is wrong. The requirements set runs
+`D-1`..`D-16`; the design set runs `D-1`..`D-12`. That the design range
+is a strict subset is not a reason there is no collision — it is the
+collision, since the overlapping IDs carry unrelated content.
+Requirements `D-1` is "a reference decay model must exist as an
+executable oracle"; design `D-1` is "Q-1 must settle the decay curve …
+before the balance configuration can be authored". Both resolve, neither
+is what the other means.
+
+Nothing is currently broken by it: a sweep of every component,
+interface, ADR, diagram and `drivers.md` in the shipped design set finds
+exactly **one** `D-N` citation, and it already reads "requirements
+`D-14`". The hazard is latent rather than realised — which is precisely
+why it belongs in a record like this one rather than in a bug report.
+
+`Q-N` is the case that genuinely does *not* collide, and the difference
+is instructive. The design stage **continues** the requirements
+question namespace rather than restarting it: it inherits `Q-1` and
+`Q-5`..`Q-10` unchanged and allocates its own new questions from `Q-11`
+upward. One namespace, one meaning per ID. That is the shape `A-N` and
+`D-N` should have had.
 
 Sixty-seven citation sites in the regenerated design set needed
 qualification as "requirements A-N"; they now read that way. Eight of the
@@ -606,15 +629,20 @@ about the content was wrong. Nothing about the process report was
 literally false. The file was simply not produced the way the claim
 implied.
 
-**Note how narrow that detection method is.** Quoting style here is
-per-writer, not global: `gdpr/requirements` is single-quoted,
-`tamagotchi/requirements` is entirely unquoted, and in the design set the
-57 formatter-written artifacts are single-quoted while the 4
-`generate_c4.py` diagrams are not. There is no tree-wide convention to
-check a file against — the anomaly was legible only against its own
-siblings, and only because the rest of that one set happened to be
-uniform. A transcription into a set that was itself mixed, or the first
-file written into an empty one, would leave no tell at all. The
+**Note how narrow that detection method is.** There is demonstrably no
+tree-wide convention to check a file against. The sharpest evidence is
+inside a single directory: in `tamagotchi/design`, the 57
+formatter-written artifacts carry a single-quoted `created_at` while the
+4 `generate_c4.py` diagrams carry an unquoted one — two writers, one
+directory, two styles. The per-set contrast points the same way without
+proving as much: `gdpr/requirements` is single-quoted and
+`tamagotchi/requirements` is entirely unquoted, which is consistent with
+style following the writer, though each of those sets is also a single
+formatter run and so cannot separate the two explanations. Either way
+the anomaly was legible only against its own siblings, and only because
+the rest of that one set happened to be uniform. A transcription into a
+set that was itself mixed, or the first file written into an empty one,
+would leave no tell at all. The
 guarantee this fingerprint provides is much weaker than the fact that it
 worked once suggests.
 
@@ -697,8 +725,9 @@ Everything in this list is a **choice**. None of it is inherited.
 | `dependency-cycle` has no real-world input | §2.3 | Breaking the cycle was the better design; the rule is still tested synthetically |
 | `validator: null` in the critique exhibit | §2.2 | Correct by contract — the critic runs before anything is on disk |
 | `critique-report.yaml` is not pipeline layout | §2.2 | It is an exhibit, published at the root precisely so it cannot be mistaken for one |
-| `Q-4` resolved while `D-10` says it cannot be | §2.6 | Recorded as provisional; the pipeline surfaced the same tension itself |
+| `Q-4` resolved while the requirement set's `D-10` says it cannot be | §2.6 | Recorded as provisional; the pipeline surfaced the same tension itself |
 | GDPR `NFR-007`/`NFR-008` name an unsourced standard and SLA | §3.3 | Disclosed gap-fills at `confidence: low` with review-queue entries |
 | GDPR `Q-1` still unreconciled against `FR-001` | §3.1 | The tension is real; labelling it beats resolving it by fiat |
-| Assumption `A-N` namespaces still collide by design | §4.2 | Fixed in the examples' prose; the underlying ID-shape issue is another ticket |
+| `A-N` and `D-N` namespaces still collide across stages | §4.2 | Qualified wherever the examples cite them; the underlying ID-shape issue is another ticket |
 | Body-prose wrapping, DoD generation noise | §4.6 | Formatter/generator prompt fixes, not artifact fixes |
+| `tamagotchi/dev-log-followup.md` still cites 22 requirements | — | A dated narrative, banner-flagged rather than rewritten; correcting its counts would destroy the before/after account it exists to give |

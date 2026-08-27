@@ -39,7 +39,11 @@ comparing this set against an older copy of it.
 - **[`CONSOLIDATED.md`](./CONSOLIDATED.md)** — every requirement, the
   assumptions, and the review queue rendered into one readable document.
 - **[`dev-log-followup.md`](./dev-log-followup.md)** — the follow-up dev-log
-  post (portable draft) narrating the before/after.
+  post (portable draft) narrating the before/after. It is a **dated
+  narrative**: it was written against the pre-STO-219 22-requirement set and
+  its counts describe that set, not this one. Left as written, with a banner
+  at its head, because rewriting its numbers would destroy the before/after
+  account it exists to give.
 
 ## Validating the sets
 

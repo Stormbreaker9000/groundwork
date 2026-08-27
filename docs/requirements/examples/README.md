@@ -33,4 +33,6 @@ and the two projects' ID spaces collide.
   own; its divergences are in `REGENERATION.md` §3.
 
 The tamagotchi project also ships a single-document rendering
-(`tamagotchi/CONSOLIDATED.md`) and the dev-log draft that discusses it.
+(`tamagotchi/CONSOLIDATED.md`) and a dev-log draft, `dev-log-followup.md`.
+That draft is a dated narrative written against the pre-STO-219
+22-requirement set; its counts are deliberately left describing that set.
