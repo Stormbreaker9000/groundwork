@@ -159,6 +159,9 @@ review_queue:
 - id: NFR-008
   confidence: low
   reason: 99.9% monthly availability is an assumed target; no SLA was stated in the elicited context (see A-7).
+- id: NFR-012
+  confidence: low
+  reason: affected by open question Q-3 — audit-log retention period not specified
 - id: NFR-014
   confidence: low
   reason: 'Extensibility target is a direct consequence of open question Q-2 (owner: legal); the retention-category set is not yet finalized.'

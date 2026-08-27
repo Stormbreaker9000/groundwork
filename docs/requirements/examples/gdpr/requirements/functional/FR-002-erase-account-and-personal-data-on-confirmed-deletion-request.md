@@ -11,8 +11,11 @@ confidence: low
 verification_method: test
 ears_pattern: event
 status: draft
-created_at: "2026-08-26"
-traces_from: [BR-001, BR-002, CON-001]
+created_at: '2026-08-26'
+traces_from:
+- BR-001
+- BR-002
+- CON-001
 traces_to:
   design: []
   tests: []

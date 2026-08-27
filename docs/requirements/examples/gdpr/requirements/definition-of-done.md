@@ -19,35 +19,19 @@ source requirement and regenerate.
 criteria, and `fit_criterion`. One gate per FR; the linked file holds the
 authoritative, executable acceptance criteria.*
 
-- [ ] **FR-001 — Export personal data as machine-readable archive** (must): all
-  acceptance-criteria scenarios in
-  `.sdlc/requirements/functional/FR-001-export-personal-data-as-machine-readable-archive.md`
-  pass.
-  Fit criterion: 100% of export requests produce a downloadable archive within
-  30 days of submission; a field-level audit of each generated archive against
-  the catalogued data map confirms 0 omitted fields, checked across a sample of
-  test accounts spanning every data store in scope.
+- [ ] **FR-001 — Export personal data as machine-readable archive** (must): all acceptance-criteria scenarios in
+  `.sdlc/requirements/functional/FR-001-export-personal-data-as-machine-readable-archive.md` pass.
+  Fit criterion: 100% of export requests produce a downloadable archive within 30 days of submission; a field-level audit of each generated archive against the catalogued data map confirms 0 omitted fields, checked across a sample of test accounts spanning every data store in scope.
   Verification: test.
 
-- [ ] **FR-002 — Erase account and personal data on confirmed deletion request**
-  (must): all acceptance-criteria scenarios in
-  `.sdlc/requirements/functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-request.md`
-  pass.
-  Fit criterion: For 100% of confirmed deletion requests sampled in acceptance
-  testing, a data audit conducted on or before day 30 after confirmation finds
-  0 personal-data records for the account outside the documented
-  statutory-retention set, and 100% of authentication attempts against the
-  deleted account fail.
+- [ ] **FR-002 — Erase account and personal data on confirmed deletion request** (must): all acceptance-criteria scenarios in
+  `.sdlc/requirements/functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-request.md` pass.
+  Fit criterion: For 100% of confirmed deletion requests sampled in acceptance testing, a data audit conducted on or before day 30 after confirmation finds 0 personal-data records for the account outside the documented statutory-retention set, and 100% of authentication attempts against the deleted account fail.
   Verification: test.
 
-- [ ] **FR-003 — Cancel unconfirmed account deletion request within 24-hour
-  window** (must): all acceptance-criteria scenarios in
-  `.sdlc/requirements/functional/FR-003-cancel-unconfirmed-account-deletion-request-within-24-hour-window.md`
-  pass.
-  Fit criterion: 100% of deletion requests left unconfirmed for 24 hours are
-  automatically cancelled with 0 mutations to account state or personal data; 0
-  accounts are deleted without a corresponding recorded re-authentication event
-  within the 24-hour window.
+- [ ] **FR-003 — Cancel unconfirmed account deletion request within 24-hour window** (must): all acceptance-criteria scenarios in
+  `.sdlc/requirements/functional/FR-003-cancel-unconfirmed-account-deletion-request-within-24-hour-window.md` pass.
+  Fit criterion: 100% of deletion requests left unconfirmed for 24 hours are automatically cancelled with 0 mutations to account state or personal data; 0 accounts are deleted without a corresponding recorded re-authentication event within the 24-hour window.
   Verification: test.
 
 ## 2. NFR Fitness Gates
@@ -55,148 +39,108 @@ authoritative, executable acceptance criteria.*
 scenario (QAS). The **response measure** is the pass/fail oracle; the
 `verification_method` is how it is confirmed.*
 
-- [ ] **NFR-001 — Export data completeness across all catalogued data stores**
-  (must): meets response measure — a field-level audit finds 0 omissions
-  across 100% of data stores, sampled quarterly and on every export-pipeline
-  release — for the QAS *submits a data export request* on *export generation
-  subsystem* under *normal operation, spanning every data store in the
-  already-catalogued data map*.
+- [ ] **NFR-001 — Export data completeness across all catalogued data stores** (must): meets response measure —
+  A field-level audit finds 0 omissions across 100% of data stores, sampled quarterly and on every export-pipeline release.
+  — for the QAS *Submits a data export request* on *Export generation subsystem*
+  under *Normal operation, spanning every data store in the already-catalogued data map*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-001-export-data-completeness-across-all-catalogued-data-stores.md`.
 
-- [ ] **NFR-002 — Erasure completeness excluding statutory-retention records**
-  (must): meets response measure — a data audit finds 0 personal-data records
-  outside the documented statutory-retention set; 100% of authentication
-  attempts against the deleted account fail — for the QAS *confirms a deletion
-  request via re-authentication* on *erasure processing subsystem across all
-  catalogued personal-data stores* under *normal operation, after the erasure
-  process completes*.
+- [ ] **NFR-002 — Erasure completeness excluding statutory-retention records** (must): meets response measure —
+  A data audit finds 0 personal-data records outside the documented statutory-retention set; 100% of authentication attempts against the deleted account fail.
+  — for the QAS *Confirms a deletion request via re-authentication* on *Erasure processing subsystem across all catalogued personal-data stores*
+  under *Normal operation, after the erasure process completes*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-002-erasure-completeness-excluding-statutory-retention-records.md`.
 
-- [ ] **NFR-003 — Export generation time under normal load** (must): meets
-  response measure — p95 turnaround <= 72 hours; 100% of exports available
-  within the 30-day statutory ceiling, measured over a rolling 30-day window —
-  for the QAS *submits a request to export their personal data* on *export
-  generation service and the durable object store holding generated archives
-  (D-1)* under *normal operating load, export-worker utilisation <= 80%*.
+- [ ] **NFR-003 — Export generation time under normal load** (must): meets response measure —
+  p95 turnaround <= 72 hours; 100% of exports available within the 30-day statutory ceiling, measured over a rolling 30-day window.
+  — for the QAS *Submits a request to export their personal data* on *Export generation service and the durable object store holding generated archives (D-1)*
+  under *Normal operating load, export-worker utilisation <= 80%*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-003-export-generation-time-under-normal-load.md`.
 
-- [ ] **NFR-005 — Export archive format interoperability** (should): meets
-  response measure — 100% of archives validate against the published schema
-  via automated validation and open successfully in standard tooling during
-  verification testing — for the QAS *downloads and opens the export archive*
-  on *export archive format and its published specification* under *normal
-  operation, using common third-party tooling (archive utilities, JSON/CSV
-  parsers)*.
+- [ ] **NFR-005 — Export archive format interoperability** (should): meets response measure —
+  100% of archives validate against the published schema via automated validation and open successfully in standard tooling during verification testing.
+  — for the QAS *Downloads and opens the export archive* on *Export archive format and its published specification*
+  under *Normal operation, using common third-party tooling (archive utilities, JSON/CSV parsers)*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-005-export-archive-format-interoperability.md`.
 
-- [ ] **NFR-006 — User error protection for irreversible account deletion**
-  (must): meets response measure — 100% of deletion initiations require the
-  distinct acknowledgment step; 0 deletion requests are queued without both the
-  acknowledgment and the re-authentication event recorded — for the QAS
-  *initiates account deletion* on *deletion request UI/flow* under *normal
-  operation, self-service deletion flow*.
+- [ ] **NFR-006 — User error protection for irreversible account deletion** (must): meets response measure —
+  100% of deletion initiations require the distinct acknowledgment step; 0 deletion requests are queued without both the acknowledgment and the re-authentication event recorded.
+  — for the QAS *Initiates account deletion* on *Deletion request UI/flow*
+  under *Normal operation, self-service deletion flow*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-006-user-error-protection-for-irreversible-account-deletion.md`.
 
-- [ ] **NFR-007 — Accessibility of export and deletion self-service flows**
-  (should): meets response measure — 0 critical violations, verified by
-  automated scan plus manual screen-reader and keyboard-only walkthrough — for
-  the QAS *navigates the export or deletion self-service flow, including the
-  re-authentication step-up and the irreversibility-acknowledgment step* on
-  *export and deletion self-service UI flow* under *normal operation, any
-  supported assistive technology*.
+- [ ] **NFR-007 — Accessibility of export and deletion self-service flows** (should): meets response measure —
+  0 critical violations, verified by automated scan plus manual screen-reader and keyboard-only walkthrough.
+  — for the QAS *Navigates the export or deletion self-service flow, including the re-authentication step-up and the irreversibility-acknowledgment step* on *Export and deletion self-service UI flow*
+  under *Normal operation, any supported assistive technology*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-007-accessibility-of-export-and-deletion-self-service-flows.md`.
 
-- [ ] **NFR-008 — Availability of the GDPR self-service portal** (should):
-  meets response measure — >= 99.9% monthly availability, measured via uptime
-  monitoring over a rolling monthly window — for the QAS *attempts to submit an
-  export or deletion request* on *export and deletion request-submission API
-  endpoints* under *normal operation, any hour (self-service, no
-  business-hours restriction implied by the brief)*.
+- [ ] **NFR-008 — Availability of the GDPR self-service portal** (should): meets response measure —
+  >= 99.9% monthly availability, measured via uptime monitoring over a rolling monthly window.
+  — for the QAS *Attempts to submit an export or deletion request* on *Export and deletion request-submission API endpoints*
+  under *Normal operation, any hour (self-service, no business-hours restriction implied by the brief)*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-008-availability-of-the-gdpr-self-service-portal.md`.
 
-- [ ] **NFR-009 — Fault tolerance and recovery of export generation** (should):
-  meets response measure — >= 99% of transient failures resolved within 3
-  retry attempts; 100% of affected requests still complete within the 30-day
-  ceiling, verified via fault-injection testing — for the QAS *one or more
-  source stores fail to respond during archive assembly* on *export generation
-  pipeline* under *normal operation, no sustained outage*.
+- [ ] **NFR-009 — Fault tolerance and recovery of export generation** (should): meets response measure —
+  >= 99% of transient failures resolved within 3 retry attempts; 100% of affected requests still complete within the 30-day ceiling, verified via fault-injection testing.
+  — for the QAS *One or more source stores fail to respond during archive assembly* on *Export generation pipeline*
+  under *Normal operation, no sustained outage*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-009-fault-tolerance-and-recovery-of-export-generation.md`.
 
-- [ ] **NFR-010 — Confidentiality of exported personal-data archives** (must):
-  meets response measure — 100% of archives encrypted at rest (assumed AES-256
-  or equivalent); links expire within an assumed 72-hour window; 0 unauthorized
-  retrievals across access-control and penetration testing — for the QAS
-  *attempts to access or intercept the export archive or its download link* on
-  *export archive and its download link* under *normal operation, archive at
-  rest in the durable object store and in transit during download*.
+- [ ] **NFR-010 — Confidentiality of exported personal-data archives** (must): meets response measure —
+  100% of archives encrypted at rest (assumed AES-256 or equivalent); links expire within an assumed 72-hour window; 0 unauthorized retrievals across access-control and penetration testing.
+  — for the QAS *Attempts to access or intercept the export archive or its download link* on *Export archive and its download link*
+  under *Normal operation, archive at rest in the durable object store and in transit during download*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-010-confidentiality-of-exported-personal-data-archives.md`.
 
-- [ ] **NFR-011 — Deletion requires fresh re-authentication and auto-cancels if
-  unconfirmed** (must): meets response measure — 0 accounts deleted without a
-  recorded re-authentication event in the prior 24 hours; 100% of unconfirmed
-  requests auto-cancelled with no data mutation — for the QAS *a deletion
-  request is submitted, with or without a subsequent step-up re-authentication
-  event* on *deletion confirmation flow and its integration with the existing
-  identity provider's step-up re-authentication capability* under *normal
-  operation, within or beyond the 24-hour confirmation window*.
+- [ ] **NFR-011 — Deletion requires fresh re-authentication and auto-cancels if unconfirmed** (must): meets response measure —
+  0 accounts deleted without a recorded re-authentication event in the prior 24 hours; 100% of unconfirmed requests auto-cancelled with no data mutation.
+  — for the QAS *A deletion request is submitted, with or without a subsequent step-up re-authentication event* on *Deletion confirmation flow and its integration with the existing identity provider's step-up re-authentication capability*
+  under *Normal operation, within or beyond the 24-hour confirmation window*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-011-deletion-requires-fresh-re-authentication-and-auto-cancels-if-unconfirmed.md`.
 
-- [ ] **NFR-012 — Tamper-evident audit logging of export and deletion events**
-  (must): meets response measure — 100% of lifecycle events captured with
-  actor, timestamp, and outcome; entries are immutable/tamper-evident and
-  retained for 7 years from the event date; verified via log-integrity
-  inspection, retention-configuration inspection, and a sample compliance
-  audit — for the QAS *a request is created, confirmed, cancelled, or
-  completed* on *audit logging subsystem for export/deletion events* under
-  *normal operation*.
+- [ ] **NFR-012 — Tamper-evident audit logging of export and deletion events** (must): meets response measure —
+  100% of lifecycle events captured with actor, timestamp, and outcome; entries are immutable/tamper-evident; no automated deletion occurs absent a defined retention policy (open question Q-3); verified via log-integrity inspection and a sample compliance audit.
+  — for the QAS *A request is created, confirmed, cancelled, or completed* on *Audit logging subsystem for export/deletion events*
+  under *Normal operation*.
   Verification: inspection.
   Source: `.sdlc/requirements/non-functional/NFR-012-tamper-evident-audit-logging-of-export-and-deletion-events.md`.
 
-- [ ] **NFR-014 — Extensibility of statutory retention categories** (should):
-  meets response measure — the addition is achievable via configuration/data
-  rather than core deletion-logic changes, verified via mechanism analysis —
-  for the QAS *identifies a new regulated record type (beyond financial/tax)
-  that must override erasure* on *retention-override /
-  pseudonymisation-and-isolation mechanism* under *normal operation, outside of
-  an active deletion incident*.
+- [ ] **NFR-014 — Extensibility of statutory retention categories** (should): meets response measure —
+  The addition is achievable via configuration/data rather than core deletion-logic changes, verified via mechanism analysis.
+  — for the QAS *Identifies a new regulated record type (beyond financial/tax) that must override erasure* on *Retention-override / pseudonymisation-and-isolation mechanism*
+  under *Normal operation, outside of an active deletion incident*.
   Verification: analysis.
   Source: `.sdlc/requirements/non-functional/NFR-014-extensibility-of-statutory-retention-categories.md`.
 
-- [ ] **NFR-015 — Monitoring and alerting on requests approaching the statutory
-  deadline** (should): meets response measure — 100% of requests within an
-  assumed 5-day margin of the ceiling trigger an alert, verified via test; 0
-  silent breaches — for the QAS *an export or deletion request is still open as
-  it nears the 30-day statutory ceiling* on *monitoring/alerting pipeline over
-  export and deletion request state* under *normal operation*.
+- [ ] **NFR-015 — Monitoring and alerting on requests approaching the statutory deadline** (should): meets response measure —
+  100% of requests within an assumed 5-day margin of the ceiling trigger an alert, verified via test; 0 silent breaches.
+  — for the QAS *An export or deletion request is still open as it nears the 30-day statutory ceiling* on *Monitoring/alerting pipeline over export and deletion request state*
+  under *Normal operation*.
   Verification: test.
   Source: `.sdlc/requirements/non-functional/NFR-015-monitoring-and-alerting-on-requests-approaching-the-statutory-deadline.md`.
 
-- [ ] **NFR-016 — Safe deployment and rollback without corrupting in-flight
-  requests** (could): meets response measure — 0 jobs left in an inconsistent
-  state, verified via a deployment/rollback demonstration under simulated
-  in-flight load — for the QAS *a deployment or rollback occurs while
-  export/deletion jobs are in-flight* on *export generation and erasure
-  processing pipelines and their deployment mechanism* under *normal release
-  activity*.
+- [ ] **NFR-016 — Safe deployment and rollback without corrupting in-flight requests** (could): meets response measure —
+  0 jobs left in an inconsistent state, verified via a deployment/rollback demonstration under simulated in-flight load.
+  — for the QAS *A deployment or rollback occurs while export/deletion jobs are in-flight* on *Export generation and erasure processing pipelines and their deployment mechanism*
+  under *Normal release activity*.
   Verification: demonstration.
   Source: `.sdlc/requirements/non-functional/NFR-016-safe-deployment-and-rollback-without-corrupting-in-flight-requests.md`.
 
-- [ ] **NFR-017 — Statutory-retention compliance of pseudonymised records
-  post-erasure** (must): meets response measure — 100% of retained records are
-  pseudonymised and isolated; a compliance audit finds 0 exceptions against the
-  documented retention rules — for the QAS *an account with financial/tax
-  records under mandated retention is erased* on *retention-isolation and
-  pseudonymisation mechanism* under *normal operation*.
+- [ ] **NFR-017 — Statutory-retention compliance of pseudonymised records post-erasure** (must): meets response measure —
+  100% of retained records are pseudonymised and isolated; a compliance audit finds 0 exceptions against the documented retention rules.
+  — for the QAS *An account with financial/tax records under mandated retention is erased* on *Retention-isolation and pseudonymisation mechanism*
+  under *Normal operation*.
   Verification: inspection.
   Source: `.sdlc/requirements/non-functional/NFR-017-statutory-retention-compliance-of-pseudonymised-records-post-erasure.md`.
 
@@ -205,30 +149,29 @@ scenario (QAS). The **response measure** is the pass/fail oracle; the
   its acceptance criteria (Gherkin → executable test), recorded in the FR's
   `traces_to.tests`.
 - [ ] Every NFR with `verification_method: test` has an automated fitness check
-  asserting its QAS response measure: NFR-001, NFR-002, NFR-003, NFR-005,
-  NFR-006, NFR-007, NFR-008, NFR-009, NFR-010, NFR-011, NFR-015.
+  asserting its QAS response measure: NFR-001, NFR-002, NFR-003, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, NFR-010, NFR-011, NFR-015.
 - [ ] NFRs with `verification_method` of `inspection` / `analysis` /
-  `demonstration` have a recorded, signed-off evidence artifact: NFR-012
-  (inspection), NFR-014 (analysis), NFR-016 (demonstration), NFR-017
-  (inspection).
+  `demonstration` have a recorded, signed-off evidence artifact: NFR-012, NFR-014, NFR-016, NFR-017.
 - [ ] No FR/NFR marked `must` remains without a corresponding test or evidence
-  link (no dangling `traces_to`).
+  link (no dangling `traces_to`). **Flagged as currently unmet:** every requirement
+  in this set has an empty `traces_to.tests`, including all `must`-priority
+  requirements — FR-001, FR-002, FR-003, NFR-001, NFR-002, NFR-003, NFR-006,
+  NFR-010, NFR-011, NFR-012, NFR-017, BR-001, BR-002, CON-001.
 
 ## 4. Documentation Requirements
 - [ ] Public-facing behavior described by `must` FRs is documented (user/API
   docs as applicable): FR-001, FR-002, FR-003.
 - [ ] Operational NFRs (security, reliability, observability, deployability) have
-  runbook / config notes: NFR-008 (availability), NFR-009 (fault tolerance),
-  NFR-010 (confidentiality), NFR-011 (re-authentication / authenticity),
-  NFR-012 (audit logging), NFR-015 (monitoring / alerting), NFR-016 (safe
-  deployment / rollback).
+  runbook / config notes: NFR-008 (reliability), NFR-009 (reliability),
+  NFR-010 (security), NFR-011 (security), NFR-012 (observability),
+  NFR-015 (observability), NFR-016 (deployability).
 - [ ] `.sdlc/requirements/` is current: every implemented requirement has
   `status: implemented` (or `verified`) and populated `traces_to.code`.
 - [ ] Architecture-significant decisions are captured as ADRs referenced from the
   relevant requirements' `traces_to.design`.
 
 ## 5. Deployment / Operational Readiness
-- [ ] Security NFR gates pass before release: NFR-010, NFR-011.
+- [ ] Security NFR gates pass before release: NFR-010, NFR-011, NFR-012.
 - [ ] Reliability / availability NFR targets are met or have an accepted waiver:
   NFR-008, NFR-009.
 - [ ] Observability is in place (logs / metrics / traces) for the response

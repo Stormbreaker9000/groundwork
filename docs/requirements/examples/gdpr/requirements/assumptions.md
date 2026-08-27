@@ -13,6 +13,7 @@
 - A-10: Financial and tax records are assumed not necessarily to be the complete list of statutory-retention categories (NFR-014, CON-001, BR-002); the set may need to grow pending Q-2's answer from legal.
 - A-11: Pseudonymisation of statutorily-retained financial/tax records (CON-001) is assumed to meet the bar GDPR Article 17(3)(b) sets for putting data beyond ordinary processing use, without requiring a separate legal sign-off step in-system.
 - A-12: BR-002's retention exemption is assumed to apply per-record (or per-record-category) — only the specific statutory-retention records are held back from FR-002's erasure, not the account as a whole.
+- A-13: No retention period was specified for the tamper-evident audit log (NFR-012) in the elicited context; retention is assumed indefinite, with no automated deletion, until superseded by a future retention policy, pending Q-3.
 
 ## Dependencies
 - D-1: A durable object store must be available to hold generated export archives before FR-001 and NFR-010 can be implemented and verified.
@@ -24,3 +25,4 @@
 ## Open Questions
 - Q-1: What is the maximum acceptable turnaround for an export request? (The 30-day statutory ceiling in FR-001 is fixed and not in question; this asks for the practical operational target within that ceiling — currently assumed as a 72-hour p95 in NFR-003 — pending this answer.) (owner: product)
 - Q-2: Which regulated record types override erasure, beyond financial? (owner: legal)
+- Q-3: What is the required/legally mandated retention period for the tamper-evident export/deletion audit log (NFR-012)? No retention duration for this log was stated in the elicited context. (owner: legal)
