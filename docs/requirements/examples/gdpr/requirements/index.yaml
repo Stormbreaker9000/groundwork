@@ -1,0 +1,164 @@
+requirements:
+- id: FR-001
+  type: functional
+  tier: solution
+  title: Export personal data as machine-readable archive
+  priority: must
+  status: draft
+  path: functional/FR-001-export-personal-data-as-machine-readable-archive.md
+- id: FR-002
+  type: functional
+  tier: solution
+  title: Erase account and personal data on confirmed deletion, excluding statutory retention records
+  priority: must
+  status: draft
+  path: functional/FR-002-erase-account-and-personal-data-on-confirmed-deletion-excluding-statutory-retention-records.md
+- id: FR-003
+  type: functional
+  tier: solution
+  title: Cancel unconfirmed account deletion request within 24-hour window
+  priority: must
+  status: draft
+  path: functional/FR-003-cancel-unconfirmed-account-deletion-request-within-24-hour-window.md
+- id: NFR-001
+  type: non_functional
+  tier: solution
+  title: Export data completeness across all catalogued data stores
+  priority: must
+  status: draft
+  path: non-functional/NFR-001-export-data-completeness-across-all-catalogued-data-stores.md
+- id: NFR-002
+  type: non_functional
+  tier: solution
+  title: Erasure completeness excluding statutory-retention records
+  priority: must
+  status: draft
+  path: non-functional/NFR-002-erasure-completeness-excluding-statutory-retention-records.md
+- id: NFR-003
+  type: non_functional
+  tier: solution
+  title: Export generation time under normal load
+  priority: must
+  status: draft
+  path: non-functional/NFR-003-export-generation-time-under-normal-load.md
+- id: NFR-005
+  type: non_functional
+  tier: solution
+  title: Export archive format interoperability
+  priority: should
+  status: draft
+  path: non-functional/NFR-005-export-archive-format-interoperability.md
+- id: NFR-006
+  type: non_functional
+  tier: solution
+  title: User error protection for irreversible account deletion
+  priority: must
+  status: draft
+  path: non-functional/NFR-006-user-error-protection-for-irreversible-account-deletion.md
+- id: NFR-007
+  type: non_functional
+  tier: solution
+  title: Accessibility of export and deletion self-service flows
+  priority: should
+  status: draft
+  path: non-functional/NFR-007-accessibility-of-export-and-deletion-self-service-flows.md
+- id: NFR-008
+  type: non_functional
+  tier: solution
+  title: Availability of the GDPR self-service portal
+  priority: should
+  status: draft
+  path: non-functional/NFR-008-availability-of-the-gdpr-self-service-portal.md
+- id: NFR-009
+  type: non_functional
+  tier: solution
+  title: Fault tolerance and recovery of export generation
+  priority: should
+  status: draft
+  path: non-functional/NFR-009-fault-tolerance-and-recovery-of-export-generation.md
+- id: NFR-010
+  type: non_functional
+  tier: solution
+  title: Confidentiality of exported personal-data archives
+  priority: must
+  status: draft
+  path: non-functional/NFR-010-confidentiality-of-exported-personal-data-archives.md
+- id: NFR-011
+  type: non_functional
+  tier: solution
+  title: Deletion requires fresh re-authentication and auto-cancels if unconfirmed
+  priority: must
+  status: draft
+  path: non-functional/NFR-011-deletion-requires-fresh-re-authentication-and-auto-cancels-if-unconfirmed.md
+- id: NFR-012
+  type: non_functional
+  tier: solution
+  title: Tamper-evident audit logging of export and deletion events
+  priority: must
+  status: draft
+  path: non-functional/NFR-012-tamper-evident-audit-logging-of-export-and-deletion-events.md
+- id: NFR-014
+  type: non_functional
+  tier: solution
+  title: Extensibility of statutory retention categories
+  priority: should
+  status: draft
+  path: non-functional/NFR-014-extensibility-of-statutory-retention-categories.md
+- id: NFR-015
+  type: non_functional
+  tier: solution
+  title: Monitoring and alerting on requests approaching the statutory deadline
+  priority: should
+  status: draft
+  path: non-functional/NFR-015-monitoring-and-alerting-on-requests-approaching-the-statutory-deadline.md
+- id: NFR-016
+  type: non_functional
+  tier: solution
+  title: Safe deployment and rollback without corrupting in-flight requests
+  priority: could
+  status: draft
+  path: non-functional/NFR-016-safe-deployment-and-rollback-without-corrupting-in-flight-requests.md
+- id: NFR-017
+  type: non_functional
+  tier: solution
+  title: Statutory-retention compliance of pseudonymised records post-erasure
+  priority: must
+  status: draft
+  path: non-functional/NFR-017-statutory-retention-compliance-of-pseudonymised-records-post-erasure.md
+- id: CON-001
+  type: constraint
+  tier: business
+  title: Statutory-retained financial and tax records survive erasure in pseudonymised, isolated form
+  priority: must
+  status: draft
+  path: constraints/CON-001-statutory-retained-financial-and-tax-records-survive-erasure-in-pseudonymised-isolated-form.md
+- id: BR-001
+  type: business_rule
+  tier: business
+  title: Completed account deletion is irreversible
+  priority: must
+  status: draft
+  path: business-rules/BR-001-completed-account-deletion-is-irreversible.md
+- id: BR-002
+  type: business_rule
+  tier: business
+  title: Data under an active legal retention obligation is exempt from erasure until it expires
+  priority: must
+  status: draft
+  path: business-rules/BR-002-data-under-an-active-legal-retention-obligation-is-exempt-from-erasure-until-it-expires.md
+review_queue:
+- id: NFR-003
+  confidence: low
+  reason: '72-hour p95 export turnaround is an assumed interim engineering target pending Q-1 (owner: product); no confirmed figure exists yet.'
+- id: NFR-007
+  confidence: low
+  reason: WCAG 2.2 AA is an assumed accessibility standard; no accessibility law or target was stated in the elicited context (see A-6).
+- id: NFR-008
+  confidence: low
+  reason: 99.9% monthly availability is an assumed target; no SLA was stated in the elicited context (see A-7).
+- id: NFR-014
+  confidence: low
+  reason: 'Extensibility target is a direct consequence of open question Q-2 (owner: legal); the retention-category set is not yet finalized.'
+- id: NFR-016
+  confidence: low
+  reason: Inferred gap-fill, not stated explicitly in the brief, given the long-running, compliance-critical nature of export/deletion jobs.
