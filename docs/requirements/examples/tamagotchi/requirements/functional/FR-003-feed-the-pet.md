@@ -3,15 +3,15 @@ id: FR-003
 type: functional
 tier: solution
 title: Feed the pet
-description: When the owner selects the feed action, the system shall increase the pet's hunger-satisfaction stat by the configured feed increment up to its maximum value.
-rationale: Feeding is the primary care interaction that reverses hunger decay; it is the most frequent reason a user returns, so it must produce an immediate, legible reward.
-fit_criterion: Each feed action raises the hunger-satisfaction stat by exactly the configured increment, never exceeding the maximum, verified for boundary cases at 0, mid-range, and near-maximum starting values.
+description: When the owner selects the feed action, the system shall increase the pet's hunger stat by the feed interaction's defined increment, up to the stat's maximum value.
+rationale: Feed is one of the four care interactions the owner performs to counteract stat decay; without it the owner has no way to address hunger decay, breaking the core care loop the attachment habit depends on.
+fit_criterion: The hunger stat increases by the configured feed increment (or is unchanged if already at maximum) in 100% of feed action invocations in acceptance tests.
 priority: must
-confidence: high
+confidence: medium
 verification_method: test
 ears_pattern: event
 status: draft
-created_at: 2026-07-10
+created_at: 2026-08-24
 traces_from: []
 traces_to:
   design: []
@@ -24,29 +24,29 @@ parent_scope: null
 # FR-003 — Feed the pet
 
 ## Description
-When the owner selects the feed action, the system shall increase the pet's
-hunger-satisfaction stat by the configured feed increment up to its maximum value.
+When the owner selects the feed action, the system shall increase the pet's hunger
+stat by the feed interaction's defined increment, up to the stat's maximum value.
 
 ## Rationale
-Feeding is the primary care interaction that reverses hunger decay; it is the most
-frequent reason a user returns, so it must produce an immediate, legible reward.
+Feed is one of the four care interactions the owner performs to counteract stat
+decay; without it the owner has no way to address hunger decay, breaking the core
+care loop the attachment habit depends on.
 
 ## Acceptance Criteria
-### AC-1 — Feeding raises hunger satisfaction
+### AC-1 — Feeding increases hunger below maximum
 ```gherkin
-Given a pet with hunger-satisfaction below its maximum
+Given the pet's hunger stat is below its maximum value
 When the owner selects the feed action
-Then the hunger-satisfaction stat increases by the configured feed increment
+Then the hunger stat increases by the feed interaction's defined increment, not exceeding the maximum value
 ```
 
-### AC-2 — Feeding never overflows the maximum
+### AC-2 — Feeding at maximum hunger has no further effect
 ```gherkin
-Given a pet with hunger-satisfaction near its maximum
+Given the pet's hunger stat is already at its maximum value
 When the owner selects the feed action
-Then the hunger-satisfaction stat is capped at its maximum value
+Then the hunger stat remains at its maximum value with no error
 ```
 
 ## Fit Criterion
-Each feed action raises the hunger-satisfaction stat by exactly the configured
-increment, never exceeding the maximum, verified for boundary cases at 0,
-mid-range, and near-maximum starting values.
+The hunger stat increases by the configured feed increment (or is unchanged if
+already at maximum) in 100% of feed action invocations in acceptance tests.

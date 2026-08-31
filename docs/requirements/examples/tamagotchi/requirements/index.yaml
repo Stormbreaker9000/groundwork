@@ -1,194 +1,210 @@
+# Machine index for .sdlc/requirements — derived, not authoritative.
+# The per-file frontmatter is the source of truth; regenerate wholesale.
 requirements:
   - id: FR-001
     type: functional
-    tier: solution
-    title: Persist pet state to local storage
+    tier: stakeholder
+    title: "Persist pet state on stat change and app close"
     priority: must
-    confidence: high
     status: draft
-    path: functional/FR-001-persist-pet-state-to-local-storage.md
+    path: functional/FR-001-persist-pet-state-on-stat-change-and-app-close.md
   - id: FR-002
     type: functional
     tier: solution
-    title: Apply offline-elapsed decay on launch
+    title: "Apply offline-elapsed decay at launch"
     priority: must
-    confidence: high
     status: draft
-    path: functional/FR-002-apply-offline-elapsed-decay-on-launch.md
+    path: functional/FR-002-apply-offline-elapsed-decay-at-launch.md
   - id: FR-003
     type: functional
     tier: solution
-    title: Feed the pet
+    title: "Feed the pet"
     priority: must
-    confidence: high
     status: draft
     path: functional/FR-003-feed-the-pet.md
   - id: FR-004
     type: functional
     tier: solution
-    title: Play with the pet
+    title: "Play with the pet"
     priority: must
-    confidence: high
     status: draft
     path: functional/FR-004-play-with-the-pet.md
   - id: FR-005
     type: functional
     tier: solution
-    title: Clean the pet
+    title: "Clean the pet"
     priority: must
-    confidence: high
     status: draft
     path: functional/FR-005-clean-the-pet.md
   - id: FR-006
     type: functional
     tier: solution
-    title: Put the pet to sleep
+    title: "Put the pet to sleep"
     priority: must
-    confidence: high
     status: draft
     path: functional/FR-006-put-the-pet-to-sleep.md
   - id: FR-007
     type: functional
-    tier: solution
-    title: Display pet mood expression
+    tier: stakeholder
+    title: "Display mood expression tracking stat thresholds"
     priority: must
-    confidence: medium
     status: draft
-    path: functional/FR-007-display-pet-mood-expression.md
+    path: functional/FR-007-display-mood-expression-tracking-stat-thresholds.md
   - id: FR-008
     type: functional
     tier: solution
-    title: Progress neglect to sickness and death
+    title: "Progress sustained neglect toward a terminal health status"
     priority: must
-    confidence: low
     status: draft
-    path: functional/FR-008-progress-neglect-to-sickness-and-death.md
+    path: functional/FR-008-progress-sustained-neglect-toward-a-terminal-health-status.md
   - id: FR-009
     type: functional
     tier: solution
-    title: Optional local care reminders
-    priority: could
-    confidence: medium
+    title: "Present optional local care-reminder notifications"
+    priority: should
     status: draft
-    path: functional/FR-009-optional-local-care-reminders.md
+    path: functional/FR-009-present-optional-local-care-reminder-notifications.md
   - id: FR-010
     type: functional
     tier: solution
-    title: Recover from corrupted or missing save file
+    title: "Initialize a default pet when no save file is present"
     priority: must
-    confidence: high
     status: draft
-    path: functional/FR-010-recover-from-corrupted-or-missing-save-file.md
+    path: functional/FR-010-initialize-a-default-pet-when-no-save-file-is-present.md
+  - id: FR-011
+    type: functional
+    tier: solution
+    title: "Wake the pet from the Sleeping state"
+    priority: must
+    status: draft
+    path: functional/FR-011-wake-the-pet-from-the-sleeping-state.md
+  - id: FR-012
+    type: functional
+    tier: solution
+    title: "Quarantine a save file that fails integrity validation"
+    priority: must
+    status: draft
+    path: functional/FR-012-quarantine-a-save-file-that-fails-integrity-validation.md
   - id: NFR-001
     type: non_functional
     tier: solution
-    title: Offline-elapsed decay correctness
+    title: "Offline-elapsed decay matches the reference decay model"
     priority: must
-    confidence: medium
     status: draft
-    path: non-functional/NFR-001-offline-elapsed-decay-correctness.md
+    path: non-functional/NFR-001-offline-elapsed-decay-matches-the-reference-decay-model.md
   - id: NFR-002
     type: non_functional
     tier: solution
-    title: Idle CPU and memory footprint budget
+    title: "Idle CPU and memory footprint of the always-on process"
     priority: must
-    confidence: low
     status: draft
-    path: non-functional/NFR-002-idle-cpu-and-memory-footprint-budget.md
+    path: non-functional/NFR-002-idle-cpu-and-memory-footprint-of-the-always-on-process.md
   - id: NFR-003
     type: non_functional
     tier: solution
-    title: Keyboard and screen-reader accessibility
+    title: "Keyboard-only and screen-reader operability of the full care loop"
     priority: must
-    confidence: high
     status: draft
-    path: non-functional/NFR-003-keyboard-and-screen-reader-accessibility.md
+    path: non-functional/NFR-003-keyboard-only-and-screen-reader-operability-of-the-full-care-loop.md
   - id: NFR-004
     type: non_functional
     tier: solution
-    title: Crash-safe state recovery
+    title: "Crash-safe atomic persistence and recovery"
     priority: must
-    confidence: high
     status: draft
-    path: non-functional/NFR-004-crash-safe-state-recovery.md
+    path: non-functional/NFR-004-crash-safe-atomic-persistence-and-recovery.md
   - id: NFR-005
     type: non_functional
     tier: solution
-    title: Local-only data handling
+    title: "Local-only handling of pet and owner data"
     priority: must
-    confidence: high
     status: draft
-    path: non-functional/NFR-005-local-only-data-handling.md
+    path: non-functional/NFR-005-local-only-handling-of-pet-and-owner-data.md
   - id: NFR-006
     type: non_functional
     tier: solution
-    title: Cross-platform desktop support
-    priority: should
-    confidence: medium
+    title: "Single-codebase support for all three desktop targets"
+    priority: must
     status: draft
-    path: non-functional/NFR-006-cross-platform-desktop-support.md
+    path: non-functional/NFR-006-single-codebase-support-for-all-three-desktop-targets.md
   - id: NFR-007
     type: non_functional
     tier: solution
-    title: Local diagnostic logging of state decay
+    title: "Local diagnostic logging of decay and lifecycle events"
     priority: should
-    confidence: medium
     status: draft
-    path: non-functional/NFR-007-local-diagnostic-logging-of-state-decay.md
+    path: non-functional/NFR-007-local-diagnostic-logging-of-decay-and-lifecycle-events.md
+  - id: NFR-008
+    type: non_functional
+    tier: solution
+    title: "Offline-decay computation cost does not scale with the length of the absence"
+    priority: must
+    status: draft
+    path: non-functional/NFR-008-offline-decay-computation-cost-does-not-scale-with-the-length-of-the-absence.md
+  - id: NFR-009
+    type: non_functional
+    tier: solution
+    title: "Offline-decay computation time on the launch path"
+    priority: should
+    status: draft
+    path: non-functional/NFR-009-offline-decay-computation-time-on-the-launch-path.md
   - id: CON-001
     type: constraint
     tier: solution
-    title: Lightweight always-on runtime footprint boundary
+    title: "Runtime baseline overhead must leave headroom in the idle-footprint budget"
     priority: must
-    confidence: low
     status: draft
-    path: constraints/CON-001-lightweight-always-on-runtime-footprint-boundary.md
+    path: constraints/CON-001-runtime-baseline-overhead-must-leave-headroom-in-the-idle-footprint-budget.md
   - id: CON-002
     type: constraint
-    tier: solution
-    title: Fully offline local-only operation
+    tier: business
+    title: "Core pet simulation must operate fully offline"
     priority: must
-    confidence: high
     status: draft
-    path: constraints/CON-002-fully-offline-local-only-operation.md
+    path: constraints/CON-002-core-pet-simulation-must-operate-fully-offline.md
   - id: CON-003
     type: constraint
     tier: business
-    title: Cross-platform delivery target
-    priority: should
-    confidence: low
+    title: "No design decision may foreclose Windows, macOS or Linux"
+    priority: must
     status: draft
-    path: constraints/CON-003-cross-platform-delivery-target.md
+    path: constraints/CON-003-no-design-decision-may-foreclose-windows-macos-or-linux.md
   - id: BR-001
     type: business_rule
     tier: business
-    title: Death only after sustained neglect
+    title: "Terminal end-of-life is reached only through sustained, unremedied neglect"
     priority: must
-    confidence: low
     status: draft
-    path: business-rules/BR-001-death-only-after-sustained-neglect.md
+    path: business-rules/BR-001-terminal-end-of-life-is-reached-only-through-sustained-unremedied-neglect.md
   - id: BR-002
     type: business_rule
     tier: business
-    title: Decay accrues only for real forward elapsed time
+    title: "Pending Q-2, a terminal pet's state is preserved and no disposition is implemented"
     priority: must
-    confidence: medium
     status: draft
-    path: business-rules/BR-002-decay-accrues-only-for-real-forward-elapsed-time.md
-
+    path: business-rules/BR-002-pending-q-2-a-terminal-pet-s-state-is-preserved-and-no-disposition-is-implemented.md
 review_queue:
+  - id: FR-006
+    confidence: low
+    reason: "sleep has no owner-visible effect anywhere in the set; rests on Q-8"
   - id: FR-008
     confidence: low
-    reason: "rests on open question Q-2 (is death permanent or a configurable soft reset)"
+    reason: "terminal-status disposition rests on Q-2; neglect durations rest on Q-1"
+  - id: FR-011
+    confidence: low
+    reason: "wake mechanism and sleep duration are inferred, not stated; rests on Q-1 and Q-10"
   - id: NFR-002
     confidence: low
-    reason: "idle-footprint budget depends on open question Q-4 (framework/runtime choice: Electron vs Tauri vs native)"
+    reason: "idle budget has no admissible test environment until Q-5 records the reference machine"
+  - id: NFR-009
+    confidence: low
+    reason: "250 ms launch bound is a reasoned apportionment and inherits the Q-5 dependency"
   - id: CON-001
     confidence: low
-    reason: "runtime footprint boundary rests on open question Q-4 (framework/runtime choice)"
-  - id: CON-003
-    confidence: low
-    reason: "cross-platform delivery scope rests on open question Q-3 (which platforms ship in v1)"
+    reason: "runtime exclusion screen inherits Q-5; the 40% headroom is an engineering judgement pending Q-4"
   - id: BR-001
     confidence: low
-    reason: "death/reset policy rests on open question Q-2 (death permanence)"
+    reason: "neglect period has no numeric value until Q-1; terminal status stays provisional until Q-2"
+  - id: BR-002
+    confidence: low
+    reason: "scoped explicitly to the interim; revisit or retire the moment Q-2 lands"

@@ -6,6 +6,8 @@ tags: ["groundwork", "sdlc", "requirements", "dev-log", "llm"]
 draft: true
 ---
 
+> Written against the pre-STO-219 set (22 requirements). That set was regenerated; see [../REGENERATION.md](../REGENERATION.md).
+
 > Portable draft for eyeofthestorm.dev — adjust frontmatter / add cover art to match the site's post format before publishing.
 
 In the [first Groundwork dev log](https://eyeofthestorm.dev/posts/dev-log-building-groundwork) I pointed the plugin's requirements workflow at a desktop tamagotchi and let it run. Then I wrote down everything the output was missing. That list of complaints wasn't really a review — it was a backlog. This post is what happened after I built it.

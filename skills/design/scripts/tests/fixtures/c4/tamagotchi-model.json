@@ -1,25 +1,48 @@
 {
-  "system_name": "Tamagotchi Desktop Pet",
-  "system_description": "An offline desktop pet whose state decays over real elapsed time.",
+  "system_name": "Desktop Virtual Pet",
+  "system_description": "A single-user desktop virtual pet that persists between sessions and decays against the real wall clock whether or not the application is running.",
   "actors": [
     {
       "key": "owner",
-      "name": "Pet Owner",
-      "description": "The single local user who cares for the pet.",
-      "relationship": "feeds, plays with and cleans the pet",
-      "entrypoint": "desktop-app"
+      "name": "Owner",
+      "description": "The single local desktop owner of one installation, who keeps the pet and exercises the care loop; requirements assumption A-1 admits no other role.",
+      "relationship": "views the pet and performs care actions",
+      "entrypoint": "webview-ui"
     }
   ],
   "containers": [
     {
-      "key": "desktop-app",
-      "name": "Desktop App",
-      "technology": "Tauri (Rust core + system webview)",
-      "description": "One local process: simulation, persistence and UI.",
-      "components": ["CMP-001", "CMP-002", "CMP-003", "CMP-004", "CMP-005",
-                     "CMP-006", "CMP-007", "CMP-008", "CMP-009"]
+      "key": "webview-ui",
+      "name": "Pet Webview UI",
+      "technology": "HTML/CSS/TypeScript in the system webview",
+      "description": "The owner-facing surface rendered in the OS-supplied webview, hosted on the presentation surface the core hands it and driven across the Tauri IPC bridge.",
+      "components": ["CMP-016"]
+    },
+    {
+      "key": "pet-core",
+      "name": "Pet Core",
+      "technology": "Rust (Tauri core process)",
+      "description": "The native process holding the pet simulation, its persistence and integrity rules, and the single platform-adapter layer through which every platform-specific behaviour passes.",
+      "components": [
+        "CMP-001",
+        "CMP-002",
+        "CMP-003",
+        "CMP-004",
+        "CMP-005",
+        "CMP-006",
+        "CMP-007",
+        "CMP-008",
+        "CMP-009",
+        "CMP-010",
+        "CMP-011",
+        "CMP-012",
+        "CMP-013",
+        "CMP-014",
+        "CMP-015",
+        "CMP-017"
+      ]
     }
   ],
-  "confidence": "high",
-  "reason": "Q-4 resolved to Tauri: a single desktop process, no deployable split."
+  "confidence": "medium",
+  "reason": "Two containers because runtime_and_stack names two runtimes in one installer — a Rust core and a system webview that cannot share a technology label and communicate only across Tauri's IPC seam, already encoded as IF-027, IF-017 and IF-030 — held at medium because that stack is recorded as provisional against Q-5's unmeasured reference machine."
 }

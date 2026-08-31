@@ -1,0 +1,110 @@
+# Phase 4 output of skills/design/SKILL.md, confirmed by the user.
+# Input to agents/design-orchestrator.md Stage 1.
+#
+# Committed alongside the example so the design stage is replayable: the
+# artifacts under design/ are what the M2 pipeline produced from exactly
+# this object, run against the requirement set under requirements/.
+design_context:
+  requirements_root: "docs/requirements/examples/tamagotchi/requirements"
+  system_purpose: >
+    A desktop virtual pet that persists between sessions and decays in real time
+    whether or not the app is running, so that caring for it is a genuine ongoing
+    commitment rather than an in-session game.
+  runtime_and_stack: >
+    Tauri — a Rust core with a system webview. Chosen against NFR-002's idle budget
+    (<=1% CPU of one core, <=150 MB resident) and CON-001's baseline-overhead
+    exclusion screen. The screen has not actually been executed: CON-001 and NFR-002
+    are both measured on a reference machine that Q-5 has not yet recorded, so the
+    selection is provisional against measurement rather than settled by it.
+  persistence: >
+    A single JSON state file written atomically (write to a temp file, then rename),
+    stored under the OS local data directory. Atomicity is what makes FR-012's
+    integrity-validation failure rare, since an interrupted write never replaces the
+    already-committed file; quarantine-and-restart (FR-012, then FR-010's default pet)
+    remains the fallback, not the primary defence. One committed generation is
+    retained, not two.
+  deployment_target: >
+    Windows first for v1; macOS and Linux follow. CON-003 becomes a staged target
+    rather than a v1 one, so platform-specific surface must stay minimal and confined
+    to the platform-adapter layer NFR-006 names.
+  integration_points: >
+    The OS notification service, for FR-009's optional local care reminders, and the
+    platform wall clock every elapsed-interval computation reads. Nothing else —
+    CON-002 mandates fully offline, local-only operation for every core
+    pet-simulation function, so there is no network surface at all.
+  operational_constraints: >
+    No servers, no telemetry, no remote error reporting. NFR-007's diagnostic logging
+    is local-only and user-readable.
+  team_constraints: >
+    Assumed solo or small team with no dedicated platform specialists — part of why a
+    single shared UI beats native-per-platform.
+  out_of_scope: >
+    None identified.
+  inherited_open_questions:
+    - id: Q-1
+      statement: >
+        What is the exact decay-curve and balance tuning — rates, thresholds,
+        increments, both sustained-neglect durations, and the sleep duration?
+      disposition: still_open
+    - id: Q-2
+      statement: >
+        Is the terminal end-of-life status permanent, or a configurable soft
+        reset?
+      disposition: resolved
+      resolution: >
+        The terminal end-of-life status is permanent. One terminal lifecycle path, no
+        reset setting, and no disposition that discards a terminal pet's accumulated
+        state — which is the single project-wide policy BR-002 requires the answer to
+        take.
+    - id: Q-3
+      statement: "Which platforms ship in v1 — all three, or Windows-first?"
+      disposition: resolved
+      resolution: "Windows first; macOS and Linux staged after v1."
+    - id: Q-4
+      statement: >
+        Which framework/runtime is chosen given the footprint constraint (Electron vs
+        Tauri vs native)?
+      disposition: resolved
+      resolution: >
+        Tauri — a Rust core with a system webview — rejecting Electron on its
+        empty-shell baseline against CON-001 and native-per-platform on the team
+        constraint. Provisional: CON-001's screen cannot be executed as measurement
+        until Q-5 records a reference machine, so the choice rests on published
+        baselines rather than on this project's own.
+    - id: Q-5
+      statement: >
+        What is the reference-machine specification against which the idle-footprint
+        budget and launch-latency figures are measured?
+      disposition: still_open
+    - id: Q-6
+      statement: >
+        What are the release, auto-update and rollback strategies for desktop
+        distribution?
+      disposition: still_open
+    - id: Q-7
+      statement: >
+        Should v1 carry explicit maintainability targets (modularity / modifiability),
+        given that Q-1's decay-balance tuning is a live, ongoing loop?
+      disposition: still_open
+    - id: Q-8
+      statement: "Should the Sleeping state be rendered to the owner?"
+      disposition: still_open
+    - id: Q-9
+      statement: >
+        Should committed saves be retained for two generations, to survive post-commit
+        media corruption?
+      disposition: resolved
+      resolution: >
+        No — one committed generation. Atomic write-then-rename already prevents an
+        interrupted write from replacing a committed file, which is the failure mode
+        NFR-004 measures; post-commit media corruption is caught by FR-012's integrity
+        validation and resolves to quarantine plus FR-010's default pet. Two-generation
+        retention was weighed and rejected for v1 on cost against a failure mode the
+        product does not carry stakes for.
+    - id: Q-10
+      statement: >
+        How often does the running application re-evaluate pet state, and what bounds
+        that interval?
+      disposition: still_open
+  inherited_review_queue:
+    [FR-006, FR-008, FR-011, NFR-002, NFR-009, CON-001, BR-001, BR-002]

@@ -209,3 +209,22 @@ def test_context_artifact_h3_assumptions_is_rejected(tmp_path):
     )
     errors = vr.check_context_artifact(str(tmp_path))
     assert any("missing required heading" in e and "Assumptions" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Real-world regression: the shipped worked examples
+# ---------------------------------------------------------------------------
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+EXAMPLES = os.path.join(REPO_ROOT, "docs", "requirements", "examples")
+
+
+@pytest.mark.parametrize("name", ["tamagotchi", "gdpr"])
+def test_shipped_example_passes_structural_gate(name, capsys):
+    """The published requirement sets must satisfy the schema they ship
+    alongside. The design side has pinned its example since STO-216;
+    nothing has ever run THIS validator over `docs/requirements/examples/`,
+    so a schema change could stale every published requirement with
+    nothing turning red. STO-219 replaces both sets wholesale, which is
+    exactly when that net needs to already exist."""
+    code = run(os.path.join(EXAMPLES, name, "requirements"))
+    assert code == 0, capsys.readouterr().out

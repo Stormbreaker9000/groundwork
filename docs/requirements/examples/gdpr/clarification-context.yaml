@@ -1,0 +1,96 @@
+# Reconstructed replay (STO-219) of skills/requirements/SKILL.md Phase 4.5's
+# "Elicitation context" block, from what the published GDPR requirement set
+# already records — not a re-interview. Every value below is traceable to
+# requirements/assumptions.md, requirements/glossary.md,
+# requirements/definition-of-done.md, and the requirement bodies under
+# requirements/{functional,non-functional,constraints,business-rules}/.
+#
+# Input to agents/requirements-orchestrator.md Stage 1 (clarification_context,
+# defined at requirements-orchestrator.md:53).
+clarification_context:
+  problem_domain: >
+    A system giving an authenticated data subject self-service control over
+    their own personal data under GDPR, covering two specific rights: data
+    portability — exporting the personal data held for them (FR-001, whose
+    rationale cites "GDPR Article 20 (right to data portability)") — and
+    erasure, also called "the right to be forgotten" per the glossary —
+    permanently deleting their account and personal data (FR-002, whose
+    rationale cites "GDPR Article 17 (right to erasure)"). The DoD title
+    names the combined scope "GDPR Data Export & Account Deletion." The
+    underlying goal named in the rationales is discharging these legal
+    obligations directly through self-service, reducing manual
+    data-subject-access-request handling (FR-001 rationale) and limiting the
+    organisation's personal-data liability (FR-002 rationale).
+  stakeholders_and_users: >
+    Primary user: a single authenticated data subject per account — A-1
+    states every data subject has exactly one authenticated account
+    identity, and the glossary defines "data subject" as "the identified or
+    identifiable natural person whose personal data the system holds, and
+    who exercises the rights these requirements implement." Every
+    functional requirement is framed around "an authenticated user"
+    (FR-001, FR-002, FR-003), and re-authentication for deletion reuses the
+    existing identity provider rather than introducing a separate role
+    (A-3, FR-003). No admin, support, or operator role is described
+    anywhere in the published set — BR-001's guarantee that "no
+    administrative or automated path restores the erased data" rules out an
+    admin-recovery capability, it does not assert an admin role exists.
+    Legal appears only as an external supplier of statutory retention rules
+    (D-3, Q-2), not as a system user.
+  core_functionality: >
+    Three functional requirements, all scoped to the authenticated user's
+    own account: export all personal data held for the account as a
+    machine-readable archive within 30 days of request (FR-001);
+    permanently erase the account and its personal data within 30 days of
+    confirmation, excluding records under statutory retention (FR-002); and
+    require the deletion request to be confirmed via re-authentication
+    within a 24-hour window, cancelling it unconfirmed and leaving the
+    account and data unchanged (FR-003).
+  success_criteria: >
+    Each requirement carries its own quantified fit criterion. FR-001 —
+    100% of export requests yield an archive within 30 days, and a
+    field-level audit confirms 0 omissions across all stores. FR-002 — a
+    post-deletion data audit finds 0 personal-data records outside the
+    documented statutory-retention set, and 100% of authentication attempts
+    against the deleted account fail. FR-003 — 100% of unconfirmed deletion
+    requests are cancelled with no data mutation, and 0 accounts are
+    deleted without a recorded re-authentication event. NFR-001 — archives
+    are AES-256 encrypted at rest, download links require the requesting
+    user's session and expire within 24 hours, and a penetration test finds
+    0 archives retrievable without authentication. NFR-002 — 95% of exports
+    for accounts <=1GB complete within 1 hour, and 100% complete within the
+    30-day legal ceiling. FR-001 and FR-002's rationales frame the
+    underlying goal as discharging the GDPR obligation itself (Article 20 /
+    Article 17), not a separate business metric.
+  non_functional_concerns: >
+    Only two NFRs are defined. Confidentiality of the exported
+    personal-data archive: encrypted at rest and served only via an
+    authenticated, time-limited (24-hour) download link scoped to the
+    requesting user (NFR-001). Export generation time under normal load:
+    95% of typical (<=1GB) exports available within 1 hour, all within the
+    30-day legal ceiling, measured at <=80% export-worker utilisation
+    (NFR-002). definition-of-done.md's operational-readiness gate also
+    names "audit logging of export and deletion events" as an
+    observability expectation, though no NFR requirement formalises it.
+  constraints: >
+    Statutory retention overrides erasure: financial and tax records within
+    their mandated retention period must be preserved in pseudonymised
+    form, isolated from active personal-data stores, even after the
+    account is erased (CON-001). Re-authentication for deletion must use
+    the existing identity provider — no new authentication mechanism is to
+    be built (A-3) — and that provider must expose a step-up
+    re-authentication flow (D-2). A durable object store must be available
+    to hold generated export archives (D-1).
+  out_of_scope: >
+    Personal data outside the already-catalogued data map — A-2 defines
+    the "personal data" these requirements cover as limited to records
+    already catalogued in the data map, so data outside that catalogue is
+    not addressed by this set. Building a new authentication mechanism —
+    A-3 states re-authentication reuses the existing identity provider; no
+    new auth is built. Any account-recovery or undo path after deletion
+    completes — BR-001 states deletion is irreversible and that no
+    administrative or automated path restores the erased data.
+  open_questions: >
+    Q-1: What is the maximum acceptable turnaround for an export request?
+    (owner: product)
+    Q-2: Which regulated record types override erasure, beyond financial?
+    (owner: legal)
