@@ -343,13 +343,15 @@ SET_CHECKS: List[Callable[[str, List[Dict[str, Any]]], List[Finding]]] = [
 # directions, to what the fixture corpus actually produces.
 #
 # ``severities`` is a list because two rules demote to "info" when the text
-# they flag carries a number.
+# they flag carries a number. ``fields`` is a list because a check may flag
+# more than one frontmatter field, and ``test_emitted_fields_are_declared``
+# holds it honest.
 RULES: List[Dict[str, Any]] = [
     {
         "id": "vague-qualifier",
         "severities": ["warn", "info"],
         "applies_to": "requirement",
-        "field": "description",
+        "fields": ["description", "title"],
         "summary": (
             "A vague qualifier with no concrete metric. Demoted to info when "
             "the sentence carries a number."
@@ -359,7 +361,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "compound",
         "severities": ["warn"],
         "applies_to": "requirement",
-        "field": "description",
+        "fields": ["description"],
         "summary": (
             "Multiple actions joined by a conjunction in one requirement, "
             "which cannot be verified or traced as a single unit."
@@ -369,7 +371,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "ears-conformance",
         "severities": ["warn"],
         "applies_to": "requirement",
-        "field": "description",
+        "fields": ["description"],
         "summary": (
             "The description does not match the shape of the EARS pattern "
             "the requirement declares."
@@ -379,14 +381,14 @@ RULES: List[Dict[str, Any]] = [
         "id": "passive-nameless",
         "severities": ["warn"],
         "applies_to": "requirement",
-        "field": "description",
+        "fields": ["description"],
         "summary": "Passive voice hides the responsible actor.",
     },
     {
         "id": "impl-bias",
         "severities": ["info"],
         "applies_to": "requirement",
-        "field": "description",
+        "fields": ["description", "title"],
         "summary": (
             "An implementation detail appears in a requirement whose tier "
             "should stay solution-free."
@@ -396,7 +398,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "glossary-unused",
         "severities": ["warn"],
         "applies_to": "requirement",
-        "field": "terms",
+        "fields": ["terms"],
         "summary": (
             "A glossary term no requirement uses. Set-level check: not "
             "decidable from a single file."

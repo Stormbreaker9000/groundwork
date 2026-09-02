@@ -522,13 +522,15 @@ SET_CHECKS: List[Callable[[List[Tuple[str, Dict[str, Any], str]]], List[Finding]
 # and an entry no fixture exercises fails too.
 #
 # ``severities`` is a list because two rules demote to "info" when the text
-# they flag carries a number.
+# they flag carries a number. ``fields`` is a list because a check may flag
+# more than one frontmatter field, and ``test_emitted_fields_are_declared``
+# holds it honest.
 RULES: List[Dict[str, Any]] = [
     {
         "id": "vague-responsibility",
         "severities": ["warn", "info"],
         "applies_to": "component",
-        "field": "responsibility",
+        "fields": ["responsibility"],
         "summary": (
             "A component responsibility uses a vague qualifier with no "
             "concrete metric. Demoted to info when the sentence carries a "
@@ -539,7 +541,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "god-component",
         "severities": ["warn"],
         "applies_to": "component",
-        "field": "responsibility",
+        "fields": ["responsibility"],
         "summary": (
             "Two actions joined by a conjunction in one responsibility — "
             "the component is doing two jobs."
@@ -549,7 +551,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "error-modes-handwaved",
         "severities": ["warn"],
         "applies_to": "interface",
-        "field": "error_modes",
+        "fields": ["error_modes"],
         "summary": (
             "An error mode gestures at failure rather than naming one."
         ),
@@ -558,7 +560,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "orphan-interface",
         "severities": ["warn"],
         "applies_to": "interface",
-        "field": "id",
+        "fields": ["id"],
         "summary": (
             "The contract is provided but consumed by no component. Set-level "
             "check: not decidable from a single file."
@@ -568,7 +570,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "adr-consequences-one-sided",
         "severities": ["warn"],
         "applies_to": "adr",
-        "field": "consequences",
+        "fields": ["consequences"],
         "summary": (
             "Consequences list only upsides; no cost is recorded. A decision "
             "with no downside was not a decision."
@@ -578,7 +580,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "adr-vague-driver",
         "severities": ["warn", "info"],
         "applies_to": "adr",
-        "field": "decision_drivers",
+        "fields": ["decision_drivers"],
         "summary": (
             "A decision driver names no threshold the chosen option can be "
             "checked against. Demoted to info when the line carries a number."
@@ -588,7 +590,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "adr-option-unexamined",
         "severities": ["info"],
         "applies_to": "adr",
-        "field": "considered_options",
+        "fields": ["considered_options"],
         "summary": (
             "An option listed in frontmatter never appears under the "
             "'Considered Options' heading, so it was named but not weighed."
@@ -598,7 +600,7 @@ RULES: List[Dict[str, Any]] = [
         "id": "dependency-cycle",
         "severities": ["warn"],
         "applies_to": "component",
-        "field": "depends_on",
+        "fields": ["depends_on"],
         "summary": (
             "A cycle in the component graph where every individual edge "
             "resolves. Set-level check: invisible one file at a time."

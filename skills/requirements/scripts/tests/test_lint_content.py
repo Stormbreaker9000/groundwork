@@ -286,7 +286,16 @@ def test_emitted_severities_are_declared():
 
 def test_rules_registry_entries_are_complete():
     for rule in lc.RULES:
-        assert set(rule) == {"id", "severities", "applies_to", "field", "summary"}
-        assert rule["id"] and rule["summary"] and rule["field"]
+        assert set(rule) == {"id", "severities", "applies_to", "fields", "summary"}
+        assert rule["id"] and rule["summary"] and rule["fields"]
         assert rule["severities"]
         assert rule["applies_to"] == "requirement"
+
+
+def test_emitted_fields_are_declared():
+    declared = {r["id"]: set(r["fields"]) for r in lc.RULES}
+    for finding in _all_emitted_findings():
+        assert finding.field in declared[finding.rule], (
+            f"{finding.rule} emitted field {finding.field!r}, "
+            f"registry declares {sorted(declared[finding.rule])}"
+        )
