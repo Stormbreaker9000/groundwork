@@ -1,0 +1,40 @@
+{
+  "name": "groundwork-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "postbuild": "pagefind --site .next/server/app --output-path out/_pagefind",
+    "reference": "python3 scripts/export_reference.py"
+  },
+  "dependencies": {
+    "next": "^16.3.4",
+    "nextra": "^4.6.1",
+    "nextra-theme-docs": "^4.6.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "pagefind": "^1.5.2"
+  },
+  "//overrides": [
+    "WORKAROUND — pins the zod that nextra/nextra-theme-docs resolve to.",
+    "nextra-theme-docs@4.6.1's <Layout> destructures `children` out of its props and then",
+    "validates the remainder against LayoutPropsSchema, a z.strictObject whose `children` key",
+    "is declared required (`children: reactNode`, where reactNode is a bare z.custom()).",
+    "Up to zod 4.3.x a missing key backed by z.custom() parsed as valid, so the mismatch was",
+    "harmless. zod 4.4.0 changed that: a required z.custom() key now fails with",
+    "'Invalid input: expected nonoptional, received undefined -> at children', which the theme",
+    "rethrows, so EVERY prerendered page crashes (the build dies first on Next's synthetic",
+    "/_not-found route). The theme declares zod '^4.1.12', so npm otherwise resolves 4.5.x.",
+    "Bisected: 4.3.6 ok, 4.4.0 broken. Unrelated to output:'export' — reproduced without it.",
+    "REMOVE WHEN: nextra-theme-docs ships a release that either passes `children` into",
+    "safeParse or marks it optional in LayoutPropsSchema. Verify by deleting this override",
+    "plus the one below, reinstalling, and confirming `npm run build` still exits 0."
+  ],
+  "overrides": {
+    "zod": "~4.3.6"
+  }
+}
