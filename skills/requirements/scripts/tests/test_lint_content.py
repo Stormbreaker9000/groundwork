@@ -257,3 +257,36 @@ def test_shipped_example_has_no_error_findings(name):
     silently invalidating a published set."""
     findings = lc.lint_dir(os.path.join(EXAMPLES, name, "requirements"))
     assert [f for f in findings if f.severity == "error"] == []
+
+
+def _all_emitted_findings():
+    """Every finding the whole content fixture corpus produces."""
+    findings = []
+    for name in sorted(os.listdir(CONTENT)):
+        path = os.path.join(CONTENT, name)
+        if os.path.isdir(path):
+            findings.extend(lc.lint_dir(path))
+    return findings
+
+
+def test_rules_registry_matches_emitted_rules():
+    emitted = {f.rule for f in _all_emitted_findings()}
+    declared = {r["id"] for r in lc.RULES}
+    assert emitted == declared
+
+
+def test_emitted_severities_are_declared():
+    declared = {r["id"]: set(r["severities"]) for r in lc.RULES}
+    for finding in _all_emitted_findings():
+        assert finding.severity in declared[finding.rule], (
+            f"{finding.rule} emitted severity {finding.severity!r}, "
+            f"registry declares {sorted(declared[finding.rule])}"
+        )
+
+
+def test_rules_registry_entries_are_complete():
+    for rule in lc.RULES:
+        assert set(rule) == {"id", "severities", "applies_to", "field", "summary"}
+        assert rule["id"] and rule["summary"] and rule["field"]
+        assert rule["severities"]
+        assert rule["applies_to"] == "requirement"

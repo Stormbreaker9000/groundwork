@@ -334,6 +334,77 @@ SET_CHECKS: List[Callable[[str, List[Dict[str, Any]]], List[Finding]]] = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Rule registry
+# ---------------------------------------------------------------------------
+# Declarative description of every rule the checks above can emit, read by
+# site/scripts/export_reference.py to build the published rule reference.
+# ``test_rules_registry_matches_emitted_rules`` holds this equal, in both
+# directions, to what the fixture corpus actually produces.
+#
+# ``severities`` is a list because two rules demote to "info" when the text
+# they flag carries a number.
+RULES: List[Dict[str, Any]] = [
+    {
+        "id": "vague-qualifier",
+        "severities": ["warn", "info"],
+        "applies_to": "requirement",
+        "field": "description",
+        "summary": (
+            "A vague qualifier with no concrete metric. Demoted to info when "
+            "the sentence carries a number."
+        ),
+    },
+    {
+        "id": "compound",
+        "severities": ["warn"],
+        "applies_to": "requirement",
+        "field": "description",
+        "summary": (
+            "Multiple actions joined by a conjunction in one requirement, "
+            "which cannot be verified or traced as a single unit."
+        ),
+    },
+    {
+        "id": "ears-conformance",
+        "severities": ["warn"],
+        "applies_to": "requirement",
+        "field": "description",
+        "summary": (
+            "The description does not match the shape of the EARS pattern "
+            "the requirement declares."
+        ),
+    },
+    {
+        "id": "passive-nameless",
+        "severities": ["warn"],
+        "applies_to": "requirement",
+        "field": "description",
+        "summary": "Passive voice hides the responsible actor.",
+    },
+    {
+        "id": "impl-bias",
+        "severities": ["info"],
+        "applies_to": "requirement",
+        "field": "description",
+        "summary": (
+            "An implementation detail appears in a requirement whose tier "
+            "should stay solution-free."
+        ),
+    },
+    {
+        "id": "glossary-unused",
+        "severities": ["warn"],
+        "applies_to": "requirement",
+        "field": "terms",
+        "summary": (
+            "A glossary term no requirement uses. Set-level check: not "
+            "decidable from a single file."
+        ),
+    },
+]
+
+
 def lint_dir(reqs_dir: str) -> List[Finding]:
     findings: List[Finding] = []
     frontmatters: List[Dict[str, Any]] = []
