@@ -1,3 +1,5 @@
 export default {
-  index: 'Introduction'
+  index: 'Introduction',
+  guide: 'User guide',
+  architecture: 'Architecture'
 }

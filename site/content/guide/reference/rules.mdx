@@ -1,0 +1,29 @@
+import { RuleTable } from '../../../components/RuleTable'
+
+# Content rules
+
+Both stages run a content-quality linter after their structural gates pass.
+These linters are **advisory**: they print findings and exit 0, so nothing
+here blocks a pipeline run. Pass `--strict` to exit non-zero on an
+`error`-severity finding, and `--json` for machine-readable output.
+
+The tables below are generated from the linters' own rule registries. They
+cannot describe a rule that does not exist, or miss one that does.
+
+## Design rules
+
+Run by `lint_design_content.py` over `.sdlc/design`.
+
+<RuleTable linter="design" />
+
+## Requirements rules
+
+Run by `lint_requirements_content.py` over `.sdlc/requirements`.
+
+<RuleTable linter="requirements" />
+
+## Reading a severity
+
+A rule listed as `warn / info` demotes itself to `info` when the text it
+flagged carries a number — a vague word next to a concrete threshold is
+usually prose, not a missing measurement.
