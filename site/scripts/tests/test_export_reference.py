@@ -65,3 +65,55 @@ def test_check_mode_detects_clean_stale_and_missing(tmp_path, monkeypatch, capsy
 
     # Check mode must never write.
     assert not (tmp_path / "rules.json").exists()
+
+
+def test_export_fields_covers_both_schemas():
+    payload = er.export_fields()
+    assert set(payload) == {"design", "requirements"}
+
+
+def test_design_fields_include_base_and_conditional_properties():
+    fields = {f["name"]: f for f in er.export_fields()["design"]}
+    # Base property, required for every design artifact.
+    assert fields["id"]["required_for"] == ["*"]
+    # Conditional: only components must declare a responsibility.
+    assert fields["responsibility"]["required_for"] == ["component"]
+    # Conditional: only interfaces must declare a provider.
+    assert fields["provider"]["required_for"] == ["interface"]
+    # Enums survive.
+    assert set(fields["type"]["enum"]) == {
+        "component", "interface", "adr", "diagram"
+    }
+
+
+def test_requirement_conditional_required_without_added_properties():
+    # requirement.schema.json's only allOf branch adds a `required` entry for
+    # a property already declared in the base `properties` block. The
+    # extractor must annotate the existing field rather than skip the branch.
+    fields = {f["name"]: f for f in er.export_fields()["requirements"]}
+    assert fields["ears_pattern"]["required_for"] == ["functional"]
+
+
+def test_export_agents_covers_every_agent_file():
+    agents = er.export_agents()
+    on_disk = [
+        n[:-3] for n in os.listdir(os.path.join(er.REPO_ROOT, "agents"))
+        if n.endswith(".md")
+    ]
+    assert len(agents) == len(on_disk) == 15
+    assert {a["name"] for a in agents} == set(on_disk)
+
+
+def test_export_agents_reads_title_and_description():
+    by_name = {a["name"]: a for a in er.export_agents()}
+    assert by_name["design-critic"]["title"] == "Design Critic"
+    assert by_name["design-critic"]["description"].startswith(
+        "Architecture quality critic."
+    )
+    for agent in er.export_agents():
+        assert agent["title"], f"{agent['name']} has no H1"
+        assert agent["description"], f"{agent['name']} has no description"
+
+
+def test_all_outputs_are_written_and_current():
+    assert er.main(["--check"]) == 0

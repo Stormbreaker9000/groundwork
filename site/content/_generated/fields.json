@@ -1,0 +1,425 @@
+{
+  "design": [
+    {
+      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: CMP->component, IF->interface, ADR->adr, DIA->diagram. An optional uppercase category infix is allowed (e.g. CMP-AUTH-004).",
+      "enum": [],
+      "name": "id",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Design-artifact category.",
+      "enum": [
+        "component",
+        "interface",
+        "adr",
+        "diagram"
+      ],
+      "name": "type",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Short human-readable title (matches the kebab-case used in the filename).",
+      "enum": [],
+      "name": "title",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "One clear statement of what this element is.",
+      "enum": [],
+      "name": "description",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Upstream traceability: requirement IDs (FR-/NFR-/CON-/BR-/UC-) this element satisfies. May be empty. Existence is resolved by the cross-artifact validator (STO-102), not this schema.",
+      "enum": [],
+      "name": "traces_from",
+      "required_for": [
+        "*"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "Downstream traceability to ADRs, diagrams, code, and tests. Any key may be omitted or empty.",
+      "enum": [],
+      "name": "traces_to",
+      "required_for": [
+        "*"
+      ],
+      "type": "object"
+    },
+    {
+      "description": "Lifecycle status. IDs are never re-used; set status to obsolete instead of deleting.",
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved",
+        "implemented",
+        "verified",
+        "obsolete"
+      ],
+      "name": "status",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Confidence level for human-in-the-loop triage (STO-138).",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "name": "confidence",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Creation date in YYYY-MM-DD format.",
+      "enum": [],
+      "name": "created_at",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "RESERVED (agile planning scope). Present-but-optional; mirrors the requirement schema.",
+      "enum": [
+        "project",
+        "epic",
+        "story"
+      ],
+      "name": "scope",
+      "required_for": [],
+      "type": "string"
+    },
+    {
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional.",
+      "enum": [],
+      "name": "parent_scope",
+      "required_for": [],
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    {
+      "description": "The single clear purpose of the unit.",
+      "enum": [],
+      "name": "responsibility",
+      "required_for": [
+        "component"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Whether the unit is inside the system boundary or an external system modelled as a component (C4).",
+      "enum": [
+        "internal",
+        "external"
+      ],
+      "name": "boundary",
+      "required_for": [
+        "component"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The interface contracts this component consumes. IF- IDs only; may be empty. Existence is resolved by the design validator.",
+      "enum": [],
+      "name": "depends_on",
+      "required_for": [
+        "component"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "The single component that provides this contract. Exactly one CMP- ID.",
+      "enum": [],
+      "name": "provider",
+      "required_for": [
+        "interface"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The operations this contract exposes, at architecture altitude (name + summary + interaction; no payload schemas).",
+      "enum": [],
+      "name": "operations",
+      "required_for": [
+        "interface"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "How this contract can fail. An interface that does not say how it fails is a gap; at least one mode is required.",
+      "enum": [],
+      "name": "error_modes",
+      "required_for": [
+        "interface"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "MADR decision status. Distinct from `status`, which is the artifact lifecycle.",
+      "enum": [
+        "proposed",
+        "rejected",
+        "accepted",
+        "deprecated",
+        "superseded"
+      ],
+      "name": "decision_status",
+      "required_for": [
+        "adr"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The options weighed. Never fabricated: when a second option cannot be recovered from the recorded decision, no ADR is emitted at all.",
+      "enum": [],
+      "name": "considered_options",
+      "required_for": [],
+      "type": "array"
+    },
+    {
+      "description": "The option taken. Absent while the decision is still proposed.",
+      "enum": [],
+      "name": "chosen_option",
+      "required_for": [],
+      "type": "string"
+    },
+    {
+      "description": "C4 level. Determines the Mermaid header directive: context->C4Context, container->C4Container, component->C4Component.",
+      "enum": [
+        "context",
+        "container",
+        "component"
+      ],
+      "name": "level",
+      "required_for": [
+        "diagram"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The container key whose internals this view depicts. Present only on level: component.",
+      "enum": [],
+      "name": "container",
+      "required_for": [],
+      "type": "string"
+    }
+  ],
+  "requirements": [
+    {
+      "description": "Categorical, zero-padded, stable ID. Prefix encodes type: FR->functional, NFR->non_functional, CON->constraint, BR->business_rule, UC->use_case. An optional uppercase category infix is allowed (e.g. FR-ORDER-014).",
+      "enum": [],
+      "name": "id",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Requirement category.",
+      "enum": [
+        "functional",
+        "non_functional",
+        "constraint",
+        "business_rule",
+        "use_case"
+      ],
+      "name": "type",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "BABOK v3 four-tier hierarchy level.",
+      "enum": [
+        "business",
+        "stakeholder",
+        "solution",
+        "transition"
+      ],
+      "name": "tier",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Short human-readable title (matches the kebab-case used in the filename).",
+      "enum": [],
+      "name": "title",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "For functional requirements: an EARS-phrased statement. For NFRs/constraints/etc.: a clear single statement of the requirement.",
+      "enum": [],
+      "name": "description",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Volere mandatory rationale: the WHY behind this requirement.",
+      "enum": [],
+      "name": "rationale",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Volere mandatory fit criterion: a measurable test oracle for the requirement.",
+      "enum": [],
+      "name": "fit_criterion",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "MoSCoW priority.",
+      "enum": [
+        "must",
+        "should",
+        "could",
+        "wont"
+      ],
+      "name": "priority",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Confidence level for human-in-the-loop triage.",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "name": "confidence",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "How the requirement is verified.",
+      "enum": [
+        "test",
+        "inspection",
+        "analysis",
+        "demonstration"
+      ],
+      "name": "verification_method",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "EARS sentence pattern. Required for functional requirements only; omitted for other types.",
+      "enum": [
+        "ubiquitous",
+        "event",
+        "state",
+        "unwanted",
+        "optional",
+        "complex"
+      ],
+      "name": "ears_pattern",
+      "required_for": [
+        "functional"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Lifecycle status. IDs are never re-used; set status to obsolete instead of deleting.",
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved",
+        "implemented",
+        "verified",
+        "obsolete"
+      ],
+      "name": "status",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Creation date in YYYY-MM-DD format.",
+      "enum": [],
+      "name": "created_at",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Upstream traceability: IDs of higher-tier requirements this one derives from. May be empty for top-tier (business) requirements.",
+      "enum": [],
+      "name": "traces_from",
+      "required_for": [
+        "*"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "Downstream traceability mapping to design, tests, and code artifacts. Any of the three keys may be omitted or empty.",
+      "enum": [],
+      "name": "traces_to",
+      "required_for": [
+        "*"
+      ],
+      "type": "object"
+    },
+    {
+      "description": "RESERVED (STO-98/agile). Agile planning scope. Present-but-optional.",
+      "enum": [
+        "project",
+        "epic",
+        "story"
+      ],
+      "name": "scope",
+      "required_for": [],
+      "type": "string"
+    },
+    {
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional.",
+      "enum": [],
+      "name": "parent_scope",
+      "required_for": [],
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  ]
+}
