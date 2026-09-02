@@ -511,6 +511,102 @@ SET_CHECKS: List[Callable[[List[Tuple[str, Dict[str, Any], str]]], List[Finding]
 ]
 
 
+# ---------------------------------------------------------------------------
+# Rule registry
+# ---------------------------------------------------------------------------
+# Declarative description of every rule the checks above can emit, read by
+# site/scripts/export_reference.py to build the published rule reference.
+# ``test_rules_registry_matches_emitted_rules`` holds this equal, in both
+# directions, to what the fixture corpus actually produces — so a new check
+# with no entry here fails the suite before it can reach the documentation,
+# and an entry no fixture exercises fails too.
+#
+# ``severities`` is a list because two rules demote to "info" when the text
+# they flag carries a number.
+RULES: List[Dict[str, Any]] = [
+    {
+        "id": "vague-responsibility",
+        "severities": ["warn", "info"],
+        "applies_to": "component",
+        "field": "responsibility",
+        "summary": (
+            "A component responsibility uses a vague qualifier with no "
+            "concrete metric. Demoted to info when the sentence carries a "
+            "number."
+        ),
+    },
+    {
+        "id": "god-component",
+        "severities": ["warn"],
+        "applies_to": "component",
+        "field": "responsibility",
+        "summary": (
+            "Two actions joined by a conjunction in one responsibility — "
+            "the component is doing two jobs."
+        ),
+    },
+    {
+        "id": "error-modes-handwaved",
+        "severities": ["warn"],
+        "applies_to": "interface",
+        "field": "error_modes",
+        "summary": (
+            "An error mode gestures at failure rather than naming one."
+        ),
+    },
+    {
+        "id": "orphan-interface",
+        "severities": ["warn"],
+        "applies_to": "interface",
+        "field": "id",
+        "summary": (
+            "The contract is provided but consumed by no component. Set-level "
+            "check: not decidable from a single file."
+        ),
+    },
+    {
+        "id": "adr-consequences-one-sided",
+        "severities": ["warn"],
+        "applies_to": "adr",
+        "field": "consequences",
+        "summary": (
+            "Consequences list only upsides; no cost is recorded. A decision "
+            "with no downside was not a decision."
+        ),
+    },
+    {
+        "id": "adr-vague-driver",
+        "severities": ["warn", "info"],
+        "applies_to": "adr",
+        "field": "decision_drivers",
+        "summary": (
+            "A decision driver names no threshold the chosen option can be "
+            "checked against. Demoted to info when the line carries a number."
+        ),
+    },
+    {
+        "id": "adr-option-unexamined",
+        "severities": ["info"],
+        "applies_to": "adr",
+        "field": "considered_options",
+        "summary": (
+            "An option listed in frontmatter never appears under the "
+            "'Considered Options' heading, so it was named but not weighed."
+        ),
+    },
+    {
+        "id": "dependency-cycle",
+        "severities": ["warn"],
+        "applies_to": "component",
+        "field": "depends_on",
+        "summary": (
+            "A cycle in the component graph where every individual edge "
+            "resolves. Set-level check: invisible one file at a time."
+        ),
+    },
+]
+
+
 def lint_dir(design_dir: str) -> List[Finding]:
     findings: List[Finding] = []
     artifacts: List[Tuple[str, Dict[str, Any], str]] = []
