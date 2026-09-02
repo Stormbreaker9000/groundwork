@@ -32,32 +32,22 @@ When you make a vague request like *"build me a login form"* or *"add dark mode"
 
 | Workflow | Trigger | Description |
 |---|---|---|
-| `requirements` | "build X", "add Y", "make it do Z" | Turns vague requests into a structured brief with acceptance criteria before any code is written |
+| `requirements` | "build X", "add Y", "make it do Z" | Turns a vague request into atomic, validated requirement artifacts under `.sdlc/requirements/` — functional and non-functional requirements, constraints, business rules, assumptions, a glossary and a Definition of Done |
+| `design` | a validated requirement set exists | Turns requirements into an architecture under `.sdlc/design/` — components, interface contracts, MADR architecture decision records and C4 diagrams, each traced back to the requirements that motivated it |
 
-### Requirements Brief format
+Claude will not write code until you sign off.
 
-```
-## Requirements Brief
+## Documentation
 
-**Problem:** [One sentence: what breaks or is missing and for whom]
-
-**Acceptance Criteria:**
-- [ ] [Specific, testable condition]
-
-**Constraints:** [What this must not do or must stay within]
-
-**Out of Scope:** [What will not be addressed in this change]
-```
-
-Claude will not write code until you sign off on the brief.
+Full documentation, including the content-rule reference, is at
+**https://stormbreaker9000.github.io/groundwork/**.
 
 ## Roadmap
 
-- [ ] Architecture design workflow
+- [x] Architecture design workflow
 - [ ] Test planning workflow
 - [ ] Release checklist workflow
 - [ ] `PreToolUse` hooks to enforce requirements brief before implementation
-- [ ] `requirements-analyst` agent for fully autonomous requirements gathering
 
 ## Plugin structure
 
