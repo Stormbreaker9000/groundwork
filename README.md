@@ -39,7 +39,7 @@ Claude will not write code until you sign off.
 
 ## Documentation
 
-Full documentation, including the content-rule reference, is at
+Full documentation, including the content-rule reference, is published from this repository to
 **https://stormbreaker9000.github.io/groundwork/**.
 
 ## Roadmap
