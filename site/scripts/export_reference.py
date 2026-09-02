@@ -72,6 +72,8 @@ SCHEMAS = {
     ),
 }
 
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
+_FENCED_BLOCK_RE = re.compile(r"^```.*?^```\s*$", re.DOTALL | re.MULTILINE)
 _H1_RE = re.compile(r"^# (.+)$", re.MULTILINE)
 _DESCRIPTION_RE = re.compile(
     r"\A---\s*\n\s*description:\s*(.+?)\s*\n---\s*$", re.MULTILINE
@@ -148,13 +150,60 @@ def export_fields() -> Dict[str, List[Dict[str, Any]]]:
     return out
 
 
+def _parse_agent_file(text: str, name: str) -> Dict[str, str]:
+    """Parse one agent file's frontmatter description and body H1 title.
+
+    The title is the first ``# `` heading in the file's BODY — after the
+    closing frontmatter fence, and outside any fenced (``` ``` ```) code
+    block — not the first ``# ``-shaped line anywhere in the file. Eight of
+    the fifteen current agent files contain additional ``# ``-shaped lines
+    later in the body, inside fenced blocks that show example artifacts the
+    agent writes (e.g. ``# CMP-001 — Example Component``). A naive
+    first-match-anywhere search happens to return the correct title today
+    only because the real title always sits at line 5, before any example
+    block. If a file's real title were ever preceded by an example block
+    containing an H1-shaped line, first-match-anywhere — and even a search
+    merely anchored past the frontmatter fence — would silently return the
+    wrong title, since the fenced heading would still be the first ``# ``
+    line encountered. Nothing would catch that: the drift gate only compares
+    the committed JSON to what this function currently produces, so a
+    consistently wrong extraction reads as "current" forever. Stripping
+    fenced blocks from the body before searching removes that hazard
+    regardless of where the example block sits relative to the real title.
+
+    The description parser expects exactly the three-line frontmatter block
+    every current agent file uses (``---`` / ``description: ...`` / ``---``).
+    A second frontmatter key alongside ``description`` does not match this
+    pattern and silently yields an empty description string rather than
+    raising — there is no signal that the parse degraded. Whoever adds a
+    second frontmatter key to an agent file next must re-verify
+    ``export_agents()`` by hand; this function will not warn them.
+    """
+    frontmatter = _FRONTMATTER_RE.match(text)
+    body = text[frontmatter.end():] if frontmatter else text
+    heading = _H1_RE.search(_FENCED_BLOCK_RE.sub("", body))
+    description = _DESCRIPTION_RE.search(text)
+    raw = description.group(1).strip() if description else ""
+    # Strips one matching outer quote pair only. A description that merely
+    # begins and ends with quoted sub-phrases (no single pair wrapping the
+    # whole string) would be corrupted by this — not reachable in any
+    # current file, but a trap for whoever edits this next.
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
+        raw = raw[1:-1]
+    return {
+        "name": name,
+        "title": heading.group(1).strip() if heading else "",
+        "description": raw,
+    }
+
+
 def export_agents() -> List[Dict[str, str]]:
     """The agent roster, from each file's frontmatter description and H1.
 
     Every agent file carries a three-line frontmatter block whose single key
     is ``description``; the agent's name is its filename, not a frontmatter
-    field. ``test_export_agents_reads_title_and_description`` fails if that
-    stops being true.
+    field. Per-file parsing is delegated to ``_parse_agent_file`` — see its
+    docstring for what the extraction does and does not cover.
     """
     agents_dir = os.path.join(REPO_ROOT, "agents")
     out: List[Dict[str, str]] = []
@@ -165,18 +214,7 @@ def export_agents() -> List[Dict[str, str]]:
             os.path.join(agents_dir, filename), "r", encoding="utf-8"
         ) as handle:
             text = handle.read()
-        heading = _H1_RE.search(text)
-        description = _DESCRIPTION_RE.search(text)
-        raw = description.group(1).strip() if description else ""
-        if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
-            raw = raw[1:-1]
-        out.append(
-            {
-                "name": filename[:-3],
-                "title": heading.group(1).strip() if heading else "",
-                "description": raw,
-            }
-        )
+        out.append(_parse_agent_file(text, filename[:-3]))
     return out
 
 

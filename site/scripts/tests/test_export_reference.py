@@ -115,5 +115,60 @@ def test_export_agents_reads_title_and_description():
         assert agent["description"], f"{agent['name']} has no description"
 
 
+def test_parse_agent_file_title_skips_fenced_example_heading():
+    # Regression test for the first-match-anywhere title bug: a `# `-shaped
+    # line inside a fenced example block, appearing BEFORE the real title,
+    # must not be picked up as the title. Against the old implementation
+    # (er._H1_RE.search(text) with no offset) this returns "Example
+    # Component" instead of "Real Title".
+    text = (
+        "---\n"
+        "description: Test agent.\n"
+        "---\n"
+        "\n"
+        "```markdown\n"
+        "# CMP-001 — Example Component\n"
+        "```\n"
+        "\n"
+        "# Real Title\n"
+    )
+    result = er._parse_agent_file(text, "test-agent")
+    assert result["title"] == "Real Title"
+
+
+def test_parse_agent_file_no_heading_returns_empty_title():
+    text = "---\ndescription: Test agent.\n---\n\nNo heading in this body.\n"
+    result = er._parse_agent_file(text, "test-agent")
+    assert result["title"] == ""
+
+
+def test_parse_agent_file_second_frontmatter_key_yields_empty_description():
+    # today's _DESCRIPTION_RE anchors on exactly the three-line frontmatter
+    # block; a second key breaks that shape and the description silently
+    # comes back empty rather than raising.
+    text = (
+        "---\n"
+        "description: Test agent.\n"
+        "model: sonnet\n"
+        "---\n"
+        "\n"
+        "# Title\n"
+    )
+    result = er._parse_agent_file(text, "test-agent")
+    assert result["description"] == ""
+
+
+def test_parse_agent_file_strips_quoted_description():
+    text = (
+        "---\n"
+        'description: "Quoted agent description."\n'
+        "---\n"
+        "\n"
+        "# Title\n"
+    )
+    result = er._parse_agent_file(text, "test-agent")
+    assert result["description"] == "Quoted agent description."
+
+
 def test_all_outputs_are_written_and_current():
     assert er.main(["--check"]) == 0
