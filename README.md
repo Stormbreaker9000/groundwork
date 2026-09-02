@@ -6,7 +6,7 @@ A Claude Code plugin that brings structure to software development — requireme
 
 ## What it does
 
-Groundwork intercepts vague implementation requests and guides you through a lightweight requirements process before anything gets built. Instead of jumping straight to code, you get a structured brief with acceptance criteria that both you and Claude agree on.
+Groundwork intercepts vague implementation requests and guides you through a lightweight requirements process before anything gets built. Instead of jumping straight to code, you get atomic, validated requirement artifacts — each with a rationale and a fit criterion — that both you and Claude agree on before implementation starts.
 
 ## Installation
 
@@ -57,7 +57,11 @@ groundwork/
 ├── skills/               # Markdown instruction sets (skill triggers)
 ├── commands/             # Slash commands (/groundwork)
 ├── hooks/                # Event-driven scripts (SessionStart)
-└── agents/               # Dispatched subagents
+├── agents/               # Dispatched subagents
+├── lib/                  # Shared Python modules used by the linting/validation scripts
+├── site/                 # Nextra documentation site, published to GitHub Pages
+├── docs/                 # Internal planning docs (specs, plans, research) — not the published site
+└── .github/              # CI and GitHub Pages deploy workflows
 ```
 
 ## License
