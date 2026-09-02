@@ -62,13 +62,21 @@ def export_rules() -> Dict[str, Any]:
     }
 
 
+def _serialize(payload: Any) -> str:
+    """The single definition of what a committed reference file contains.
+
+    Both write_json and --check go through this. If they ever computed the
+    serialization separately, the gate could pass over a stale file.
+    """
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def write_json(name: str, payload: Any) -> str:
     """Write ``payload`` to ``OUT_DIR/name``, stably and diff-cleanly."""
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, name)
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     with open(path, "w", encoding="utf-8") as handle:
-        handle.write(text)
+        handle.write(_serialize(payload))
     return path
 
 
@@ -90,17 +98,18 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     stale: List[str] = []
     for name, builder in sorted(OUTPUTS.items()):
-        expected = json.dumps(builder(), indent=2, sort_keys=True) + "\n"
+        payload = builder()
         path = os.path.join(OUT_DIR, name)
         if args.check:
+            expected = _serialize(payload)
             try:
                 with open(path, "r", encoding="utf-8") as handle:
                     if handle.read() != expected:
                         stale.append(name)
-            except OSError:
+            except (OSError, UnicodeDecodeError):
                 stale.append(name)
         else:
-            write_json(name, builder())
+            write_json(name, payload)
 
     if args.check and stale:
         for name in stale:

@@ -45,3 +45,23 @@ def test_written_json_is_stable_and_newline_terminated():
     assert json.loads(text) == json.loads(
         json.dumps(er.export_rules(), indent=2, sort_keys=True)
     )
+
+
+def test_check_mode_detects_clean_stale_and_missing(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(er, "OUT_DIR", str(tmp_path))
+
+    # Clean: freshly written output is current.
+    assert er.main([]) == 0
+    assert er.main(["--check"]) == 0
+
+    # Stale: content that does not match what the registries produce.
+    (tmp_path / "rules.json").write_text("garbage\n", encoding="utf-8")
+    assert er.main(["--check"]) == 1
+    assert "stale: " in capsys.readouterr().err
+
+    # Missing: the file is not there at all.
+    (tmp_path / "rules.json").unlink()
+    assert er.main(["--check"]) == 1
+
+    # Check mode must never write.
+    assert not (tmp_path / "rules.json").exists()
