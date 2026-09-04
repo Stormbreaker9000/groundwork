@@ -5,7 +5,9 @@ import { RuleTable } from '../../../components/RuleTable'
 Both stages run a content-quality linter after their structural gates pass.
 These linters are **advisory**: they print findings and exit 0, so nothing
 here blocks a pipeline run. Pass `--strict` to exit non-zero on an
-`error`-severity finding, and `--json` for machine-readable output.
+`error`-severity finding — no rule in either table below declares one today,
+so `--strict` currently changes nothing for either linter — and `--json` for
+machine-readable output.
 
 The tables below are generated from the linters' own rule registries. They
 cannot describe a rule that does not exist, or miss one that does.

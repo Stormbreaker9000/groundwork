@@ -150,8 +150,8 @@ The context object is handed to a chain of agents that run in a fixed order:
 2. **component-specialist** — decomposes the system into components, each with
    a single declared responsibility, tracing to the requirements that drove it.
 3. **interface-specialist** — turns every capability the components declared
-   into an interface with a provider, operations, an interaction style and
-   error modes.
+   into an interface with a provider, error modes, and operations that each
+   declare an interaction style.
 4. **design-critic** — a two-phase review: per-artifact quality (ISO/IEC/IEEE
    42010) and coverage of the architecturally significant requirements with
    tradeoffs and sensitivity points named (ATAM-lite). This gate is judgment
