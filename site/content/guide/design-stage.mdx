@@ -33,13 +33,16 @@ with rather than resolved before.
 This is the part worth understanding, because it looks like duplicated work and
 is not.
 
-The requirement set does not carry technology context — that is by
+The requirements themselves do not carry technology context — that is by
 construction, not omission. The requirements stage's content linter flags
 implementation bias at the business and stakeholder tiers, but only at `info`
 severity and advisorily; the requirements critic is what actually holds the
-line, by judgment, at its gate. So nothing in `.sdlc/requirements/` says
-"Tauri" or "Postgres" — because the pipeline is built to keep it that way, not
-because a tool hard-fails on it.
+line, by judgment, at its gate. So no *requirement* in `.sdlc/requirements/`
+says "Tauri" or "Postgres" — because the pipeline is built to keep it that way,
+not because a tool hard-fails on it. The project-level companions are a
+different matter, and deliberately so: an open question in `assumptions.md` may
+name a technology precisely because it is asking which one to pick, which is
+what the tamagotchi `Q-4` below does.
 
 Which leaves exactly two options at design time: ask, or invent. Groundwork's
 own history settled which. An earlier build took an unexamined Electron
@@ -191,7 +194,7 @@ Immediately after the write, the formatter re-runs the structural validator over
 everything it just wrote, then the cross-artifact traceability validator. Both
 must exit `0`. See [Gates](/guide/gates/).
 
-## An empty `adr/` or `diagrams/` is a legal outcome
+## An empty `adr/` is a legal outcome
 
 ADRs are **derived, never elicited**. The generator promotes decisions the
 pipeline already recorded — resolved `Q-` questions from the architecture

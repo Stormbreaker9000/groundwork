@@ -34,7 +34,9 @@ it separately for exactly that reason: sending an exit `2` into the
 failure-routing logic sends the stage hunting for a defect that was never
 reported. Check the path you passed.
 
-The two advisory linters use the same `2`, and otherwise always exit `0`.
+The two advisory linters use the same `2`. Otherwise they exit `0`, with one
+exception: under `--strict` they return `1` if an `error`-severity finding
+exists.
 
 ## `validate_requirements.py`
 
@@ -142,9 +144,19 @@ flag a **requirement** file rather than a design artifact:
 The design stage never writes into `.sdlc/requirements/`, so there is nothing
 to re-dispatch and no loop to run. The stage reports these and stops, passing
 the validator's lines through as they are: each already names the requirement
-ID, its file path, and the exact edit to make — move the edge onto the named
-requirement's `traces_from`. You make that edit in the requirements stage, then
-re-run the design stage.
+ID, its file path, and the exact edit to make.
+
+Which edit depends on what the entry turned out to be.
+`misplaced-requirement-trace`, and a `dangling-reverse-trace` whose target
+resolves as a requirement, are both the pre-STO-102 shape, and the message says
+to move the edge: delete it here, and add this requirement's own ID to the
+named requirement's `traces_from`. A `dangling-reverse-trace` pointing at
+something that is not a known design artifact at all is an ordinary bad
+reference, and the message says to clear the entry or correct it to a
+`CMP-`/`IF-`/`ADR-` ID.
+
+Either way you make the edit yourself, in the requirements stage, then re-run
+the design stage.
 
 **There is deliberately no migration script and no bypass flag.** A tool that
 rewrote requirement files from the design stage would be the second writer this
