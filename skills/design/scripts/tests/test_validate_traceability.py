@@ -9,8 +9,10 @@ runs the real CLI end to end. Fixture artifacts carry only the fields this
 tool reads — it never schema-validates, so they are deliberately not
 schema-complete.
 """
+import inspect
 import json
 import os
+import re
 
 import validate_traceability as vt
 
@@ -470,9 +472,6 @@ def test_shipped_tamagotchi_example_is_clean(capsys):
 # ---------------------------------------------------------------------------
 # Rule registry (STO-250 pass 2)
 # ---------------------------------------------------------------------------
-import inspect
-import re
-
 _RULE_LITERAL_RE = re.compile(r'rule=["\']([a-z0-9-]+)["\']')
 
 

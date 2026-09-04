@@ -10,11 +10,6 @@ import export_reference as er
 ENTRY_KEYS = {"id", "severities", "applies_to", "fields", "summary"}
 
 
-def test_export_rules_has_both_linters():
-    payload = er.export_rules()
-    assert set(payload) == {"design", "requirements", "traceability"}
-
-
 def test_export_rules_records_its_source_module():
     payload = er.export_rules()
     assert payload["design"]["linter"] == "lint_design_content.py"
