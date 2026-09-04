@@ -8,17 +8,9 @@ not that the requirement exists, and ``validate_requirements.py`` excludes
 every ``traces_to`` sub-list from its dangling-reference sweep. This tool is
 the one that reads both directories at once and resolves that edge.
 
-It runs these rules::
-
-    dangling-trace               error  design traces_from resolves to a requirement
-    adr-driver-unresolved        error  IDs listed under '## Decision Drivers' resolve
-    dangling-reverse-trace       error  requirement traces_to.design resolves
-    misplaced-requirement-trace  error  no requirement id in traces_to.tests/code
-    uncovered-fr                 warn   every FR is cited by some component
-    adr-driver-untraced          warn   a listed driver absent from frontmatter
-    adr-driver-unlisted          warn   a prose-only ID was not checked as a driver
-    index-unparseable            warn   a file is missing from the index
-    duplicate-id                 warn   two files claim one id; only one indexed
+The rules it runs are declared in ``RULES`` below, which is also what the
+documentation site renders. There is deliberately no second list here: a
+restated table is a place for the same facts to drift.
 
 The last two are index caveats rather than edge checks, and they are findings
 for a reason: they travel the same channel every consumer already reads (the
@@ -72,6 +64,108 @@ from artifact_core import parse_frontmatter  # noqa: E402
 ERROR = "error"
 WARN = "warn"
 _SEVERITY_ORDER = {ERROR: 0, WARN: 1}
+
+# The published rule reference is generated from this list (STO-250 pass 2).
+# It is the single declaration of what this tool checks: the module docstring
+# used to restate it in prose, which was a second place for the same facts to
+# drift. Keys match the two content linters' registries so one component
+# renders all three. `fields` is empty by construction — a traceability
+# Finding names an artifact and a path, never a frontmatter field.
+RULES: List[Dict[str, Any]] = [
+    {
+        "id": "dangling-trace",
+        "severities": [ERROR],
+        "applies_to": "design artifact",
+        "fields": [],
+        "summary": (
+            "A design artifact's traces_from names a requirement ID that "
+            "does not exist in the requirements set."
+        ),
+    },
+    {
+        "id": "adr-driver-unresolved",
+        "severities": [ERROR],
+        "applies_to": "adr",
+        "fields": [],
+        "summary": (
+            "A requirement ID listed under '## Decision Drivers' does not "
+            "resolve. A listed driver is the leading token of a list item."
+        ),
+    },
+    {
+        "id": "dangling-reverse-trace",
+        "severities": [ERROR],
+        "applies_to": "requirement",
+        "fields": [],
+        "summary": (
+            "A requirement's non-empty traces_to.design names a design ID "
+            "that does not exist. Fixed by hand in the requirements stage — "
+            "there is no migration script and no bypass flag."
+        ),
+    },
+    {
+        "id": "misplaced-requirement-trace",
+        "severities": [ERROR],
+        "applies_to": "requirement",
+        "fields": [],
+        "summary": (
+            "A requirement ID sits in traces_to.tests or traces_to.code, "
+            "which hold test and code references. Fixed by hand in the "
+            "requirements stage; the message names the exact edit."
+        ),
+    },
+    {
+        "id": "uncovered-fr",
+        "severities": [WARN],
+        "applies_to": "requirement",
+        "fields": [],
+        "summary": (
+            "A functional requirement is cited by no component. Excludes "
+            "priority: wont and status: obsolete."
+        ),
+    },
+    {
+        "id": "adr-driver-untraced",
+        "severities": [WARN],
+        "applies_to": "adr",
+        "fields": [],
+        "summary": (
+            "A listed decision driver resolves but is absent from that ADR's "
+            "traces_from."
+        ),
+    },
+    {
+        "id": "adr-driver-unlisted",
+        "severities": [WARN],
+        "applies_to": "adr",
+        "fields": [],
+        "summary": (
+            "A requirement ID appears in the drivers prose but not as a list "
+            "item, so it was never checked as a driver. A warning rather than "
+            "an error: ordinary English mentioning an ID is history, not a "
+            "defect."
+        ),
+    },
+    {
+        "id": "index-unparseable",
+        "severities": [WARN],
+        "applies_to": "the index",
+        "fields": [],
+        "summary": (
+            "A file's frontmatter did not parse, so it is missing from the "
+            "index and the sweep was not complete."
+        ),
+    },
+    {
+        "id": "duplicate-id",
+        "severities": [WARN],
+        "applies_to": "the index",
+        "fields": [],
+        "summary": (
+            "Two files claim the same ID; only the last one read was indexed."
+        ),
+    },
+]
 
 
 @dataclass
