@@ -20,14 +20,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Runs first so a Pages source that is not yet set to "GitHub Actions"
       # (Settings > Pages > Source) fails fast, before install/build/indexing
       # burn CI time on a deploy that can't land.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -55,7 +55,7 @@ jobs:
       - name: Generated reference is not stale
         run: python3 site/scripts/export_reference.py --check
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site/out
 

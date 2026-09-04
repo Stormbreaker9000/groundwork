@@ -60,14 +60,16 @@ Current pins are several majors behind. In **both** workflow files, replace:
 
 `actions/deploy-pages@v5` is already current — leave it.
 
-Before committing, check each bump against GitHub's own current Pages starter workflow, which is the authority pass 1 pinned to:
+Before committing, check each bump against GitHub's own current Pages starter workflow (this is the template pass 1 originally pinned to, but see below — it is not authoritative for this bump):
 
 ```bash
 gh api repos/actions/starter-workflows/contents/pages/nextjs.yml \
   --jq '.content' | base64 -d | grep -n 'uses:'
 ```
 
-If the starter pins something lower than the table above, follow the starter and record why in the commit body. `upload-pages-artifact` v3→v5 and `configure-pages` v5→v6 are the two that can carry breaking changes; read their release notes rather than assuming.
+GitHub's starter workflow lags behind these pins — as of this writing it still uses `checkout@v4`, `setup-node@v4`, and `configure-pages@v5`. Apply the bumps in the table above regardless; the starter is not the authority here. The explicit instruction going into this task was that there is no reason to be behind on GitHub Actions versions, and `checkout`, `setup-node`, and `configure-pages` v4→v5/v6/v7 are exactly the Node-runtime bumps (node20 → node24) that STO-263 B3 exists to clear — following the starter would preserve the deprecation warning the ticket was filed about.
+
+`upload-pages-artifact` v3→v5 is the one bump with a real behaviour change: v4 excludes dotfiles from the uploaded artifact. Checked against this project's actual `site/out/` export output and found inert — `find out -name '.*'` returns nothing; the underscore-prefixed `_next` and `_pagefind` directories are not dotfiles, and Actions-based Pages deploys bypass Jekyll, so no `.nojekyll` is needed either. `configure-pages` v6's changelog is dependabot/ts-jest churn, not a behavioural change. Apply all four bumps.
 
 - [ ] **Step 3: Add the Node-only build job to `ci.yml`**
 
