@@ -1,0 +1,33 @@
+import { FieldTable } from '../../../components/FieldTable'
+
+# Frontmatter fields
+
+Every artifact Groundwork writes is a Markdown file whose YAML frontmatter is
+validated against a JSON Schema. These tables are generated from those two
+schemas, so a field that exists in the schema appears here and a field that
+does not, does not.
+
+The structural validators — `validate_requirements.py` and
+`validate_design.py` — enforce exactly what these tables describe. See
+[Gates](/guide/gates/) for what happens when one fails, and
+[Reading an artifact](/guide/reading-an-artifact/) for what the fields mean
+in practice rather than in schema terms.
+
+## Requirement fields
+
+Required by `validate_requirements.py` over `.sdlc/requirements`.
+
+<FieldTable stage="requirements" />
+
+## Design fields
+
+Required by `validate_design.py` over `.sdlc/design`.
+
+<FieldTable stage="design" />
+
+## Reading the Required column
+
+`always` means every artifact of that stage carries the field. A list of type
+names means the field is required only for those types — `ears_pattern` is
+required for `functional` requirements and meaningless for the rest.
+`optional` means the schema permits it and never demands it.
