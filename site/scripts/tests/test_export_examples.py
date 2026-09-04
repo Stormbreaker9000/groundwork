@@ -154,6 +154,38 @@ def test_check_fails_when_a_page_is_stale(capsys):
     assert ee.main(["--check"]) == 0
 
 
+def test_check_orphan_guidance_is_specific_to_orphaned_pages(capsys):
+    # An orphaned page needs a different remediation than ordinary drift:
+    # regenerating does not delete anything, so the printed instruction must
+    # say so — and must not show up for a page the generator still produces.
+    orphan = os.path.join(ee.OUT_DIR, "tamagotchi", "requirements", "stray.md")
+    try:
+        with open(orphan, "w", encoding="utf-8") as handle:
+            handle.write("stray\n")
+        assert ee.main(["--check"]) == 1
+        err = capsys.readouterr().err
+        assert "(orphaned)" in err
+        assert "delete any path marked (orphaned)" in err
+    finally:
+        if os.path.exists(orphan):
+            os.remove(orphan)
+    assert ee.main(["--check"]) == 0
+
+    target = os.path.join(ee.OUT_DIR, "tamagotchi", "requirements", "functional.md")
+    original = open(target, encoding="utf-8").read()
+    try:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original + "\nstale\n")
+        assert ee.main(["--check"]) == 1
+        err = capsys.readouterr().err
+        assert "(orphaned)" not in err
+        assert "delete any path marked (orphaned)" not in err
+    finally:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original)
+    assert ee.main(["--check"]) == 0
+
+
 def test_project_artifact_pages_carry_the_prose_files():
     page = ee.render_project_artifacts("tamagotchi", "requirements")
     assert "## Glossary" in page

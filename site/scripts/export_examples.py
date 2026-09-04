@@ -377,7 +377,7 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
         "open.",
         "",
     ]
-    return "\n".join(header) + "\n".join(sections).rstrip("\n") + "\n"
+    return "\n".join(header) + "\n" + "\n".join(sections).rstrip("\n") + "\n"
 
 
 def _meta_js(entries: List[Tuple[str, str]]) -> str:
@@ -476,7 +476,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.check and stale:
         for relative in sorted(stale):
             print(f"stale: site/content/guide/examples/{relative}", file=sys.stderr)
-        print("run: python3 site/scripts/export_examples.py", file=sys.stderr)
+        print("", file=sys.stderr)
+        print(
+            "run: python3 site/scripts/export_examples.py   "
+            "— regenerates stale pages",
+            file=sys.stderr,
+        )
+        if any(relative.endswith("(orphaned)") for relative in stale):
+            print(
+                "delete any path marked (orphaned): the generator no longer "
+                "produces it,\nand regenerating will not remove it",
+                file=sys.stderr,
+            )
         return 1
     return 0
 

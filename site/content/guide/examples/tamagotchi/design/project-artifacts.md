@@ -7,6 +7,7 @@
 # Project artifacts
 
 The stage-level files that sit alongside the atomic artifacts: the vocabulary they are written in, what was assumed, and what is still open.
+
 ## Architecture drivers [#drivers]
 
 ### Architecturally Significant Requirements
