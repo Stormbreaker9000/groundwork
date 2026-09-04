@@ -65,3 +65,70 @@ def test_split_frontmatter_returns_the_body_only():
 def test_split_frontmatter_leaves_a_file_without_frontmatter_alone():
     text = "# Assumptions\n\nProse.\n"
     assert ee.split_frontmatter(text) == text
+
+
+def test_demote_headings_shifts_every_level_by_one():
+    body = "# Title\n\n## Section\n\n### Sub\n"
+    assert ee.demote_headings(body) == "## Title\n\n### Section\n\n#### Sub\n"
+
+
+def test_demote_headings_ignores_hashes_inside_fenced_blocks():
+    # Gherkin and Mermaid blocks contain lines that start with '#'. Demoting
+    # them would corrupt the fenced content, and a naive regex would.
+    body = "# Title\n\n```gherkin\n# not a heading\n```\n\n## After\n"
+    out = ee.demote_headings(body)
+    assert "# not a heading" in out
+    assert "## not a heading" not in out
+    assert out.startswith("## Title")
+    assert "### After" in out
+
+
+def test_demote_headings_handles_an_unbalanced_fence():
+    # An unterminated fence must not silently re-enable demotion below it.
+    body = "# Title\n\n```\n# inside\n"
+    out = ee.demote_headings(body)
+    assert "# inside" in out
+    assert "## inside" not in out
+
+
+def test_index_maps_ids_to_anchored_urls():
+    index = ee.build_index("tamagotchi")
+    assert index["FR-001"] == (
+        "/guide/examples/tamagotchi/requirements/functional/#fr-001"
+    )
+    assert index["CMP-001"] == (
+        "/guide/examples/tamagotchi/design/components/#cmp-001"
+    )
+
+
+def test_rendered_page_anchors_every_artifact():
+    artifacts = ee.load_group("tamagotchi", "requirements", "functional")
+    index = ee.build_index("tamagotchi")
+    page = ee.render_group(
+        "tamagotchi", "requirements", "functional",
+        "Functional requirements", artifacts, index,
+    )
+    assert "## FR-001 — Persist pet state on stat change and app close [#fr-001]" in page
+    for artifact in artifacts:
+        assert f"[#{artifact.artifact_id.lower()}]" in page
+
+
+def test_rendered_page_links_resolvable_traces_and_leaves_the_rest_as_text():
+    artifacts = ee.load_group("tamagotchi", "requirements", "functional")
+    index = ee.build_index("tamagotchi")
+    page = ee.render_group(
+        "tamagotchi", "requirements", "functional",
+        "Functional requirements", artifacts, index,
+    )
+    # FR-001 traces_from: [CON-002, BR-002] — both exist in this set.
+    assert "[CON-002](/guide/examples/tamagotchi/requirements/constraints/#con-002)" in page
+    # An ID absent from the set must render as plain text, never a dead link.
+    assert "](/guide/examples/tamagotchi/requirements/functional/#fr-999)" not in page
+
+
+def test_rendered_page_is_byte_identical_across_runs():
+    args = ("tamagotchi", "design", "components", "Components")
+    index = ee.build_index("tamagotchi")
+    first = ee.render_group(*args, ee.load_group(*args[:3]), index)
+    second = ee.render_group(*args, ee.load_group(*args[:3]), index)
+    assert first == second

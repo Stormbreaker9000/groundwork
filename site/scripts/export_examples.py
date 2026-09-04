@@ -152,3 +152,172 @@ def load_group(set_name: str, stage: str, directory: str) -> List[Artifact]:
 
     artifacts.sort(key=lambda a: _sort_key(a.artifact_id))
     return artifacts
+
+
+_FENCE_RE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
+_HEADING_RE = re.compile(r"^(#{1,5})(\s+)(.*)$")
+
+
+def demote_headings(body: str) -> str:
+    """Shift every heading down one level, outside fenced code blocks.
+
+    An artifact body opens with ``# FR-001 — Title``; on a consolidated page
+    that has to become an H2 under the page's own H1.
+
+    A state machine rather than a regex over the whole document. Artifact
+    bodies carry Gherkin and Mermaid fences whose lines can begin with ``#``,
+    and a fence is closed only by a fence of at least the same length using
+    the same character — the rule CommonMark actually specifies. An
+    unterminated fence runs to the end of the file rather than silently
+    re-enabling demotion, which is the residual STO-263 C1 records against
+    the exporter's regex approach.
+    """
+    out: List[str] = []
+    fence: Optional[Tuple[str, int]] = None
+
+    for line in body.split("\n"):
+        fence_match = _FENCE_RE.match(line)
+        if fence_match:
+            char = fence_match.group(2)[0]
+            length = len(fence_match.group(2))
+            info = fence_match.group(3).strip()
+            if fence is None:
+                # An opening fence may carry an info string; a closing one
+                # may not.
+                fence = (char, length)
+            elif char == fence[0] and length >= fence[1] and not info:
+                fence = None
+            out.append(line)
+            continue
+
+        if fence is None:
+            heading = _HEADING_RE.match(line)
+            if heading:
+                out.append(
+                    "#" + heading.group(1) + heading.group(2) + heading.group(3)
+                )
+                continue
+
+        out.append(line)
+
+    return "\n".join(out)
+
+
+def page_url(set_name: str, stage: str, directory: str) -> str:
+    """Site-relative page URL, trailing slash, no basePath.
+
+    The form ``site/content/index.mdx`` already uses and pass 1 confirmed
+    resolves on the deployed project page.
+    """
+    return f"/guide/examples/{set_name}/{stage}/{directory}/"
+
+
+def build_index(set_name: str) -> Dict[str, str]:
+    """Map every artifact ID in a set to its anchored URL."""
+    index: Dict[str, str] = {}
+    for stage, directory, _title in GROUPS:
+        url = page_url(set_name, stage, directory)
+        for artifact in load_group(set_name, stage, directory):
+            index[artifact.artifact_id] = f"{url}#{artifact.artifact_id.lower()}"
+    return index
+
+
+def _link_ids(ids: List[Any], index: Dict[str, str]) -> str:
+    """Render an ID list as links, leaving unresolvable IDs as plain text.
+
+    A generated page must not publish a dead cross-reference — least of all
+    on pages about traceability.
+    """
+    if not ids:
+        return "—"
+    parts: List[str] = []
+    for raw in ids:
+        value = str(raw)
+        target = index.get(value)
+        parts.append(f"[{value}]({target})" if target else value)
+    return ", ".join(parts)
+
+
+# Frontmatter keys worth surfacing per artifact, in display order. Anything
+# not listed stays in the source file; this is a reading view, not a dump.
+META_ROWS = [
+    ("type", "Type"),
+    ("tier", "Tier"),
+    ("priority", "Priority"),
+    ("status", "Status"),
+    ("confidence", "Confidence"),
+    ("ears_pattern", "EARS pattern"),
+    ("verification_method", "Verification"),
+    ("boundary", "Boundary"),
+    ("responsibility", "Responsibility"),
+    ("provider", "Provider"),
+    ("interaction", "Interaction"),
+    ("level", "C4 level"),
+]
+
+LINK_ROWS = [
+    ("traces_from", "Traces from"),
+    ("depends_on", "Depends on"),
+]
+
+
+def _meta_table(artifact: Artifact, index: Dict[str, str]) -> str:
+    rows: List[str] = []
+    for key, label in META_ROWS:
+        value = artifact.meta.get(key)
+        if value in (None, "", []):
+            continue
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        rows.append(f"| {label} | {value} |")
+    for key, label in LINK_ROWS:
+        value = artifact.meta.get(key)
+        if not value:
+            continue
+        rows.append(f"| {label} | {_link_ids(list(value), index)} |")
+
+    if not rows:
+        return ""
+    header = "| Field | Value |\n| --- | --- |"
+    return header + "\n" + "\n".join(rows) + "\n"
+
+
+def render_group(
+    set_name: str,
+    stage: str,
+    directory: str,
+    title: str,
+    artifacts: List[Artifact],
+    index: Dict[str, str],
+) -> str:
+    """Render one artifact type as a single consolidated page."""
+    lines = [
+        "<!--",
+        "  GENERATED FILE — do not edit.",
+        "  Source: docs/requirements/examples/"
+        f"{set_name}/{stage}/{directory}/",
+        "  Regenerate: python3 site/scripts/export_examples.py",
+        "-->",
+        "",
+        f"# {title}",
+        "",
+        f"The {len(artifacts)} {title.lower()} from the "
+        f"`{set_name}` worked example, exactly as the pipeline wrote them.",
+        "",
+    ]
+
+    for artifact in artifacts:
+        anchor = artifact.artifact_id.lower()
+        heading = f"{artifact.artifact_id} — {artifact.title}".rstrip(" —")
+        lines.append(f"## {heading} [#{anchor}]")
+        lines.append("")
+        table = _meta_table(artifact, index)
+        if table:
+            lines.append(table)
+        body = demote_headings(artifact.body).strip()
+        # The artifact's own H1 became an H2 identical to the heading above.
+        body = re.sub(r"\A##\s+.*\n+", "", body)
+        lines.append(body)
+        lines.append("")
+
+    return "\n".join(lines).rstrip("\n") + "\n"
