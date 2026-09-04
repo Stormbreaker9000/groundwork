@@ -1,4 +1,5 @@
 export default {
+  'index': 'Overview',
   'functional': 'Functional requirements',
   'non-functional': 'Non-functional requirements',
   'constraints': 'Constraints',

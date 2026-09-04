@@ -203,6 +203,45 @@ def demote_headings(body: str) -> str:
     return "\n".join(out)
 
 
+def count_phrase(count: int, title: str) -> str:
+    """``4 C4 diagrams``, ``1 constraint`` — pluralised and cased correctly.
+
+    Doing this inline costs two defects, both of which reached review.
+    ``title.lower()`` destroys an acronym that the page's own H1 keeps
+    capitalised (``C4 diagrams`` rendered as ``c4 diagrams`` two lines under
+    its own heading), and an unconditional plural writes ``1 constraints``.
+    """
+    words: List[str] = []
+    for word in title.split():
+        # An all-caps token is an acronym carrying its own casing — ``C4``
+        # stays ``C4``. Every other word is capitalised only because it
+        # opened a title, so it lowercases inside a sentence.
+        words.append(word if word == word.upper() else word.lower())
+    if count == 1 and words and words[-1].endswith("s"):
+        if not words[-1].endswith("ss"):
+            words[-1] = words[-1][:-1]
+    return f"{count} {' '.join(words)}"
+
+
+def _joined(parts: List[str]) -> str:
+    """``a``, ``a and b``, ``a, b and c`` — prose, not a comma list."""
+    if len(parts) < 3:
+        return " and ".join(parts)
+    return ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def _header(source: str) -> List[str]:
+    """The generated-file comment every page this script writes carries."""
+    return [
+        "<!--",
+        "  GENERATED FILE — do not edit.",
+        f"  Source: {source}",
+        "  Regenerate: python3 site/scripts/export_examples.py",
+        "-->",
+        "",
+    ]
+
+
 def page_url(set_name: str, stage: str, directory: str) -> str:
     """Site-relative page URL, trailing slash, no basePath.
 
@@ -210,6 +249,11 @@ def page_url(set_name: str, stage: str, directory: str) -> str:
     resolves on the deployed project page.
     """
     return f"/guide/examples/{set_name}/{stage}/{directory}/"
+
+
+def stage_url(set_name: str, stage: str) -> str:
+    """Site-relative URL of one stage's index page."""
+    return f"/guide/examples/{set_name}/{stage}/"
 
 
 def build_index(set_name: str) -> Dict[str, str]:
@@ -251,8 +295,12 @@ META_ROWS = [
     ("boundary", "Boundary"),
     ("responsibility", "Responsibility"),
     ("provider", "Provider"),
-    ("interaction", "Interaction"),
     ("level", "C4 level"),
+    # No contract-level `interaction` row: STO-216 moved interaction to the
+    # individual operation, and the design schema's interface branch rejects
+    # the contract-level key through `unevaluatedProperties: false`. A row
+    # for it could only ever render on a schema-invalid artifact, publishing
+    # an illegal field as though it were routine.
 ]
 
 LINK_ROWS = [
@@ -291,18 +339,15 @@ def render_group(
     index: Dict[str, str],
 ) -> str:
     """Render one artifact type as a single consolidated page."""
-    lines = [
-        "<!--",
-        "  GENERATED FILE — do not edit.",
-        "  Source: docs/requirements/examples/"
-        f"{set_name}/{stage}/{directory}/",
-        "  Regenerate: python3 site/scripts/export_examples.py",
-        "-->",
-        "",
+    lines = _header(
+        f"docs/requirements/examples/{set_name}/{stage}/{directory}/"
+    )
+    lines += [
         f"# {title}",
         "",
-        f"The {len(artifacts)} {title.lower()} from the "
-        f"`{set_name}` worked example, exactly as the pipeline wrote them.",
+        f"The {count_phrase(len(artifacts), title)} from the "
+        f"`{set_name}` worked example, exactly as the pipeline wrote "
+        + ("it." if len(artifacts) == 1 else "them."),
         "",
     ]
 
@@ -330,12 +375,54 @@ SET_TITLES = {
     "gdpr": "GDPR compliance",
 }
 
+# What each worked example is, for its own landing page. A set with no entry
+# falls back to a generic line, so adding a set does not require touching
+# this map — the same rule SET_TITLES follows.
+SET_BLURBS = {
+    "tamagotchi": (
+        "A desktop pet: a small always-on window holding a creature whose "
+        "hunger, happiness and hygiene decay in real time, and whose state "
+        "has to survive the machine being switched off. Small enough to read "
+        "end to end, and the only set here that carries a design stage as "
+        "well as a requirement set."
+    ),
+    "gdpr": (
+        "The GDPR data-subject rights obligations — export an account's "
+        "personal data, erase it on a confirmed request, cancel a request "
+        "that has not been confirmed — written as requirements. It is "
+        "regulation-driven rather than feature-driven, so most of the set is "
+        "non-functional, and the load is carried by the constraints and "
+        "business rules rather than by the three features. It stops at "
+        "requirements: no design stage was run for it."
+    ),
+}
+
+STAGE_TITLES = {
+    "requirements": "Requirements",
+    "design": "Design",
+}
+
 PROJECT_TITLES = {
     "glossary.md": "Glossary",
     "assumptions.md": "Assumptions",
     "definition-of-done.md": "Definition of done",
     "drivers.md": "Architecture drivers",
 }
+
+
+def present_project_files(set_name: str, stage: str) -> List[str]:
+    """The stage's project-level prose files that exist, in reading order.
+
+    Which of them exist varies by set and stage, so both the page that
+    publishes them and the index that advertises them read the answer from
+    disk rather than from a list written twice.
+    """
+    root = os.path.join(EXAMPLES_DIR, set_name, stage)
+    return [
+        name
+        for name in PROJECT_FILES[stage]
+        if os.path.isfile(os.path.join(root, name))
+    ]
 
 
 def render_project_artifacts(set_name: str, stage: str) -> str:
@@ -347,10 +434,8 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
     """
     root = os.path.join(EXAMPLES_DIR, set_name, stage)
     sections: List[str] = []
-    for name in PROJECT_FILES[stage]:
+    for name in present_project_files(set_name, stage):
         path = os.path.join(root, name)
-        if not os.path.isfile(path):
-            continue
         with open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
         body = demote_headings(split_frontmatter(text)).strip()
@@ -363,13 +448,9 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
     if not sections:
         return ""
 
-    header = [
-        "<!--",
-        "  GENERATED FILE — do not edit.",
-        f"  Source: docs/requirements/examples/{set_name}/{stage}/",
-        "  Regenerate: python3 site/scripts/export_examples.py",
-        "-->",
-        "",
+    header = _header(
+        f"docs/requirements/examples/{set_name}/{stage}/"
+    ) + [
         "# Project artifacts",
         "",
         "The stage-level files that sit alongside the atomic artifacts: the "
@@ -378,6 +459,108 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
         "",
     ]
     return "\n".join(header) + "\n" + "\n".join(sections).rstrip("\n") + "\n"
+
+
+@dataclass
+class StageSummary:
+    """What one stage of one set published, for its index pages to describe.
+
+    ``groups`` is (directory, page title, artifact count) per emitted page,
+    in sidebar order. Counts come from the artifacts actually loaded, so the
+    index pages cannot drift from the set the way a written-down number can.
+    """
+
+    stage: str
+    groups: List[Tuple[str, str, int]]
+    project_files: List[str]
+
+    @property
+    def total(self) -> int:
+        return sum(count for _directory, _title, count in self.groups)
+
+
+def _project_gloss(summary: StageSummary) -> str:
+    """``the glossary, assumptions and definition of done`` — as published."""
+    names = [PROJECT_TITLES[name].lower() for name in summary.project_files]
+    return _joined(names)
+
+
+def render_stage_index(set_name: str, summary: StageSummary) -> str:
+    """Render the landing page for one stage of one worked example.
+
+    Every child of ``examples/<set>/<stage>/`` is a page, but the folder
+    itself still needs one. Nextra points a folder's breadcrumb at that
+    folder's own route, which resolves to nothing unless a page occupies it —
+    the crumb 404s. Elsewhere on this site a folder's first child happens to
+    be a page and the route is taken for free; under ``examples/`` it is
+    folders all the way down, so these index pages are what make the
+    breadcrumbs resolve. Reordering ``_meta.js`` cannot substitute: there is
+    no child page to promote.
+    """
+    stage = summary.stage
+    lines = _header(f"docs/requirements/examples/{set_name}/{stage}/")
+    lines += [
+        f"# {STAGE_TITLES[stage]}",
+        "",
+        f"The {stage} stage of the `{set_name}` worked example: "
+        f"{count_phrase(summary.total, 'atomic artifacts')} published across "
+        f"{count_phrase(len(summary.groups), 'pages')}, exactly as the "
+        "pipeline wrote them.",
+        "",
+    ]
+    for directory, title, count in summary.groups:
+        url = page_url(set_name, stage, directory)
+        lines.append(
+            f"- **[{title}]({url})** — {count_phrase(count, title)}."
+        )
+    if summary.project_files:
+        url = page_url(set_name, stage, "project-artifacts")
+        lines += [
+            f"- **[Project artifacts]({url})** — the stage-level files that "
+            f"carry no artifact ID: {_project_gloss(summary)}.",
+        ]
+    lines += [
+        "",
+        "Every artifact keeps a stable anchor, so a link to a single one "
+        "resolves — the trace edges in these pages link to each other.",
+        "",
+    ]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def render_set_index(set_name: str, summaries: List[StageSummary]) -> str:
+    """Render the landing page for one worked example set.
+
+    Exists for the same breadcrumb reason as the stage index above, and
+    carries the set's description and its stage-by-stage shape.
+    """
+    lines = _header(f"docs/requirements/examples/{set_name}/")
+    lines += [
+        f"# {SET_TITLES.get(set_name, set_name)}",
+        "",
+        SET_BLURBS.get(
+            set_name,
+            "A complete artifact set produced by the Groundwork pipelines.",
+        ),
+        "",
+        "Nothing here was written or corrected by hand. The pages are "
+        "generated from the committed set under "
+        f"`docs/requirements/examples/{set_name}/`, so what you read is the "
+        "artifact rather than a description of one.",
+        "",
+    ]
+    for summary in summaries:
+        breakdown = _joined(
+            [count_phrase(count, title) for _d, title, count in summary.groups]
+        )
+        lines.append(
+            f"- **[{STAGE_TITLES[summary.stage]}]"
+            f"({stage_url(set_name, summary.stage)})** — "
+            f"{count_phrase(summary.total, 'atomic artifacts')}: "
+            f"{breakdown}."
+        )
+    lines.append("")
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def _meta_js(entries: List[Tuple[str, str]]) -> str:
@@ -394,10 +577,11 @@ def build_pages() -> Dict[str, str]:
 
     for set_name in discover_sets():
         index = build_index(set_name)
-        stages_present: List[str] = []
+        summaries: List[StageSummary] = []
 
         for stage in ("requirements", "design"):
             group_entries: List[Tuple[str, str]] = []
+            groups: List[Tuple[str, str, int]] = []
             for group_stage, directory, title in GROUPS:
                 if group_stage != stage:
                     continue
@@ -408,6 +592,7 @@ def build_pages() -> Dict[str, str]:
                     set_name, stage, directory, title, artifacts, index
                 )
                 group_entries.append((directory, title))
+                groups.append((directory, title, len(artifacts)))
 
             project = render_project_artifacts(set_name, stage)
             if project:
@@ -415,15 +600,33 @@ def build_pages() -> Dict[str, str]:
                 group_entries.append(("project-artifacts", "Project artifacts"))
 
             if group_entries:
-                pages[f"{set_name}/{stage}/_meta.js"] = _meta_js(group_entries)
-                stages_present.append(stage)
+                summary = StageSummary(
+                    stage=stage,
+                    groups=groups,
+                    project_files=(
+                        present_project_files(set_name, stage)
+                        if project
+                        else []
+                    ),
+                )
+                pages[f"{set_name}/{stage}/index.md"] = render_stage_index(
+                    set_name, summary
+                )
+                # The index is keyed first so it leads the stage's sidebar
+                # section. Nextra routes it either way — _meta.js orders and
+                # labels, it does not create the route.
+                pages[f"{set_name}/{stage}/_meta.js"] = _meta_js(
+                    [("index", "Overview")] + group_entries
+                )
+                summaries.append(summary)
 
-        if stages_present:
+        if summaries:
+            pages[f"{set_name}/index.md"] = render_set_index(
+                set_name, summaries
+            )
             pages[f"{set_name}/_meta.js"] = _meta_js(
-                [
-                    (s, "Requirements" if s == "requirements" else "Design")
-                    for s in stages_present
-                ]
+                [("index", "Overview")]
+                + [(s.stage, STAGE_TITLES[s.stage]) for s in summaries]
             )
             set_entries.append((set_name, SET_TITLES.get(set_name, set_name)))
 

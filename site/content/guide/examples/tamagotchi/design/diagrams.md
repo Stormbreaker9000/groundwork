@@ -6,7 +6,7 @@
 
 # C4 diagrams
 
-The 4 c4 diagrams from the `tamagotchi` worked example, exactly as the pipeline wrote them.
+The 4 C4 diagrams from the `tamagotchi` worked example, exactly as the pipeline wrote them.
 
 ## DIA-001 — System Context [#dia-001]
 

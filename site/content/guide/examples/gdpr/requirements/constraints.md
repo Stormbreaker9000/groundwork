@@ -6,7 +6,7 @@
 
 # Constraints
 
-The 1 constraints from the `gdpr` worked example, exactly as the pipeline wrote them.
+The 1 constraint from the `gdpr` worked example, exactly as the pipeline wrote it.
 
 ## CON-001 — Statutory-retained financial and tax records survive erasure in pseudonymised, isolated form [#con-001]
 

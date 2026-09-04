@@ -201,3 +201,163 @@ def test_link_ids_renders_unresolvable_ids_as_plain_text():
     index = {"FR-001": "/guide/examples/x/requirements/functional/#fr-001"}
     out = ee._link_ids(["FR-001", "FR-999"], index)
     assert out == "[FR-001](/guide/examples/x/requirements/functional/#fr-001), FR-999"
+
+
+# ---------------------------------------------------------------------------
+# Folder index pages (STO-250 pass 3)
+# ---------------------------------------------------------------------------
+
+
+def test_every_examples_subfolder_publishes_an_index_page():
+    # Nextra resolves a folder's breadcrumb to that folder's own route, and
+    # under examples/ every child of a set and of a stage is itself a folder.
+    # Without an index page occupying the folder route the crumb points at a
+    # directory with no page and 404s — which is exactly what shipped before
+    # this test existed. Reordering _meta.js cannot substitute: there is no
+    # child page to promote.
+    pages = ee.build_pages()
+    folders = set()
+    for relative in pages:
+        parts = relative.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            folders.add("/".join(parts[:depth]))
+    assert folders  # the sweep below is meaningless if this is empty
+    missing = sorted(f for f in folders if f"{f}/index.md" not in pages)
+    assert missing == []
+
+
+def test_index_pages_carry_the_generated_file_header():
+    pages = ee.build_pages()
+    index_pages = [p for p in pages if p.endswith("index.md")]
+    assert len(index_pages) == 5  # 2 sets + 3 stages
+    for relative in index_pages:
+        assert pages[relative].startswith(
+            "<!--\n  GENERATED FILE — do not edit.\n"
+        ), relative
+        assert "Regenerate: python3 site/scripts/export_examples.py" in (
+            pages[relative]
+        )
+
+
+def test_meta_lists_the_index_first_so_the_breadcrumb_lands_on_it():
+    pages = ee.build_pages()
+    for relative in ("tamagotchi/_meta.js", "tamagotchi/design/_meta.js"):
+        first = pages[relative].splitlines()[1]
+        assert first == "  'index': 'Overview',", relative
+
+
+def test_set_index_describes_the_set_and_links_every_stage():
+    page = ee.build_pages()["tamagotchi/index.md"]
+    assert "# Desktop tamagotchi" in page
+    assert ee.SET_BLURBS["tamagotchi"] in page
+    assert "](/guide/examples/tamagotchi/requirements/)" in page
+    assert "](/guide/examples/tamagotchi/design/)" in page
+    # gdpr has no design stage, so its index must not advertise one.
+    gdpr = ee.build_pages()["gdpr/index.md"]
+    assert "](/guide/examples/gdpr/requirements/)" in gdpr
+    assert "/design/" not in gdpr
+
+
+def test_set_index_counts_are_derived_from_the_loaded_artifacts():
+    page = ee.build_pages()["tamagotchi/index.md"]
+    design = [
+        ee.load_group("tamagotchi", "design", d)
+        for _s, d, _t in ee.GROUPS
+        if _s == "design"
+    ]
+    total = sum(len(group) for group in design)
+    assert f"{total} atomic artifacts" in page
+    assert f"{len(design[0])} components" in page
+
+
+def test_stage_index_lists_every_page_with_its_count():
+    page = ee.build_pages()["gdpr/requirements/index.md"]
+    assert "21 atomic artifacts published across 4 pages" in page
+    assert (
+        "- **[Constraints](/guide/examples/gdpr/requirements/constraints/)**"
+        " — 1 constraint." in page
+    )
+    assert (
+        "- **[Non-functional requirements]"
+        "(/guide/examples/gdpr/requirements/non-functional/)**"
+        " — 15 non-functional requirements." in page
+    )
+    # The project-artifacts page is advertised by the files actually present.
+    assert "glossary, assumptions and definition of done" in page
+
+
+def test_stage_index_project_gloss_follows_the_stage():
+    page = ee.build_pages()["tamagotchi/design/index.md"]
+    assert "architecture drivers and assumptions" in page
+
+
+def test_check_detects_a_stale_index_page(capsys):
+    target = os.path.join(ee.OUT_DIR, "tamagotchi", "design", "index.md")
+    original = open(target, encoding="utf-8").read()
+    try:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original + "\nstale\n")
+        assert ee.main(["--check"]) == 1
+        assert "tamagotchi/design/index.md" in capsys.readouterr().err
+    finally:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original)
+    assert ee.main(["--check"]) == 0
+
+
+def test_check_sweeps_an_orphaned_index_page(capsys):
+    # The orphan sweep is path-based, so it has to catch an index page the
+    # generator does not produce just as it catches any other stray file.
+    orphan = os.path.join(ee.OUT_DIR, "gdpr", "design")
+    os.makedirs(orphan, exist_ok=True)
+    path = os.path.join(orphan, "index.md")
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("stray\n")
+        assert ee.main(["--check"]) == 1
+        err = capsys.readouterr().err
+        assert "gdpr/design/index.md (orphaned)" in err
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+        if os.path.isdir(orphan):
+            os.rmdir(orphan)
+    assert ee.main(["--check"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Rendering details (STO-250 pass 3)
+# ---------------------------------------------------------------------------
+
+
+def test_count_phrase_singularises_only_a_count_of_one():
+    assert ee.count_phrase(3, "Constraints") == "3 constraints"
+    assert ee.count_phrase(1, "Constraints") == "1 constraint"
+    assert ee.count_phrase(1, "Business rules") == "1 business rule"
+    assert ee.count_phrase(0, "Constraints") == "0 constraints"
+
+
+def test_count_phrase_keeps_an_acronym_capitalised():
+    # The page's own H1 reads "C4 diagrams"; title.lower() two lines below it
+    # produced "c4 diagrams".
+    assert ee.count_phrase(4, "C4 diagrams") == "4 C4 diagrams"
+    assert ee.count_phrase(1, "C4 diagrams") == "1 C4 diagram"
+
+
+def test_rendered_group_intro_agrees_with_its_own_heading():
+    artifacts = ee.load_group("tamagotchi", "design", "diagrams")
+    page = ee.render_group(
+        "tamagotchi", "design", "diagrams", "C4 diagrams", artifacts,
+        ee.build_index("tamagotchi"),
+    )
+    assert "# C4 diagrams\n" in page
+    assert "The 4 C4 diagrams from the `tamagotchi` worked example" in page
+    assert "c4 diagrams" not in page
+
+
+def test_meta_rows_declare_no_contract_level_interaction():
+    # STO-216 moved interaction onto the operation; the design schema's
+    # interface branch rejects a contract-level one through
+    # unevaluatedProperties: false. A row for it could only ever render on a
+    # schema-invalid artifact, publishing an illegal field as routine.
+    assert "interaction" not in {key for key, _label in ee.META_ROWS}
