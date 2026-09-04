@@ -43,13 +43,16 @@ for _scripts_dir in (
 
 import lint_design_content as ldc  # noqa: E402
 import lint_requirements_content as lrc  # noqa: E402
+import validate_traceability as vt  # noqa: E402
 
 
 def export_rules() -> Dict[str, Any]:
-    """Both linters' rule registries, verbatim.
+    """All three linters' rule registries, verbatim.
 
     Deliberately does not restate or reformat rule text: the registry is the
     source, and any transformation here would be a place for drift to live.
+    The design and requirements registries are advisory; the traceability
+    registry is gating.
     """
     return {
         "design": {
@@ -59,6 +62,10 @@ def export_rules() -> Dict[str, Any]:
         "requirements": {
             "linter": "lint_requirements_content.py",
             "rules": lrc.RULES,
+        },
+        "traceability": {
+            "linter": "validate_traceability.py",
+            "rules": vt.RULES,
         },
     }
 

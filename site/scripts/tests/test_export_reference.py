@@ -2,6 +2,7 @@
 import json
 import os
 
+import export_reference
 import export_reference as er
 
 ENTRY_KEYS = {"id", "severities", "applies_to", "fields", "summary"}
@@ -9,7 +10,7 @@ ENTRY_KEYS = {"id", "severities", "applies_to", "fields", "summary"}
 
 def test_export_rules_has_both_linters():
     payload = er.export_rules()
-    assert set(payload) == {"design", "requirements"}
+    assert set(payload) == {"design", "requirements", "traceability"}
 
 
 def test_export_rules_records_its_source_module():
@@ -172,3 +173,27 @@ def test_parse_agent_file_strips_quoted_description():
 
 def test_all_outputs_are_written_and_current():
     assert er.main(["--check"]) == 0
+
+
+def test_rules_export_carries_the_traceability_registry():
+    payload = export_reference.export_rules()
+    assert set(payload) == {"design", "requirements", "traceability"}
+    section = payload["traceability"]
+    assert section["linter"] == "validate_traceability.py"
+    assert {r["id"] for r in section["rules"]} == {
+        "dangling-trace",
+        "adr-driver-unresolved",
+        "dangling-reverse-trace",
+        "misplaced-requirement-trace",
+        "uncovered-fr",
+        "adr-driver-untraced",
+        "adr-driver-unlisted",
+        "index-unparseable",
+        "duplicate-id",
+    }
+
+
+def test_traceability_rules_declare_no_fields():
+    # The Fields column is meaningless for this tool; RuleTable drops it.
+    for rule in export_reference.export_rules()["traceability"]["rules"]:
+        assert rule["fields"] == []

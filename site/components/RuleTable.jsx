@@ -25,6 +25,11 @@ export function RuleTable({ linter }) {
     )
   }
 
+  // Traceability findings name an artifact and a path, never a frontmatter
+  // field, so their registry declares fields: []. Render the column only
+  // where it carries something, rather than a column of em dashes.
+  const hasFields = section.rules.some(rule => rule.fields.length > 0)
+
   return (
     <Table className="nextra-scrollbar x:not-first:mt-[1.25em] x:p-0">
       <thead>
@@ -32,7 +37,7 @@ export function RuleTable({ linter }) {
           <Table.Th>Rule</Table.Th>
           <Table.Th>Severity</Table.Th>
           <Table.Th>Applies to</Table.Th>
-          <Table.Th>Fields</Table.Th>
+          {hasFields && <Table.Th>Fields</Table.Th>}
           <Table.Th>What it catches</Table.Th>
         </Table.Tr>
       </thead>
@@ -42,7 +47,9 @@ export function RuleTable({ linter }) {
             <Table.Td><code>{rule.id}</code></Table.Td>
             <Table.Td>{rule.severities.join(' / ')}</Table.Td>
             <Table.Td>{rule.applies_to}</Table.Td>
-            <Table.Td><code>{rule.fields.join(' / ')}</code></Table.Td>
+            {hasFields && (
+              <Table.Td><code>{rule.fields.join(' / ')}</code></Table.Td>
+            )}
             <Table.Td>{rule.summary}</Table.Td>
           </Table.Tr>
         ))}

@@ -167,5 +167,91 @@
         "summary": "A glossary term no requirement uses. Set-level check: not decidable from a single file."
       }
     ]
+  },
+  "traceability": {
+    "linter": "validate_traceability.py",
+    "rules": [
+      {
+        "applies_to": "design artifact",
+        "fields": [],
+        "id": "dangling-trace",
+        "severities": [
+          "error"
+        ],
+        "summary": "A design artifact's traces_from names a requirement ID that does not exist in the requirements set."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [],
+        "id": "adr-driver-unresolved",
+        "severities": [
+          "error"
+        ],
+        "summary": "A requirement ID listed under '## Decision Drivers' does not resolve. A listed driver is the leading token of a list item."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [],
+        "id": "dangling-reverse-trace",
+        "severities": [
+          "error"
+        ],
+        "summary": "A requirement's non-empty traces_to.design names a design ID that does not exist. Fixed by hand in the requirements stage \u2014 there is no migration script and no bypass flag."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [],
+        "id": "misplaced-requirement-trace",
+        "severities": [
+          "error"
+        ],
+        "summary": "A requirement ID sits in traces_to.tests or traces_to.code, which hold test and code references. Fixed by hand in the requirements stage; the message names the exact edit."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [],
+        "id": "uncovered-fr",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A functional requirement is cited by no component. Excludes priority: wont and status: obsolete."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [],
+        "id": "adr-driver-untraced",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A listed decision driver resolves but is absent from that ADR's traces_from."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [],
+        "id": "adr-driver-unlisted",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A requirement ID appears in the drivers prose but not as a list item, so it was never checked as a driver. A warning rather than an error: ordinary English mentioning an ID is history, not a defect."
+      },
+      {
+        "applies_to": "the index",
+        "fields": [],
+        "id": "index-unparseable",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A file's frontmatter did not parse, so it is missing from the index and the sweep was not complete."
+      },
+      {
+        "applies_to": "the index",
+        "fields": [],
+        "id": "duplicate-id",
+        "severities": [
+          "warn"
+        ],
+        "summary": "Two files claim the same ID; only the last one read was indexed."
+      }
+    ]
   }
 }
