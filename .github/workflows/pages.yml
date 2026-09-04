@@ -55,6 +55,9 @@ jobs:
       - name: Generated reference is not stale
         run: python3 site/scripts/export_reference.py --check
 
+      - name: Generated examples are not stale
+        run: python3 site/scripts/export_examples.py --check
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/out

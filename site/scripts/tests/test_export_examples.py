@@ -132,3 +132,40 @@ def test_rendered_page_is_byte_identical_across_runs():
     first = ee.render_group(*args, ee.load_group(*args[:3]), index)
     second = ee.render_group(*args, ee.load_group(*args[:3]), index)
     assert first == second
+
+
+def test_check_passes_against_committed_output():
+    # The gate's real contract: what is on disk equals what the exporter
+    # produces right now.
+    assert ee.main(["--check"]) == 0
+
+
+def test_check_fails_when_a_page_is_stale(capsys):
+    target = os.path.join(ee.OUT_DIR, "tamagotchi", "requirements", "functional.md")
+    original = open(target, encoding="utf-8").read()
+    try:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original + "\nstale\n")
+        assert ee.main(["--check"]) == 1
+        assert "stale:" in capsys.readouterr().err
+    finally:
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original)
+    assert ee.main(["--check"]) == 0
+
+
+def test_project_artifact_pages_carry_the_prose_files():
+    page = ee.render_project_artifacts("tamagotchi", "requirements")
+    assert "## Glossary" in page
+    assert "## Assumptions" in page
+    assert "## Definition of done" in page
+
+
+def test_gdpr_has_no_design_pages():
+    assert not os.path.isdir(os.path.join(ee.OUT_DIR, "gdpr", "design"))
+
+
+def test_link_ids_renders_unresolvable_ids_as_plain_text():
+    index = {"FR-001": "/guide/examples/x/requirements/functional/#fr-001"}
+    out = ee._link_ids(["FR-001", "FR-999"], index)
+    assert out == "[FR-001](/guide/examples/x/requirements/functional/#fr-001), FR-999"

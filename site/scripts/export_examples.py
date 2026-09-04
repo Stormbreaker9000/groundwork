@@ -321,3 +321,165 @@ def render_group(
         lines.append("")
 
     return "\n".join(lines).rstrip("\n") + "\n"
+
+
+# Sidebar labels for the sets. A set with no entry here uses its directory
+# name, so adding a set does not require touching this map.
+SET_TITLES = {
+    "tamagotchi": "Desktop tamagotchi",
+    "gdpr": "GDPR compliance",
+}
+
+PROJECT_TITLES = {
+    "glossary.md": "Glossary",
+    "assumptions.md": "Assumptions",
+    "definition-of-done.md": "Definition of done",
+    "drivers.md": "Architecture drivers",
+}
+
+
+def render_project_artifacts(set_name: str, stage: str) -> str:
+    """Render one stage's project-level prose files as a single page.
+
+    These carry no artifact ID and no frontmatter — they are the stage's
+    shared context, not atomic artifacts, and the structural validators skip
+    them for the same reason.
+    """
+    root = os.path.join(EXAMPLES_DIR, set_name, stage)
+    sections: List[str] = []
+    for name in PROJECT_FILES[stage]:
+        path = os.path.join(root, name)
+        if not os.path.isfile(path):
+            continue
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        body = demote_headings(split_frontmatter(text)).strip()
+        body = re.sub(r"\A##\s+.*\n+", "", body)
+        anchor = os.path.splitext(name)[0]
+        sections.append(
+            f"## {PROJECT_TITLES[name]} [#{anchor}]\n\n{body}\n"
+        )
+
+    if not sections:
+        return ""
+
+    header = [
+        "<!--",
+        "  GENERATED FILE — do not edit.",
+        f"  Source: docs/requirements/examples/{set_name}/{stage}/",
+        "  Regenerate: python3 site/scripts/export_examples.py",
+        "-->",
+        "",
+        "# Project artifacts",
+        "",
+        "The stage-level files that sit alongside the atomic artifacts: the "
+        "vocabulary they are written in, what was assumed, and what is still "
+        "open.",
+        "",
+    ]
+    return "\n".join(header) + "\n".join(sections).rstrip("\n") + "\n"
+
+
+def _meta_js(entries: List[Tuple[str, str]]) -> str:
+    lines = ["export default {"]
+    lines += [f"  '{key}': '{label}'," for key, label in entries]
+    lines.append("}")
+    return "\n".join(lines).replace(",\n}", "\n}") + "\n"
+
+
+def build_pages() -> Dict[str, str]:
+    """Every file this exporter owns: relative path to content."""
+    pages: Dict[str, str] = {}
+    set_entries: List[Tuple[str, str]] = []
+
+    for set_name in discover_sets():
+        index = build_index(set_name)
+        stages_present: List[str] = []
+
+        for stage in ("requirements", "design"):
+            group_entries: List[Tuple[str, str]] = []
+            for group_stage, directory, title in GROUPS:
+                if group_stage != stage:
+                    continue
+                artifacts = load_group(set_name, stage, directory)
+                if not artifacts:
+                    continue
+                pages[f"{set_name}/{stage}/{directory}.md"] = render_group(
+                    set_name, stage, directory, title, artifacts, index
+                )
+                group_entries.append((directory, title))
+
+            project = render_project_artifacts(set_name, stage)
+            if project:
+                pages[f"{set_name}/{stage}/project-artifacts.md"] = project
+                group_entries.append(("project-artifacts", "Project artifacts"))
+
+            if group_entries:
+                pages[f"{set_name}/{stage}/_meta.js"] = _meta_js(group_entries)
+                stages_present.append(stage)
+
+        if stages_present:
+            pages[f"{set_name}/_meta.js"] = _meta_js(
+                [
+                    (s, "Requirements" if s == "requirements" else "Design")
+                    for s in stages_present
+                ]
+            )
+            set_entries.append((set_name, SET_TITLES.get(set_name, set_name)))
+
+    pages["_meta.js"] = _meta_js(set_entries)
+    return pages
+
+
+def _write(path: str, content: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(content)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Publish the worked example sets to the docs site."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 if any committed page is stale, writing nothing",
+    )
+    args = parser.parse_args(argv)
+
+    pages = build_pages()
+    stale: List[str] = []
+
+    for relative, content in sorted(pages.items()):
+        path = os.path.join(OUT_DIR, relative)
+        if args.check:
+            try:
+                with open(path, "r", encoding="utf-8") as handle:
+                    if handle.read() != content:
+                        stale.append(relative)
+            except (OSError, UnicodeDecodeError):
+                stale.append(relative)
+        else:
+            _write(path, content)
+
+    if args.check:
+        # A page on disk that the exporter no longer produces is drift too.
+        for root, _dirs, names in os.walk(OUT_DIR):
+            for name in names:
+                relative = os.path.relpath(
+                    os.path.join(root, name), OUT_DIR
+                ).replace(os.sep, "/")
+                if relative not in pages:
+                    stale.append(f"{relative} (orphaned)")
+
+    if args.check and stale:
+        for relative in sorted(stale):
+            print(f"stale: site/content/guide/examples/{relative}", file=sys.stderr)
+        print("run: python3 site/scripts/export_examples.py", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

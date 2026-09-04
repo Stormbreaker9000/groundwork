@@ -31,6 +31,9 @@ jobs:
       - name: Generated reference is not stale
         run: python3 site/scripts/export_reference.py --check
 
+      - name: Generated examples are not stale
+        run: python3 site/scripts/export_examples.py --check
+
   build:
     name: Site builds
     runs-on: ubuntu-latest
@@ -59,5 +62,7 @@ jobs:
       # from rules.json, so `next build` would exit 0 on a broken page. Assert
       # a known row actually reached the HTML.
       - name: Built pages carry their generated rows
-        run: grep -q 'god-component' out/guide/reference/rules/index.html
+        run: |
+          grep -q 'god-component' out/guide/reference/rules/index.html
+          grep -q 'id="fr-001"' out/guide/examples/tamagotchi/requirements/functional/index.html
         working-directory: site
