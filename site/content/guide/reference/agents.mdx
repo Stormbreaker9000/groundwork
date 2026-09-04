@@ -1,0 +1,19 @@
+import { AgentTable } from '../../../components/AgentTable'
+
+# Agents
+
+Groundwork's two stages are pipelines of specialist agents, each with one job
+and an explicit hand-off to the next. This table is generated from the agent
+files themselves — their frontmatter descriptions and titles — so it is the
+roster as it actually ships.
+
+It is only a roster. Which agent runs when, what each one passes to the next,
+and why the pipeline is shaped this way are the architecture guide's subject:
+see [Architecture](/architecture/).
+
+You do not invoke these directly. The two skills dispatch them; see
+[The requirements stage](/guide/requirements-stage/) and
+[The design stage](/guide/design-stage/) for what that looks like from the
+outside.
+
+<AgentTable />

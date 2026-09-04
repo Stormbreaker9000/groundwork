@@ -1,4 +1,5 @@
 export default {
   rules: 'Content rules',
-  fields: 'Frontmatter fields'
+  fields: 'Frontmatter fields',
+  agents: 'Agents'
 }
