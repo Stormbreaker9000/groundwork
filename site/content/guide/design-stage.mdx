@@ -33,10 +33,13 @@ with rather than resolved before.
 This is the part worth understanding, because it looks like duplicated work and
 is not.
 
-The requirement set *cannot* carry technology context — that is by
-construction, not omission. The requirements stage's content linter treats
-implementation bias as a defect and its critic flags it, so nothing in
-`.sdlc/requirements/` says "Tauri" or "Postgres", and nothing should.
+The requirement set does not carry technology context — that is by
+construction, not omission. The requirements stage's content linter flags
+implementation bias at the business and stakeholder tiers, but only at `info`
+severity and advisorily; the requirements critic is what actually holds the
+line, by judgment, at its gate. So nothing in `.sdlc/requirements/` says
+"Tauri" or "Postgres" — because the pipeline is built to keep it that way, not
+because a tool hard-fails on it.
 
 Which leaves exactly two options at design time: ask, or invent. Groundwork's
 own history settled which. An earlier build took an unexamined Electron
