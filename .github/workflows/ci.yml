@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -30,3 +30,34 @@ jobs:
 
       - name: Generated reference is not stale
         run: python3 site/scripts/export_reference.py --check
+
+  build:
+    name: Site builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: site
+
+      # No Python step, on purpose: this job proves the site builds from
+      # committed generated data alone, which is the property pages.yml
+      # depends on. Adding Python here would hide a missing committed file.
+      - name: Build
+        run: npm run build
+        working-directory: site
+
+      # The generated tables render from committed JSON. RuleTable degrades to
+      # an error paragraph rather than throwing when a top-level key is absent
+      # from rules.json, so `next build` would exit 0 on a broken page. Assert
+      # a known row actually reached the HTML.
+      - name: Built pages carry their generated rows
+        run: grep -q 'god-component' out/guide/reference/rules/index.html
+        working-directory: site
