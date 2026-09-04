@@ -1,0 +1,32 @@
+# Installation
+
+Groundwork is distributed as a Claude Code plugin.
+
+## Add the marketplace
+
+```
+/plugin marketplace add https://github.com/Stormbreaker9000/groundwork
+```
+
+## Install the plugin
+
+```
+/plugin install groundwork@groundwork-dev
+```
+
+## Run it
+
+```
+/groundwork
+```
+
+That lists the available workflows. You do not have to invoke them by name —
+each stage is a skill with its own trigger:
+
+| Stage | Triggers when you | Produces |
+|---|---|---|
+| `requirements` | describe something to build or add | `.sdlc/requirements/` — one file per requirement, plus assumptions, a glossary and a Definition of Done |
+| `design` | have a validated requirement set and want an architecture | `.sdlc/design/` — components, interfaces, ADRs and C4 diagrams |
+
+The design stage expects the requirements stage to have run first: it reads
+the validated requirement set as its input.

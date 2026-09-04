@@ -6,7 +6,7 @@ A Claude Code plugin that brings structure to software development — requireme
 
 ## What it does
 
-Groundwork intercepts vague implementation requests and guides you through a lightweight requirements process before anything gets built. Instead of jumping straight to code, you get a structured brief with acceptance criteria that both you and Claude agree on.
+Groundwork intercepts vague implementation requests and guides you through a lightweight requirements process before anything gets built. Instead of jumping straight to code, you get atomic, validated requirement artifacts — each with a rationale and a fit criterion — that both you and Claude agree on before implementation starts.
 
 ## Installation
 
@@ -32,32 +32,22 @@ When you make a vague request like *"build me a login form"* or *"add dark mode"
 
 | Workflow | Trigger | Description |
 |---|---|---|
-| `requirements` | "build X", "add Y", "make it do Z" | Turns vague requests into a structured brief with acceptance criteria before any code is written |
+| `requirements` | "build X", "add Y", "make it do Z" | Turns a vague request into atomic, validated requirement artifacts under `.sdlc/requirements/` — functional and non-functional requirements, constraints, business rules, assumptions, a glossary and a Definition of Done |
+| `design` | a validated requirement set exists | Turns requirements into an architecture under `.sdlc/design/` — components, interface contracts, MADR architecture decision records and C4 diagrams, each traced back to the requirements that motivated it |
 
-### Requirements Brief format
+Claude will not write code until you sign off.
 
-```
-## Requirements Brief
+## Documentation
 
-**Problem:** [One sentence: what breaks or is missing and for whom]
-
-**Acceptance Criteria:**
-- [ ] [Specific, testable condition]
-
-**Constraints:** [What this must not do or must stay within]
-
-**Out of Scope:** [What will not be addressed in this change]
-```
-
-Claude will not write code until you sign off on the brief.
+Full documentation, including the content-rule reference, is published from this repository to
+**https://stormbreaker9000.github.io/groundwork/**.
 
 ## Roadmap
 
-- [ ] Architecture design workflow
+- [x] Architecture design workflow
 - [ ] Test planning workflow
 - [ ] Release checklist workflow
 - [ ] `PreToolUse` hooks to enforce requirements brief before implementation
-- [ ] `requirements-analyst` agent for fully autonomous requirements gathering
 
 ## Plugin structure
 
@@ -67,7 +57,11 @@ groundwork/
 ├── skills/               # Markdown instruction sets (skill triggers)
 ├── commands/             # Slash commands (/groundwork)
 ├── hooks/                # Event-driven scripts (SessionStart)
-└── agents/               # Dispatched subagents
+├── agents/               # Dispatched subagents
+├── lib/                  # Shared Python modules used by the linting/validation scripts
+├── site/                 # Nextra documentation site, published to GitHub Pages
+├── docs/                 # Internal planning docs (specs, plans, research) — not the published site
+└── .github/              # CI and GitHub Pages deploy workflows
 ```
 
 ## License

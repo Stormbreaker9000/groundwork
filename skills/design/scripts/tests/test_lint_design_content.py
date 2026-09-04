@@ -360,3 +360,47 @@ def test_shipped_tamagotchi_example_survives_without_pyyaml(monkeypatch):
     assert [f for f in findings if f.severity == "error"] == []
 
 
+def _all_emitted_findings():
+    """Every finding the whole lint fixture corpus produces."""
+    findings = []
+    for name in sorted(os.listdir(LINT)):
+        path = os.path.join(LINT, name)
+        if os.path.isdir(path):
+            findings.extend(ldc.lint_dir(path))
+    return findings
+
+
+def test_rules_registry_matches_emitted_rules():
+    # Bidirectional: a new check with no RULES entry fails here, and so does
+    # a RULES entry no fixture exercises. The second direction doubles as a
+    # coverage assertion — every documented rule has a fixture proving it.
+    emitted = {f.rule for f in _all_emitted_findings()}
+    declared = {r["id"] for r in ldc.RULES}
+    assert emitted == declared
+
+
+def test_emitted_severities_are_declared():
+    declared = {r["id"]: set(r["severities"]) for r in ldc.RULES}
+    for finding in _all_emitted_findings():
+        assert finding.severity in declared[finding.rule], (
+            f"{finding.rule} emitted severity {finding.severity!r}, "
+            f"registry declares {sorted(declared[finding.rule])}"
+        )
+
+
+def test_rules_registry_entries_are_complete():
+    for rule in ldc.RULES:
+        assert set(rule) == {"id", "severities", "applies_to", "fields", "summary"}
+        assert rule["id"] and rule["summary"] and rule["fields"]
+        assert rule["severities"]
+        assert rule["applies_to"] in {"component", "interface", "adr"}
+
+
+def test_emitted_fields_are_declared():
+    declared = {r["id"]: set(r["fields"]) for r in ldc.RULES}
+    for finding in _all_emitted_findings():
+        assert finding.field in declared[finding.rule], (
+            f"{finding.rule} emitted field {finding.field!r}, "
+            f"registry declares {sorted(declared[finding.rule])}"
+        )
+

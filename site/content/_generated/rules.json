@@ -1,0 +1,171 @@
+{
+  "design": {
+    "linter": "lint_design_content.py",
+    "rules": [
+      {
+        "applies_to": "component",
+        "fields": [
+          "responsibility"
+        ],
+        "id": "vague-responsibility",
+        "severities": [
+          "warn",
+          "info"
+        ],
+        "summary": "A component responsibility uses a vague qualifier with no concrete metric. Demoted to info when the sentence carries a number."
+      },
+      {
+        "applies_to": "component",
+        "fields": [
+          "responsibility"
+        ],
+        "id": "god-component",
+        "severities": [
+          "warn"
+        ],
+        "summary": "Two actions joined by a conjunction in one responsibility \u2014 the component is doing two jobs."
+      },
+      {
+        "applies_to": "interface",
+        "fields": [
+          "error_modes"
+        ],
+        "id": "error-modes-handwaved",
+        "severities": [
+          "warn"
+        ],
+        "summary": "An error mode gestures at failure rather than naming one."
+      },
+      {
+        "applies_to": "interface",
+        "fields": [
+          "id"
+        ],
+        "id": "orphan-interface",
+        "severities": [
+          "warn"
+        ],
+        "summary": "The contract is provided but consumed by no component. Set-level check: not decidable from a single file."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [
+          "consequences"
+        ],
+        "id": "adr-consequences-one-sided",
+        "severities": [
+          "warn"
+        ],
+        "summary": "Consequences list only upsides; no cost is recorded. A decision with no downside was not a decision."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [
+          "decision_drivers"
+        ],
+        "id": "adr-vague-driver",
+        "severities": [
+          "warn",
+          "info"
+        ],
+        "summary": "A decision driver names no threshold the chosen option can be checked against. Demoted to info when the line carries a number."
+      },
+      {
+        "applies_to": "adr",
+        "fields": [
+          "considered_options"
+        ],
+        "id": "adr-option-unexamined",
+        "severities": [
+          "info"
+        ],
+        "summary": "An option listed in frontmatter never appears under the 'Considered Options' heading, so it was named but not weighed."
+      },
+      {
+        "applies_to": "component",
+        "fields": [
+          "depends_on"
+        ],
+        "id": "dependency-cycle",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A cycle in the component graph where every individual edge resolves. Set-level check: invisible one file at a time."
+      }
+    ]
+  },
+  "requirements": {
+    "linter": "lint_requirements_content.py",
+    "rules": [
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "description",
+          "title"
+        ],
+        "id": "vague-qualifier",
+        "severities": [
+          "warn",
+          "info"
+        ],
+        "summary": "A vague qualifier with no concrete metric. Demoted to info when the sentence carries a number."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "description"
+        ],
+        "id": "compound",
+        "severities": [
+          "warn"
+        ],
+        "summary": "Multiple actions joined by a conjunction in one requirement, which cannot be verified or traced as a single unit."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "description"
+        ],
+        "id": "ears-conformance",
+        "severities": [
+          "warn"
+        ],
+        "summary": "The description does not match the shape of the EARS pattern the requirement declares."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "description"
+        ],
+        "id": "passive-nameless",
+        "severities": [
+          "warn"
+        ],
+        "summary": "Passive voice hides the responsible actor."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "description",
+          "title"
+        ],
+        "id": "impl-bias",
+        "severities": [
+          "info"
+        ],
+        "summary": "An implementation detail appears in a requirement whose tier should stay solution-free."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [
+          "terms"
+        ],
+        "id": "glossary-unused",
+        "severities": [
+          "warn"
+        ],
+        "summary": "A glossary term no requirement uses. Set-level check: not decidable from a single file."
+      }
+    ]
+  }
+}

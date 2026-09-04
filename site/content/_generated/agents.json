@@ -1,0 +1,77 @@
+[
+  {
+    "description": "Architecture decision record specialist. Converts decisions the pipeline already recorded \u2014 resolved Q- questions in drivers.tradeoffs and deferred_to_decision ASRs from the critique report \u2014 into atomic MADR 4.0 ADR specs (ADR-). Never elicits new decisions and never invents alternatives: an entry whose rejected options cannot be recovered is skipped with a reason rather than turned into a one-option decision record. Returns a draft_adrs object.",
+    "name": "adr-generator",
+    "title": "ADR Generator"
+  },
+  {
+    "description": "C4 diagram generation specialist. Supplies the two judgments the component and interface frontmatter cannot carry \u2014 which components group into which deployable container, and who the system's external actors are. Never authors Mermaid, never allocates DIA- IDs, and writes no file: generate_c4.py projects the returned draft_diagram_model into the three C4 views deterministically. Dispatched at Stage 9.6, after the design critic's gate: pass and the ADR generator, before the formatter.",
+    "name": "c4-generator",
+    "title": "C4 Diagram Generator"
+  },
+  {
+    "description": "Component decomposition specialist. Converts the orchestrator's generation_brief into atomic component specs (CMP-), each with a single clear responsibility, an internal/external boundary, and its required capabilities declared in prose rather than interface IDs. Returns a draft_components object with depends_on left empty for the orchestrator to back-fill.",
+    "name": "component-specialist",
+    "title": "Component Decomposition Specialist"
+  },
+  {
+    "description": "Constraints and business-rules specialist. From the orchestrator's generation_brief it produces constraints (CON-) and business rules (BR-), keeping both strictly distinct from NFRs, and declares via a transient `applies_to` field which functional/non-functional requirements each one bounds or implements, for the formatter to back-fill. Returns a draft_requirements object.",
+    "name": "constraint-specialist",
+    "title": "Constraints & Business-Rules Specialist"
+  },
+  {
+    "description": "Architecture quality critic. Runs a two-phase review over the merged design set \u2014 an ISO/IEC/IEEE 42010 per-artifact quality gate and an ATAM-lite check that every architecturally significant requirement is addressed with its tradeoffs and sensitivity points named. The structural gate runs later, at the formatter, once the artifacts exist on disk. Returns a critique_report.",
+    "name": "design-critic",
+    "title": "Design Critic"
+  },
+  {
+    "description": "Design artifact formatter. Takes the critic-approved design set and writes one atomic Markdown+YAML file per component, interface, and ADR into the correct .sdlc/design subdirectory, named <ID>-<kebab-title>.md, plus the project-level assumptions.md, drivers.md, and index.yaml, runs generate_c4.py to project the component graph into diagrams/, and back-fills traces_to.adr and traces_to.diagrams on the artifacts each affects. Returns a formatter_result.",
+    "name": "design-formatter",
+    "title": "Design Formatter"
+  },
+  {
+    "description": "Routes the design context object through the architecture generation pipeline. Identifies architecturally significant requirements, allocates categorical zero-padded CMP/IF/ADR IDs, dispatches to the component and interface specialists, the adr-generator, and the c4-generator, back-fills the depends_on edge, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
+    "name": "design-orchestrator",
+    "title": "Design Orchestrator"
+  },
+  {
+    "description": "Generates the project-wide Definition of Done checklist from emitted requirements. Runs after the requirements-formatter writes atomic FR/NFR files, derives functional acceptance gates, NFR fitness gates, and test/documentation/deployment readiness checks, and writes .sdlc/requirements/definition-of-done.md. M1 stub expanded by STO-104 in M3.",
+    "name": "dod-generator",
+    "title": "Definition of Done Generator"
+  },
+  {
+    "description": "Functional requirements specialist. Converts assigned needs from the orchestrator's generation_brief into atomic functional requirements written in EARS notation (choosing the correct pattern per requirement), each with a mandatory rationale, fit criterion, and Gherkin (Given/When/Then) acceptance criteria. Returns a draft_requirements object.",
+    "name": "fr-specialist",
+    "title": "Functional Requirements Specialist"
+  },
+  {
+    "description": "Interface design specialist. Converts each component's declared capabilities into atomic interface specs (IF-) at architecture altitude \u2014 provider, operations, interaction style, and error modes \u2014 and reports which components consume each contract so the orchestrator can back-fill depends_on. Returns a draft_interfaces object.",
+    "name": "interface-specialist",
+    "title": "Interface Design Specialist"
+  },
+  {
+    "description": "Non-functional requirements specialist. Walks all nine ISO/IEC 25010:2023 quality characteristics plus extensions (observability, deployability, compliance, cost) against the orchestrator's generation_brief and emits each applicable NFR as a six-part quality attribute scenario. Returns a draft_requirements object.",
+    "name": "nfr-specialist",
+    "title": "Non-Functional Requirements Specialist"
+  },
+  {
+    "description": "Analyzes user requests to produce structured v2 requirements artifacts with functional, non-functional, and domain requirements through hypothesis-led conversation.",
+    "name": "requirements-analyst",
+    "title": "Requirements Analyst"
+  },
+  {
+    "description": "Requirements quality critic. Runs a two-phase review over the merged draft_requirements set \u2014 an INCOSE/ISO 29148 per-requirement quality gate, an ISO 25010 NFR-coverage check, and a content-quality lint applied by inspection. The structural gate and the script-backed lint both run later, at the formatter and the skill, once the requirement files exist on disk. Returns a critique_report.",
+    "name": "requirements-critic",
+    "title": "Requirements Critic"
+  },
+  {
+    "description": "Requirements formatter. Takes the critic-approved requirement set and writes one atomic Markdown+YAML file per requirement into the correct .sdlc/requirements type subdirectory, named <ID>-<kebab-title>.md, populating traces_from/traces_to, and optionally emits a machine index.yaml. Returns a formatter_result.",
+    "name": "requirements-formatter",
+    "title": "Requirements Formatter"
+  },
+  {
+    "description": "Routes the clarification context object through the requirements generation pipeline. Classifies elicited needs into BABOK tiers, allocates categorical zero-padded requirement IDs, and dispatches to the FR, NFR, and constraint specialists, then the critic, then the formatter. Owns the explicit hand-off data shapes passed between every stage.",
+    "name": "requirements-orchestrator",
+    "title": "Requirements Orchestrator"
+  }
+]

@@ -1,0 +1,70 @@
+# .github/workflows/pages.yml
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; never cancel a run that is mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Runs first so a Pages source that is not yet set to "GitHub Actions"
+      # (Settings > Pages > Source) fails fast, before install/build/indexing
+      # burn CI time on a deploy that can't land.
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: site
+
+      # No Python in the build itself, on purpose: the site build stays
+      # Python-free. The drift check below is a separate concern.
+      - name: Build
+        run: npm run build
+        working-directory: site
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The published site renders committed JSON generated from the linters
+      # and schemas. Deploying stale data is the failure this whole gate
+      # exists to prevent, so the deploy re-checks rather than trusting that
+      # CI ran and passed — the two workflows trigger independently on the
+      # same push, and this one must not publish off stale generated data.
+      - name: Generated reference is not stale
+        run: python3 site/scripts/export_reference.py --check
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
