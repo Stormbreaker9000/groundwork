@@ -1,0 +1,222 @@
+import { CoverageAreas } from '../../components/CoverageAreas'
+
+# The requirements stage
+
+The requirements stage turns a description of something you want to build into
+a set of atomic requirement files on disk. It is a conversation first and a
+generation pipeline second, and it writes nothing until you have signed off
+twice.
+
+## What starts it
+
+You do not invoke the stage by name. It is a skill with a trigger, and the
+trigger is you describing something you want built or added — "I want to build
+X", "add Y to my project", "I need a feature that…", or a description of an
+application or system.
+
+It deliberately does **not** trigger on:
+
+- questions or explanations
+- bug reports with clear reproduction steps
+- requests to read, explore, or explain existing code
+- a `superpowers:brainstorming` session that is already running
+
+`/groundwork` lists the workflows and the trigger for each, if you want to see
+what is available without starting anything.
+
+## What it will not do
+
+No code is written at any point during this stage. The stage produces a
+requirements artifact set and nothing else.
+
+## Before the questions start
+
+**Project context.** The stage first works out whether it is looking at a
+greenfield project or an existing codebase, by running a `find` for a root
+config file and an `ls` of the usual source directories. If it finds a
+codebase, it reads three to five targeted files — the root config, the entry
+point, and whatever is most relevant to your request — to ground its
+hypotheses. That is a bounded scan, not a full audit.
+
+**Decomposition.** If your request covers three or more distinct functional
+areas that would each independently produce their own acceptance criteria, the
+stage proposes splitting it. Each unit then gets its own full interview and its
+own saved artifact set. The split is a routing decision made in conversation,
+not a document.
+
+## The interview
+
+The interview is hypothesis-led rather than a questionnaire. Before asking
+anything open-ended, the stage generates three to five domain-informed
+hypotheses about what the feature probably needs and presents them as a single
+message — one question, not five. Alongside them it makes sure it has reached
+the business *why* behind the request, applying 5-Whys as judgment rather than
+ritual: requirements generated against a misunderstood goal satisfy the letter
+and miss the point.
+
+From there the conversation works through six coverage areas. They are not
+walked in a fixed order — the stage follows where the conversation leads,
+states its current assumption about the next uncovered area, and asks one
+targeted question to confirm or correct it.
+
+<CoverageAreas stage="requirements" />
+
+Where a question's answer space is enumerable, you get two to four numbered
+candidate answers to pick from rather than an open-ended prompt. Everything the
+stage can infer from context, it infers; a well-described request typically
+needs two to four exchanges.
+
+**The gap check.** Alongside the six areas, the stage silently sweeps the
+categories requirements processes routinely skip — error and exception paths,
+compliance and regulatory constraints, data retention, migration and deletion,
+internationalization and accessibility, operational concerns such as
+deployment, backup, monitoring and on-call, legal and licensing, and
+stakeholder roles beyond "the user". It surfaces only the ones that matter for
+your domain. This is a gap check, not a script: a well-scoped request may need
+none of them raised, and the stage is told not to manufacture questions to
+cover the list. Seeing nothing from the sweep is a normal outcome.
+
+## Two sign-off gates
+
+**Gate one — the context block.** When the six areas are covered, the stage
+renders an "Elicitation context" block back to you: problem domain,
+stakeholders and users, core functionality, success criteria, non-functional
+concerns, constraints, out of scope, open questions. It then asks whether that
+captures the context correctly, and does not proceed to generation until you
+confirm. Corrections update the block and it is re-confirmed.
+
+**Gate two — the summary.** After the generation pipeline runs, and *before any
+file is written*, the stage renders a summary of the generated set: an
+overview, the functional requirements, the non-functional requirements, the
+constraints and business rules, assumptions and dependencies, open questions,
+and a triage block calling out every low-confidence item and every open
+question. It then asks whether that captures it accurately before it writes the
+files.
+
+Nothing is written to disk until you confirm at that second gate. If you ask
+for corrections, the affected items are re-dispatched to the specialist that
+owns them and the set is re-summarized.
+
+## What the interview produces before generation
+
+The context block from gate one is the pipeline's input. It serializes 1:1 into
+a `clarification_context` object that the orchestrator consumes. Here is the
+one from the `tamagotchi` worked example, trimmed to its keys with each value
+cut short — the values are quoted from the file, and the elisions are marked:
+
+```yaml
+clarification_context:
+  problem_domain: >
+    A desktop virtual pet ("tamagotchi") for a single local owner, built so
+    that caring for it forms a genuine ongoing habit rather than an
+    in-session game […]
+  stakeholders_and_users: >
+    Primary user: a single local desktop owner per installation […]
+    Secondary users: keyboard-only and screen-reader (assistive-technology)
+    users, named explicitly in scope by NFR-003 […]
+  core_functionality: >
+    Persist pet state to local storage on every stat change or app close
+    (FR-001); apply offline-elapsed decay on launch, computed from real
+    wall-clock time since the last save (FR-002) […]
+  success_criteria: >
+    FR-001's rationale names "the attachment and daily-return loop" as "the
+    core success criterion." […] Each requirement also carries its own
+    measurable fit criterion […]
+  non_functional_concerns: >
+    Functional correctness of offline-elapsed decay (NFR-001); an idle CPU
+    and memory footprint budget for an always-on background process
+    (NFR-002) […]
+  constraints: >
+    The delivered runtime must fit an idle-footprint budget on the reference
+    machine […] The application must operate fully offline, with no outbound
+    network connection for any core pet-simulation functionality (CON-002) […]
+  out_of_scope: >
+    Multi-user, account, server, or operator functionality — A-1 states a
+    single local desktop owner per installation […]
+  open_questions: >
+    Q-1: What is the exact decay-curve and balance tuning (rates,
+    thresholds, increments)? (owner: product/design) […]
+    Q-2: Is death permanent, or a configurable soft reset? (owner: product)
+    — still open. BR-001 and FR-008 are held at low confidence pending this
+    answer. […]
+```
+
+That particular file is a reconstruction: it was replayed from the published
+tamagotchi requirement set rather than captured from a live interview. The
+shape is the real one.
+
+## What the pipeline does with it
+
+The context object is handed to a chain of agents that run in a fixed order:
+
+1. **requirements-orchestrator** — classifies the elicited needs into BABOK
+   tiers (business, stakeholder, solution, transition), allocates categorical
+   zero-padded IDs, and dispatches a brief to each specialist.
+2. **fr-specialist** — functional requirements in EARS notation, each with a
+   rationale, a fit criterion, and Gherkin acceptance criteria.
+3. **nfr-specialist** — walks all nine ISO 25010:2023 quality characteristics,
+   plus observability, deployability, compliance and cost, and emits each
+   applicable non-functional requirement as a six-part quality attribute
+   scenario.
+4. **constraint-specialist** — constraints and business rules, kept distinct
+   from non-functional requirements and traced to what they bound.
+5. **requirements-critic** — a two-phase INCOSE/ISO 29148 quality gate, an ISO
+   25010 coverage check, and anti-pattern flags. This gate is judgment only; it
+   runs no script, because nothing is on disk yet.
+6. **requirements-formatter** — writes the files, and only after the critic
+   returns a passing gate.
+
+EARS notation belongs to the functional requirements alone. Non-functional
+requirements, constraints and business rules are not written in it and do not
+carry an EARS pattern.
+
+The output is one requirement per file, with categorical IDs and traceability —
+not a single flat document.
+
+## What lands on disk
+
+```
+.sdlc/requirements/
+  functional/
+  non-functional/
+  constraints/
+  business-rules/
+  use-cases/
+  assumptions.md
+  glossary.md
+  definition-of-done.md
+  index.yaml
+```
+
+`assumptions.md` carries three sections — Assumptions, Dependencies and Open
+Questions. `glossary.md` carries the domain vocabulary that anchors the
+hand-off to architecture and QA. `index.yaml` carries a `review_queue` listing
+every requirement the pipeline marked `confidence: low` — the same list the
+triage block showed you at the second gate.
+
+`definition-of-done.md` is derived from the requirement set by a separate
+agent after the files are written: functional acceptance gates, non-functional
+fitness gates, constraint and business-rule compliance, test coverage, docs and
+deployment readiness. It is currently a stub that a later milestone expands.
+
+Immediately after writing, the formatter runs the structural validator against
+what it just wrote. That is the pipeline's single structural gate, and it is
+the first point at which structure *can* be checked, since nothing existed on
+disk before. The validator must exit `0`; a non-zero exit means the write is
+not done, and the flagged files go back through the critique loop. An advisory
+content-quality linter runs afterwards for prose quality.
+
+The validator needs `pyyaml` and `jsonschema`. Without them it degrades to a
+stdlib-only fallback that still checks required fields, enums and cross-file
+references, but not the full JSON Schema, and prints an install hint.
+
+## Next
+
+- [Reading an artifact](/guide/reading-an-artifact/) — what is in one of these
+  files, field by field.
+- [Gates](/guide/gates/) — the checks between you and a written artifact set,
+  and what to do when one fails.
+- Worked examples — the
+  [tamagotchi](/guide/examples/tamagotchi/requirements/functional/) and
+  [GDPR](/guide/examples/gdpr/requirements/functional/) sets, exactly as the
+  pipeline wrote them.

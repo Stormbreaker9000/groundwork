@@ -1,0 +1,184 @@
+import { FieldTable } from '../../components/FieldTable'
+
+# Reading an artifact
+
+Every artifact Groundwork writes is a single Markdown file with YAML
+frontmatter. This page walks one of them end to end, so the files in
+`.sdlc/` read as documents rather than as output.
+
+## One artifact, one file
+
+There is no combined document. Each requirement gets its own file, filed under
+the directory for its type and named after its ID:
+
+```
+<ID>-<kebab-title>.md
+```
+
+The kebab title is the artifact's `title`, lowercased with non-alphanumerics
+collapsed to single hyphens, so the filename tells you what is inside without
+opening it.
+
+IDs are categorical and zero-padded: the prefix encodes the type — `FR`
+functional, `NFR` non-functional, `CON` constraint, `BR` business rule, `UC`
+use case — and an optional uppercase category infix is allowed, as in
+`FR-ORDER-014`.
+
+IDs are never re-used. An artifact that stops applying is not deleted; its
+`status` is set to `obsolete` and it stays where it is. That is what makes a
+reference from a design artifact or a commit message durable: `FR-007` means
+the same thing next quarter as it does today.
+
+## A real artifact
+
+This is `FR-001` from the `tamagotchi` worked example. The frontmatter is
+complete and verbatim. From the body, only the Description and the first of its
+three acceptance criteria are reproduced here; the Rationale, the other two
+criteria and the Fit Criterion are on its
+[published page](/guide/examples/tamagotchi/requirements/functional/#fr-001).
+
+````markdown
+---
+id: FR-001
+type: functional
+tier: stakeholder
+title: Persist pet state on stat change and app close
+description: When a pet stat value changes or the owner closes the application, the system shall persist the current pet state to local storage.
+rationale: "Without persistence the pet's progress and current condition would be lost between sessions, defeating the premise that the pet is a persistent companion the owner returns to — the core mechanic the daily-return habit loop depends on. Persistence covers the pet state in full and not only its stat values: FR-006's Sleeping state and FR-011's wake deadline both survive an application close only because the Awake/Sleeping field and the sleep-entry timestamp are persisted with everything else."
+fit_criterion: "Every field of the pet state held at close round-trips unchanged: across 50 restart cycles, 100% of persisted fields are present in the restored state and equal to their pre-close values, with 0 fields absent and 0 fields differing. The fields under test include, and are not limited to, every pet stat value, the health status, the Awake/Sleeping state field, the sleep-entry timestamp wherever the pet is Sleeping, and the last-saved timestamp."
+priority: must
+confidence: high
+verification_method: test
+ears_pattern: event
+status: draft
+created_at: 2026-08-24
+traces_from: [CON-002, BR-002]
+traces_to:
+  design: []
+  tests: []
+  code: []
+scope: project
+parent_scope: null
+---
+
+# FR-001 — Persist pet state on stat change and app close
+
+## Description
+When a pet stat value changes or the owner closes the application, the system shall
+persist the current pet state to local storage.
+
+## Acceptance Criteria
+### AC-1 — State is written when a stat changes
+```gherkin
+Given the owner performs a feed action that changes the pet's hunger stat
+When the stat change is applied
+Then the updated pet state, including the new stat value and a save timestamp, is written to local storage immediately
+```
+````
+
+## The frontmatter
+
+<FieldTable stage="requirements" />
+
+Most of those are self-explanatory once you have seen them. A handful are
+worth saying more about, because they are where the judgement lives.
+
+**`rationale` and `fit_criterion` are both mandatory, on every requirement.**
+The rationale is the *why* — the business or user driver. Without one, a
+requirement cannot be challenged or descoped, because nobody can tell what it
+was for. The fit criterion is a measurable test oracle: if you cannot write
+one, the requirement is too vague and needs sharpening rather than accepting.
+Look at `FR-001` above — the fit criterion is "across 50 restart cycles, 100%
+of persisted fields are present … 0 fields absent and 0 fields differing",
+which is a thing you can fail.
+
+**`ears_pattern` is functional-only.** It records which EARS sentence pattern
+the description uses — `ubiquitous`, `event`, `state`, `unwanted`, `optional`
+or `complex`. The schema requires it for `type: functional` and omits it
+everywhere else, and the cross-file validator checks that every functional
+requirement declares one. Non-functional requirements, constraints, business
+rules and use cases are not written in EARS and carry no pattern. `FR-001` is
+`event`, which is why its description opens with "When a pet stat value
+changes…".
+
+**`traces_from` and `traces_to` are the two directions of traceability.**
+`traces_from` points up: the higher-tier requirement IDs this one derives from.
+It may legitimately be empty for a top-tier business requirement. The validator
+checks that every ID in it resolves to a requirement that exists, so a dangling
+reference fails the gate. `traces_to` points down, at design, tests and code;
+any of its three keys may be omitted or empty, and they start empty because the
+downstream artifacts do not exist yet when the requirement is written.
+`FR-001`'s `traces_from: [CON-002, BR-002]` says this requirement exists
+because of an offline constraint and a business rule, and you can follow both.
+
+**`confidence` is triage, not quality.** It is set deliberately: `high` when
+something was directly stated or confirmed by you, `medium` when it was
+reasonably inferred from context, `low` when it rests on an open question or an
+unconfirmed assumption, or fills a gap you did not address.
+
+**`priority` is MoSCoW** — `must`, `should`, `could`, `wont` — set per
+requirement rather than defaulted, and `wont` is a legal value the schema
+accepts.
+
+## `confidence: low` and the review queue
+
+A low-confidence artifact is not a defect. It is the pipeline telling you which
+items to check first. Any requirement affected by an open question is forced to
+`low`, and low-confidence items are the human triage queue by design — which is
+why the pipeline is told to assign confidence honestly rather than
+optimistically.
+
+You see the same list twice: once in the summary at the sign-off gate, and once
+persisted on disk as the `review_queue` in `.sdlc/requirements/index.yaml`.
+Start a review there rather than re-reading the whole set.
+
+## The body
+
+Below the frontmatter, a functional requirement carries four sections in a
+fixed order:
+
+- **Description** — a single EARS sentence.
+- **Rationale** — why this is needed.
+- **Acceptance Criteria** — one or more named scenarios, each a fenced
+  `gherkin` block in Given/When/Then form. At minimum one happy path, plus a
+  negative or edge scenario where an unwanted condition exists.
+- **Fit Criterion** — the measurable oracle.
+
+The acceptance criteria are Gherkin because they are meant to become tests. The
+Definition of Done generator emits one gate per functional requirement that
+asserts "all of that FR's acceptance-criteria scenarios pass", and it links the
+requirement file rather than inlining the Gherkin — the requirement file stays
+the authoritative, executable copy. That is also why `verification_method` on a
+functional requirement is usually `test`.
+
+## Design artifacts differ
+
+Design artifacts share the same file-per-artifact shape and the same core
+field names — `id`, `type`, `title`, `description`, `traces_from`,
+`traces_to`, `status`, `confidence`, `created_at`, with the enums adjusted for
+design types (`component`, `interface`, `adr`, `diagram`). There is no `tier`,
+`priority`, `rationale`, `fit_criterion`, `verification_method` or
+`ears_pattern`; those are requirement fields. What replaces them is the
+type-specific half:
+
+<FieldTable stage="design" />
+
+`responsibility` and `boundary` belong to components. The first is the single
+clear purpose of the unit — one, not a list. The second says whether the unit
+sits inside the system boundary or is an external system modelled as a
+component: the C4 distinction. `depends_on`, also on components, lists the
+interface contracts the component consumes; it holds `IF-` IDs only, may be
+empty, and its references are resolved by the design validator. `provider` is
+the mirror of it on an interface: exactly one `CMP-` ID, the single component
+that provides the contract. Between them, `depends_on` and `provider` are the
+component graph, and the design formatter runs `generate_c4.py` to project
+that graph into the diagrams — projected from the artifacts by script rather
+than drawn by hand beside them.
+
+## Next
+
+- [The requirements stage](/guide/requirements-stage/) — how these files come
+  to exist.
+- [Frontmatter fields](/guide/reference/fields/) — the same tables, generated
+  straight from the schemas.
+- [Gates](/guide/gates/) — what the validators check and what a failure means.
