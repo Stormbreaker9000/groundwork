@@ -182,6 +182,21 @@ rot the ticket names. It gets the pass-1 treatment: a declarative `RULES`
 list in the module, exported under a third key in `rules.json`, rendered by
 the existing `RuleTable` component.
 
+**The table renders on `gates`, not on `reference/rules`.** That page opens
+by stating the linters are advisory and exit 0; traceability rules are a hard
+gate that fails the stage. Publishing them under that sentence would make a
+true sentence false. `reference/rules` keeps the two content linters and its
+claim intact, and `gates` — which is about the checkers that can stop a run —
+renders the third table and links back.
+
+Two consequences for the registry shape. Traceability's `Finding` carries
+`rule`, `severity`, `artifact_id`, `path`, `message` and **no `field`**, so
+its entries declare `fields: []`; `RuleTable` drops the Fields column when no
+rule in a section declares one, rather than rendering a column of em dashes.
+And the module docstring already restates all nine rules in a prose table
+(lines 11–23) — that block is deleted and replaced by a pointer to `RULES`,
+or the registry just adds a second place for the same drift to live.
+
 The sync test is **source-derived**, not corpus-derived: it asserts that the
 set of `rule="…"` literals in `inspect.getsource(module)` equals
 `{r["id"] for r in RULES}`. There is no `CHECKS` list to enumerate, and this
@@ -269,7 +284,7 @@ Three changes to the workflows, folded in from STO-263:
 - `site/scripts/export_reference.py` — third rules key, `stages.json`
 - `site/scripts/tests/test_export_reference.py`
 - `site/content/_generated/rules.json`
-- `site/content/guide/reference/rules.mdx` — traceability table
+- `site/components/RuleTable.jsx` — drop the Fields column when unused
 - `site/content/index.mdx` — the "Where to go" list
 - `site/content/_meta.js`, `site/content/guide/_meta.js`,
   `site/content/guide/reference/_meta.js`
