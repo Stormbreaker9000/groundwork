@@ -108,8 +108,12 @@ checks that every ID in it resolves to a requirement that exists, so a dangling
 reference fails the gate. `traces_to` points down, at design, tests and code;
 any of its three keys may be omitted or empty, and they start empty because the
 downstream artifacts do not exist yet when the requirement is written.
-`FR-001`'s `traces_from: [CON-002, BR-002]` says this requirement exists
-because of an offline constraint and a business rule, and you can follow both.
+`FR-001`'s `traces_from: [CON-002, BR-002]` says an offline constraint bounds
+this requirement and a business rule is implemented by it. Neither edge was
+written on this file directly: a constraint or business rule declares a
+transient `applies_to` naming what it bounds or what implements it, and the
+formatter back-fills that ID onto the named requirement's `traces_from`, so the
+edge is stored once, in one direction. You can follow both.
 
 **`confidence` is triage, not quality.** It is set deliberately: `high` when
 something was directly stated or confirmed by you, `medium` when it was
