@@ -2,6 +2,8 @@
 import json
 import os
 
+import pytest
+
 import export_reference
 import export_reference as er
 
@@ -197,3 +199,31 @@ def test_traceability_rules_declare_no_fields():
     # The Fields column is meaningless for this tool; RuleTable drops it.
     for rule in export_reference.export_rules()["traceability"]["rules"]:
         assert rule["fields"] == []
+
+
+def test_stages_export_carries_six_areas_each():
+    payload = export_reference.export_stages()
+    assert set(payload) == {"requirements", "design"}
+    for stage in payload.values():
+        assert len(stage["areas"]) == 6
+        for area in stage["areas"]:
+            assert set(area) == {"name", "detail"}
+            assert area["name"] and area["detail"]
+
+
+def test_stages_export_reads_the_real_skill_files():
+    payload = export_reference.export_stages()
+    req = [a["name"] for a in payload["requirements"]["areas"]]
+    des = [a["name"] for a in payload["design"]["areas"]]
+    assert req[0] == "Core functionality"
+    assert req[-1] == "Out of scope"
+    assert des[0] == "Runtime and stack"
+    assert des[-1] == "Team constraints"
+
+
+def test_stages_export_raises_when_the_anchor_moves():
+    # A silent empty result is the failure mode this parser must not have:
+    # the drift gate compares committed JSON to current output, so a
+    # consistently empty extraction would read as "current" forever.
+    with pytest.raises(ValueError, match="anchor not found"):
+        export_reference._coverage_areas("no such anchor here", "## Missing")
