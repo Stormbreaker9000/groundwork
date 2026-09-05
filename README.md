@@ -42,6 +42,40 @@ Claude will not write code until you sign off.
 Full documentation, including the content-rule reference, is published from this repository to
 **https://stormbreaker9000.github.io/groundwork/**.
 
+### Previewing the site locally
+
+The site is built with a `/groundwork` base path, so plain `http://localhost:3000/` returns a 404 —
+open `/groundwork/` instead.
+
+```bash
+cd site
+npm install     # first time only
+npm run dev     # http://localhost:3000/groundwork/
+```
+
+The Pagefind search index is produced by the `postbuild` step, not by `next dev`, so site search
+returns nothing under `npm run dev`. To preview the exact static output that gets deployed, build it
+and serve it from a directory where it sits under `groundwork/`:
+
+```bash
+cd site
+npm run build
+mkdir -p /tmp/gw-preview && ln -sfn "$PWD/out" /tmp/gw-preview/groundwork
+python3 -m http.server 8000 --directory /tmp/gw-preview   # http://localhost:8000/groundwork/
+```
+
+### Deploying
+
+`.github/workflows/pages.yml` deploys only on pushes to `main`, so a docs change reaches the
+published site when its pull request merges — CI on the PR builds the site but publishes nothing.
+To put a branch on the live site before merging, dispatch the workflow against that branch:
+
+```bash
+gh workflow run pages.yml --ref <branch>
+```
+
+That publishes to the real URL and stays there until the next push to `main` redeploys.
+
 ## Roadmap
 
 - [x] Architecture design workflow
