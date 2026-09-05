@@ -1,3 +1,5 @@
+[![groundwork — the stages before the code gets written](assets/groundwork-social-preview.png)](https://stormbreaker9000.github.io/groundwork/)
+
 # groundwork
 
 A Claude Code plugin that brings structure to software development — requirements gathering, planning, and SDLC discipline before you write a line of code.
@@ -94,6 +96,7 @@ groundwork/
 ├── agents/               # Dispatched subagents
 ├── lib/                  # Shared Python modules used by the linting/validation scripts
 ├── site/                 # Nextra documentation site, published to GitHub Pages
+├── assets/               # Brand assets — the plumb-bob mark, icon and social preview
 ├── docs/                 # Internal planning docs (specs, plans, research) — not the published site
 └── .github/              # CI and GitHub Pages deploy workflows
 ```

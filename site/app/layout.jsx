@@ -1,6 +1,7 @@
 import { Footer, Layout, Navbar } from 'nextra-theme-docs'
 import { Head } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
+import { GroundworkMark } from '../components/GroundworkMark'
 import 'nextra-theme-docs/style.css'
 
 export const metadata = {
@@ -14,7 +15,16 @@ export default async function RootLayout({ children }) {
       <Head />
       <body>
         <Layout
-          navbar={<Navbar logo={<b>Groundwork</b>} />}
+          navbar={
+            <Navbar
+              logo={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+                  <GroundworkMark />
+                  <b>Groundwork</b>
+                </span>
+              }
+            />
+          }
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/Stormbreaker9000/groundwork/tree/main/site"
           footer={<Footer>MIT © Mark D&apos;Adamo</Footer>}
