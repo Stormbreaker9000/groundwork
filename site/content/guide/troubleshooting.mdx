@@ -1,0 +1,129 @@
+# Troubleshooting
+
+Specific failures, symptom first. For what each check does and where it sits in
+a run, see [Gates and validators](/guide/gates/).
+
+## The tools print a "reduced (stdlib fallback) mode" warning
+
+**Symptom.** A validator runs, prints a warning about reduced mode and an
+install hint, and reports results anyway.
+
+**What it means.** `pyyaml` and `jsonschema` are not installed. The validators
+degrade to a stdlib-only fallback that still does required-field, enum and
+cross-file checks, but no full JSON Schema validation. All three tools print the
+`reduced (stdlib fallback) mode` warning when it is in use.
+
+**Fix.**
+
+```bash
+pip install pyyaml jsonschema
+# or, without a virtualenv:
+python3 -m pip install --user pyyaml jsonschema
+```
+
+`validate_traceability.py` does no schema validation at all, so strictly it
+needs neither. Install `pyyaml` anyway: reading list fields out of frontmatter
+is that tool's entire job, and the fallback is a deliberately limited YAML-ish
+parser.
+
+## A tool exited `2`
+
+**Symptom.** Non-zero exit, and no findings printed.
+
+**What it means.** Nothing is wrong with your artifacts. `2` is an environment
+error — a missing directory, or an unreadable schema — and it produces no
+findings at all. The agent contracts route it separately from a validation
+failure for that reason: treating an exit `2` as one sends the stage looking for
+a defect that was never reported.
+
+**Fix.** Check the path you passed. `validate_design.py` and
+`lint_design_content.py` default to `.sdlc/design`; `validate_requirements.py`
+defaults to `.sdlc/requirements`; `validate_traceability.py` defaults to both at
+once, and either one missing produces the `2`. All of them resolve relative
+paths against the current working directory, which in normal use is the project
+root.
+
+## A `README.md` in a stage directory fails the validator
+
+**Symptom.** You add notes as `.sdlc/requirements/README.md` or
+`.sdlc/design/README.md`, and the structural validator starts failing on it.
+
+**What it means.** This is known, and tracked as STO-218. The validators treat
+every `.md` file under a stage directory as an atomic artifact, with the single
+exception of the named project-level companions — `assumptions.md`,
+`glossary.md`, `definition-of-done.md` and `index.yaml` in the requirements
+stage; `assumptions.md`, `drivers.md` and `index.yaml` in the design stage. A
+`README.md` is not on either list, so it is parsed as an artifact and fails.
+
+**Workaround.** Keep notes outside the stage directory.
+
+## `adr/` is empty or missing
+
+**Symptom.** The design stage finished, but `.sdlc/design/adr/` has nothing in
+it, or does not exist.
+
+**What it means.** This is a legal outcome, not a failure. ADRs are derived,
+never elicited: the generator promotes decisions the pipeline already recorded
+and never invents a rejected option to fill out the template. A decision whose
+alternatives cannot be recovered stays in `drivers.md` and is reported in the
+generator's `skipped` list. The formatter creates `adr/` only when there is
+something to put in it — an absent `adr/` is the correct output when nothing
+qualified, not an omission to correct.
+
+**What to do.** Nothing, unless the pre-write summary's **Decisions not
+recorded** block listed something you wanted captured. That block is where the
+skipped list reaches you, and it is shown before anything is written, which is
+the point at which asking for a decision to be revisited is still actionable.
+See [The design stage](/guide/design-stage/).
+
+## `diagrams/` is empty or missing
+
+**Symptom.** `.sdlc/design/diagrams/` has nothing in it.
+
+**What it means.** No gate requires the directory: the structural validator
+gates only the project-level `assumptions.md` and `drivers.md`, and diagrams
+only came into its sweep at all as of STO-101 — so a design set written before
+that legitimately has none.
+
+On a set the current pipeline wrote, `diagrams/` should be populated:
+`generate_c4.py` runs inside the formatter's write and is the only writer of
+that directory.
+
+**What to do.** Do not hand-write a diagram or a Mermaid block to fill the gap;
+that directory is generated output. If the generator exited `1`, the diagram
+model contradicts the design set and the work goes back to the `c4-generator`
+rather than being repaired by hand. If it exited `2`, see the exit-code section
+above.
+
+## A validator failed after the formatter wrote the files
+
+**Symptom.** The files are on disk, and `validate_design.py`,
+`validate_requirements.py` or `validate_traceability.py` exited `1`.
+
+**What it means.** The write is not done. The formatter runs the structural
+validator against what it just wrote precisely so this is caught, and a non-zero
+exit means the stage is not finished.
+
+**Fix.** Do not hand-edit the written artifacts. Re-dispatch the flagged items
+to the specialist that owns them through the critique loop and re-run until
+clean — the same instruction both stages give for content-linter findings.
+
+The two exceptions are `dangling-reverse-trace` and
+`misplaced-requirement-trace`. Those flag a *requirement* file, which the design
+stage never writes into, so there is nothing to re-dispatch: the fix is a hand
+edit in the requirements stage, and the validator's own line names the exact
+edit. See [the two failures a human fixes by
+hand](/guide/gates/#the-two-failures-a-human-fixes-by-hand).
+
+## The sweep says `index-unparseable` or `duplicate-id`
+
+**Symptom.** `validate_traceability.py` exits `0`, but reports one of these two
+warnings.
+
+**What it means.** Read them before you read anything else on that run. They are
+not edge findings: they say the sweep ran over an index that was missing a file,
+or that had collapsed two artifacts into one ID. Every other result from that
+run is therefore unreliable in both directions — a clean one included.
+
+**Fix.** Fix the unparseable frontmatter or the duplicated ID, then re-run and
+read the results again.

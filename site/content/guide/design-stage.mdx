@@ -1,0 +1,256 @@
+import { CoverageAreas } from '../../components/CoverageAreas'
+
+# The design stage
+
+The design stage turns a validated requirement set into an architecture: atomic
+component and interface specs, architecture decision records, C4 diagrams, and
+the project-level files that record why the decomposition looks the way it
+does. Like the requirements stage, it is an interview first and a generation
+pipeline second, and it writes nothing until you have signed off.
+
+No application code is written at any point. Nothing under `.sdlc/design/` is
+executable.
+
+## It needs a validated requirement set
+
+The stage reads `.sdlc/requirements/` as its input. If that directory is
+absent, the stage stops and sends you to the [requirements
+stage](/guide/requirements-stage/) — there is nothing to design against.
+
+If it is present, the stage runs the requirements validator over it as an entry
+gate. A non-zero exit stops the stage: designing against a structurally invalid
+requirement set is meaningless.
+
+That gate is structural only. A non-empty `review_queue` in `index.yaml` does
+**not** block, and it is not a defect list to clear before starting. Those
+low-confidence requirements, and the open questions in `assumptions.md`, are
+frequently architecture decisions that correctly landed in the requirements
+stage's out-tray. They are carried forward on purpose, and they are opened
+with rather than resolved before.
+
+## Why it runs its own interview
+
+This is the part worth understanding, because it looks like duplicated work and
+is not.
+
+The requirements themselves do not choose technology — that is by
+construction, not omission. The requirements stage's content linter flags
+implementation bias at the business and stakeholder tiers, but only at `info`
+severity and advisorily; the requirements critic is what actually holds the
+line, by judgment, at its gate. So no *requirement* in `.sdlc/requirements/`
+says "Tauri" or "Postgres" — because the pipeline is built to keep it that way,
+not because a tool hard-fails on it. The project-level companions are a
+different matter, and deliberately so: an open question in `assumptions.md` may
+name a technology precisely because it is asking which one to pick, which is
+what the tamagotchi `Q-4` below does.
+
+Which leaves exactly two options at design time: ask, or invent. Groundwork's
+own history settled which. An earlier build took an unexamined Electron
+recommendation and paid to rip it out later. So this stage asks.
+
+Before the interview proper, the stage proposes a hypothesis in a single
+message: a candidate decomposition of four to six named components in plain
+terms, and its best guess at runtime, persistence and deployment target,
+grounded in the requirement set and in a bounded scan of any existing codebase.
+You confirm or correct it. That is one question, not five.
+
+## The inherited open questions come first
+
+Many of the `Q-` items in the requirement set's `assumptions.md` are
+architecture decisions by nature. They landed in the requirements stage's
+out-tray because they genuinely belong here, not because they were missed. The
+stage surfaces them *before* the six coverage areas, not after.
+
+The `tamagotchi` worked example left `Q-4` open: which framework and runtime to
+choose, given the footprint constraint — Electron, Tauri, or a native toolkit
+per platform. `NFR-002` (the idle CPU and memory budget) and `CON-001` (the
+runtime footprint boundary) both sit in `review_queue` because they rest on
+that question. Neither can be settled without answering it, and answering it is
+this stage's call, so it goes first.
+
+Every inherited question ends the interview with a recorded disposition:
+`resolved`, with the resolution, or `still_open`. Leaving one open is a legal
+outcome; leaving one undecided is not.
+
+## The six areas
+
+<CoverageAreas stage="design" />
+
+Where a question's answer space is enumerable, you get two to four numbered
+options rather than an open-ended prompt. Anything the codebase scan already
+settled is stated as an inference and confirmed, or skipped entirely where it
+is unambiguous — the stage is told to ask only what it cannot determine.
+
+## What the answers become
+
+When the six areas are covered, the stage renders a design-context block back
+to you and asks whether it captures things correctly. Nothing downstream runs
+until you confirm; that is a hard stop, not a formality.
+
+The confirmed block serializes 1:1 into the `design_context` object the
+pipeline consumes. Here is the one from the `tamagotchi` worked example,
+trimmed — the values are quoted from the file, and the elisions are marked:
+
+```yaml
+design_context:
+  requirements_root: "docs/requirements/examples/tamagotchi/requirements"
+  system_purpose: >
+    A desktop virtual pet that persists between sessions and decays in real time
+    whether or not the app is running […]
+  runtime_and_stack: >
+    Tauri — a Rust core with a system webview. Chosen against NFR-002's idle budget
+    (<=1% CPU of one core, <=150 MB resident) and CON-001's baseline-overhead
+    exclusion screen. The screen has not actually been executed […] so the
+    selection is provisional against measurement rather than settled by it.
+  persistence: >
+    A single JSON state file written atomically (write to a temp file, then rename),
+    stored under the OS local data directory […]
+  deployment_target: >
+    Windows first for v1; macOS and Linux follow […]
+  integration_points: >
+    The OS notification service, for FR-009's optional local care reminders, and the
+    platform wall clock every elapsed-interval computation reads. Nothing else […]
+  operational_constraints: >
+    No servers, no telemetry, no remote error reporting […]
+  team_constraints: >
+    Assumed solo or small team with no dedicated platform specialists […]
+  out_of_scope: >
+    None identified.
+  inherited_open_questions:
+    - id: Q-4
+      statement: >
+        Which framework/runtime is chosen given the footprint constraint (Electron vs
+        Tauri vs native)?
+      disposition: resolved
+      resolution: >
+        Tauri — a Rust core with a system webview — rejecting Electron on its
+        empty-shell baseline against CON-001 and native-per-platform on the team
+        constraint […]
+    - id: Q-5
+      statement: >
+        What is the reference-machine specification against which the idle-footprint
+        budget and launch-latency figures are measured?
+      disposition: still_open
+  inherited_review_queue:
+    [FR-006, FR-008, FR-011, NFR-002, NFR-009, CON-001, BR-001, BR-002]
+```
+
+That file was replayed from the published tamagotchi set rather than captured
+from a live interview, but the shape is the real one, and the artifacts under
+the example's `design/` are what the pipeline produced from exactly this
+object.
+
+## What the pipeline does with it
+
+The context object is handed to a chain of agents that run in a fixed order:
+
+1. **design-orchestrator** — reads the requirement set once on everyone's
+   behalf, identifies the architecturally significant requirements, allocates
+   the `CMP-` and `IF-` ID blocks, and dispatches a brief to each specialist.
+2. **component-specialist** — decomposes the system into components, each with
+   a single declared responsibility, tracing to the requirements that drove it.
+3. **interface-specialist** — turns every capability the components declared
+   into an interface with a provider, error modes, and operations that each
+   declare an interaction style.
+4. **design-critic** — a two-phase review: per-artifact quality (ISO/IEC/IEEE
+   42010) and coverage of the architecturally significant requirements with
+   tradeoffs and sensitivity points named (ATAM-lite). This gate is judgment
+   only; it runs no script, because nothing is on disk yet.
+5. **adr-generator** — runs only once the critic returns a passing gate.
+6. **c4-generator** — supplies the container grouping and the external actors,
+   and nothing else.
+7. **design-formatter** — writes the files, and only on a passing gate.
+
+Before the formatter runs, the stage renders a summary of the whole set —
+components, interfaces, ADRs, diagrams, drivers, assumptions, open questions, a
+triage block naming every low-confidence artifact, and a **Decisions not
+recorded** block. Then it asks whether that captures the architecture
+accurately.
+
+No files are written until you confirm. Corrections are re-dispatched to the
+specialist that owns the affected artifact and the set is re-summarized.
+
+## What lands on disk
+
+```
+.sdlc/design/
+  components/    CMP-XXX-*.md
+  interfaces/    IF-XXX-*.md
+  adr/           ADR-XXX-*.md
+  diagrams/      DIA-XXX-*.md
+  assumptions.md
+  drivers.md
+  index.yaml
+```
+
+`assumptions.md` carries Assumptions, Dependencies and Open Questions, the same
+three sections as its requirements-stage counterpart. `drivers.md` carries
+Architecturally Significant Requirements, Tradeoffs and Sensitivity Points — the
+orchestrator's analysis and the critic's judgments, persisted so the reasoning
+behind the decomposition survives the conversation that produced it. `index.yaml`
+indexes every artifact, diagrams included, and carries the `review_queue`.
+
+Immediately after the write, the formatter re-runs the structural validator over
+everything it just wrote, then the cross-artifact traceability validator. Both
+must exit `0`. See [Gates](/guide/gates/).
+
+## An empty `adr/` is a legal outcome
+
+ADRs are **derived, never elicited**. The generator promotes decisions the
+pipeline already recorded — resolved `Q-` questions from the architecture
+interview, and requirements the critic marked as deferred to a decision — and it
+never invents a rejected option to fill out the template. A decision whose
+alternatives cannot be recovered stays in `drivers.md` and is reported in the
+generator's `skipped` list instead.
+
+So an absent or empty `adr/` directory means **nothing qualified**, not that
+something failed. The set is still complete. If you want to know what did not
+become an ADR, the **Decisions not recorded** block in the pre-write summary is
+the one place that list reaches a human — and the one point at which asking for
+a decision to be revisited is still actionable, because nothing has been
+written yet.
+
+## Diagrams are projected, not authored
+
+The three C4 views are a deterministic projection of the component graph —
+`depends_on` on a component pointing at `provider` on an interface. The
+`c4-generator` agent supplies only the two judgments that graph cannot carry:
+which components group into which deployable container, and who the system's
+external actors are. It writes no file and authors no Mermaid.
+
+`generate_c4.py` does the projection, inside the formatter's write, producing a
+System Context view, a Container view, and one Component view per internal
+container. Because the `DIA-` IDs are assigned from emission order rather than
+hand-allocated, a design set fully on disk regenerates the same views from the
+same model.
+
+That is also why a diagram is not something to hand-edit. If the generator
+exits `1`, the model contradicts the design set: it is re-dispatched to the
+`c4-generator` rather than repaired by hand.
+
+The [tamagotchi C4 diagrams](/guide/examples/tamagotchi/design/diagrams/) are
+the real output, Mermaid and all.
+
+## What this stage does not decide
+
+Three things that look like the stage's judgment are not:
+
+- **Diagram content** belongs to `generate_c4.py`, which projects rather than
+  decides.
+- **Cross-artifact traceability** — `traces_from` resolution, functional
+  requirement coverage, ADR decision-driver resolution, `traces_to.design`
+  resolution — belongs to `validate_traceability.py`.
+- **Dependency-cycle detection**, orphan-interface detection and prose-quality
+  sweeps belong to `lint_design_content.py`.
+
+All three run over files, once the files exist. The skill's judgment stops at
+the interview and the critique loop.
+
+## Next
+
+- [Gates](/guide/gates/) — the three validators between you and a written
+  artifact set, and which failures a human fixes by hand.
+- [Reading an artifact](/guide/reading-an-artifact/) — the frontmatter fields a
+  component and an interface carry.
+- The [tamagotchi design set](/guide/examples/tamagotchi/design/components/) —
+  components, interfaces, ADRs and diagrams, exactly as the pipeline wrote them.

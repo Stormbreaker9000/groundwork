@@ -1,0 +1,193 @@
+import { RuleTable } from '../../components/RuleTable'
+
+# Gates and validators
+
+Groundwork runs two different kinds of check over what it writes, and telling
+them apart is the single most useful thing to know when something exits
+non-zero.
+
+**Structural validators are gates.** There are three of them. They check
+structure — schemas, ID agreement, resolvable references, required headings —
+and a failure stops the stage. The formatter runs them against the files it has
+just written, and a non-zero exit means the write is not done.
+
+**Content linters are advisory.** There are two of them, one per stage. They
+check prose and shape, print findings, and exit `0`. Nothing they say blocks
+anything. They are documented on [Content rules](/guide/reference/rules/).
+
+If a run stopped, it was a gate. If it printed findings and carried on, it was
+a linter.
+
+## Exit codes
+
+All three gates share one convention:
+
+| Code | Meaning |
+|---|---|
+| `0` | clean |
+| `1` | one or more violations |
+| `2` | an environment error — a missing directory, or an unreadable schema |
+
+**`2` is not a validation failure.** It means the tool could not look at what
+you pointed it at. It produces no findings at all, and the agent contracts route
+it separately for exactly that reason: sending an exit `2` into the
+failure-routing logic sends the stage hunting for a defect that was never
+reported. Check the path you passed.
+
+The two advisory linters use the same `2`. Otherwise they exit `0`, with one
+exception: under `--strict` they return `1` if an `error`-severity finding
+exists.
+
+## `validate_requirements.py`
+
+The requirements stage's structural gate, run over `.sdlc/requirements/`. The
+design stage runs it too, as its entry gate — designing against a structurally
+invalid requirement set is meaningless.
+
+Per file, against the JSON Schema: field presence, types, enums, the `id`
+pattern, the `created_at` date format, and `ears_pattern`, which is required
+only when `type: functional`.
+
+Across the set: IDs are globally unique; each `id` prefix matches its `type`
+(`FR` functional, `NFR` non-functional, `CON` constraint, `BR` business rule,
+`UC` use case); every `traces_from` reference resolves to a requirement that
+exists; and every functional requirement declares an `ears_pattern`.
+
+It also hard-gates the two project-level companions: `assumptions.md` must
+carry `## Assumptions`, `## Dependencies` and `## Open Questions`, and
+`glossary.md` must carry `## Terms`. Presence and headings only — the *content*
+under those headings is never gated, and a section reading `None identified` is
+legal and passes.
+
+`definition-of-done.md` and `index.yaml` are skipped.
+
+## `validate_design.py`
+
+The design stage's structural gate, run over `.sdlc/design/`. It checks each
+artifact against the design schema, then runs the set-level checks:
+
+- IDs are globally unique.
+- The ID prefix matches `type` — `CMP` component, `IF` interface, `ADR` adr,
+  `DIA` diagram.
+- The component graph resolves: every interface a component lists in
+  `depends_on` exists in the set, and every interface's `provider` is a known
+  component in the set.
+- `traces_from` entries are requirement-*shaped*. Whether those requirements
+  actually exist is the next tool's job, not this one's.
+
+It gates the project-level `assumptions.md` and `drivers.md` the same way the
+requirements validator gates its companions — presence and required headings,
+never content. `drivers.md` must carry `## Architecturally Significant
+Requirements`, `## Tradeoffs` and `## Sensitivity Points`.
+
+Finally, it gates each ADR body's MADR 4.0 headings: `## Context and Problem
+Statement`, `## Decision Drivers`, `## Considered Options`, `## Decision
+Outcome`, and `### Consequences`.
+
+## `validate_traceability.py`
+
+The third gate exists because neither of the first two resolves the edge
+*between* the stages. `validate_design.py` checks that a `traces_from` entry is
+requirement-shaped but not that the requirement exists;
+`validate_requirements.py` leaves `traces_to` out of its dangling-reference
+sweep entirely. This tool reads both directories at once and closes that gap.
+
+It never schema-validates and never writes. Required fields, enums and ID shape
+belong to the two structural validators; this one only resolves IDs.
+
+The rules below **can fail the stage** — that is what separates this table from
+the two on [Content rules](/guide/reference/rules/), whose linters exit `0` no
+matter what they find. Here, an `error` exits `1`. The warnings do not block
+unless you pass `--strict`.
+
+<RuleTable linter="traceability" />
+
+Every reported line ends with the offending artifact's path in brackets, so a
+finding always names a file.
+
+Two of the warnings deserve to be read differently from the rest.
+`index-unparseable` and `duplicate-id` are not edge findings at all — they say
+the sweep ran over an index that was missing a file, or that had collapsed two
+artifacts into one ID. That makes every *other* result on that run unreliable in
+both directions, a clean one included. They are carried as findings rather than
+as a side channel precisely so a sweep that could not see the whole set cannot
+be reported downstream as a clean one.
+
+### Flags
+
+- `--json` emits `findings`, `counts`, `skipped` (paths whose frontmatter would
+  not parse) and `duplicate_ids` (IDs claimed by more than one file, where only
+  the last one read was indexed).
+- `--strict` makes warnings block too.
+- `--quiet` suppresses the warning lines and keeps every error line — the same
+  meaning the flag has in the other two validators, which drop PASS lines and
+  keep failures. This is a gate; it never hides what failed. The summary line
+  still counts the suppressed warnings.
+
+## The two failures a human fixes by hand
+
+Almost every gate failure has the same remedy, and it is not editing the file.
+The flagged artifacts are re-dispatched to the specialist that owns them
+through the critique loop, and the gate is re-run until clean. Both stages say
+this explicitly: route what a check turns up back to the owning specialist
+rather than editing the written files by hand.
+
+There are exactly two exceptions, and they are the two traceability errors that
+flag a **requirement** file rather than a design artifact:
+
+- `dangling-reverse-trace` — a requirement's non-empty `traces_to.design` names
+  a design ID that does not exist.
+- `misplaced-requirement-trace` — a requirement ID is sitting in
+  `traces_to.tests` or `traces_to.code`, which hold test and source-file
+  references.
+
+The design stage never writes into `.sdlc/requirements/`, so there is nothing
+to re-dispatch and no loop to run. The stage reports these and stops, passing
+the validator's lines through as they are: each already names the requirement
+ID, its file path, and the exact edit to make.
+
+Which edit depends on what the entry turned out to be.
+`misplaced-requirement-trace`, and a `dangling-reverse-trace` whose target
+resolves as a requirement, are both the pre-STO-102 shape, and the message says
+to move the edge: delete it here, and add this requirement's own ID to the
+named requirement's `traces_from`. A `dangling-reverse-trace` pointing at
+something that is not a known design artifact at all is an ordinary bad
+reference, and the message says to clear the entry or correct it to a
+`CMP-`/`IF-`/`ADR-` ID.
+
+Either way you make the edit yourself, in the requirements stage, then re-run
+the design stage.
+
+**There is deliberately no migration script and no bypass flag.** A tool that
+rewrote requirement files from the design stage would be the second writer this
+pipeline exists to avoid. Both rules fire on the pre-STO-102 artifact shape, so
+on an older project you should expect them, and expect the fix to be a hand
+edit.
+
+## The advisory linters
+
+`lint_requirements_content.py` and `lint_design_content.py` run after their
+stage's gates have passed. They always exit `0` — `--strict` returns `1` when an
+`error`-severity finding exists, and a missing directory is still a `2`.
+
+Neither linter can emit `error` today. The design registry declares eight
+rules and the requirements registry six, and every one of them is `warn` or
+`info` — so `--strict` is currently a no-op for both.
+
+Their findings are still worth acting on, and they are routed the same way a
+gate failure is: back through the critique loop to the owning specialist, not
+by editing the written files. `dependency-cycle` is the one most worth acting
+on — two components each needing the other is invisible to every structural
+check, because each individual edge resolves. Breaking a cycle is a
+decomposition change, so it goes to the component specialist rather than the
+interface specialist.
+
+Every rule both linters run is listed on
+[Content rules](/guide/reference/rules/).
+
+## Next
+
+- [Troubleshooting](/guide/troubleshooting/) — the specific failures people hit,
+  symptom first.
+- [The design stage](/guide/design-stage/) — where the three gates sit in the
+  run.

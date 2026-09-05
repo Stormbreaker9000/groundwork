@@ -9,8 +9,10 @@ runs the real CLI end to end. Fixture artifacts carry only the fields this
 tool reads — it never schema-validates, so they are deliberately not
 schema-complete.
 """
+import inspect
 import json
 import os
+import re
 
 import validate_traceability as vt
 
@@ -465,3 +467,48 @@ def test_shipped_tamagotchi_example_is_clean(capsys):
     out = capsys.readouterr().out
     assert code == 0, out
     assert "Summary: 0 error(s), 0 warning(s)." in out
+
+
+# ---------------------------------------------------------------------------
+# Rule registry (STO-250 pass 2)
+# ---------------------------------------------------------------------------
+_RULE_LITERAL_RE = re.compile(r'rule=["\']([a-z0-9-]+)["\']')
+
+
+def test_rules_registry_matches_source_literals():
+    # Source-derived, not corpus-derived. This module has no CHECKS list to
+    # enumerate, and a source sweep also catches the case a fixture-derived
+    # test cannot: a rule that is both undeclared AND unexercised (STO-263 A2).
+    emitted = set(_RULE_LITERAL_RE.findall(inspect.getsource(vt)))
+    declared = {r["id"] for r in vt.RULES}
+    assert emitted == declared
+
+
+def test_rules_registry_entries_are_complete():
+    for rule in vt.RULES:
+        assert set(rule) == {"id", "severities", "applies_to", "fields", "summary"}
+        assert rule["id"] and rule["summary"]
+        assert rule["severities"]
+        # Traceability findings carry no `field`, unlike the content linters'.
+        assert rule["fields"] == []
+        assert rule["applies_to"] in {
+            "design artifact", "requirement", "adr", "the index",
+        }
+
+
+def test_declared_severities_are_the_ones_the_tool_can_emit():
+    for rule in vt.RULES:
+        assert set(rule["severities"]) <= {vt.ERROR, vt.WARN}
+
+
+def test_every_declared_rule_is_exercised_by_a_fixture(capsys):
+    # The second direction the source sweep cannot give: a declared rule that
+    # no fixture proves. Runs every fixture case and collects what fires.
+    seen = set()
+    for case in sorted(os.listdir(FIXTURES)):
+        if not os.path.isdir(os.path.join(FIXTURES, case)):
+            continue
+        run(case, "--json")
+        payload = json.loads(capsys.readouterr().out)
+        seen.update(f["rule"] for f in payload["findings"])
+    assert {r["id"] for r in vt.RULES} <= seen

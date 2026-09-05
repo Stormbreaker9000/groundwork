@@ -1,0 +1,62 @@
+{
+  "design": {
+    "areas": [
+      {
+        "detail": "language, framework, runtime",
+        "name": "Runtime and stack"
+      },
+      {
+        "detail": "storage mechanism, data model shape",
+        "name": "Persistence"
+      },
+      {
+        "detail": "where this runs (desktop, server, edge, mobile, CLI)",
+        "name": "Deployment target"
+      },
+      {
+        "detail": "external systems, third-party services, APIs",
+        "name": "Integration points"
+      },
+      {
+        "detail": "hosting, monitoring, on-call, resource budgets",
+        "name": "Operational constraints"
+      },
+      {
+        "detail": "existing team skills, timeline, org standards",
+        "name": "Team constraints"
+      }
+    ],
+    "heading": "Six coverage areas the requirement set cannot carry, by construction:",
+    "skill": "skills/design/SKILL.md"
+  },
+  "requirements": {
+    "areas": [
+      {
+        "detail": "what the thing does (often partially established by the hypotheses)",
+        "name": "Core functionality"
+      },
+      {
+        "detail": "who uses the system, who is affected beyond the primary user (admin, operator, support, auditor, regulator, third-party integrations)",
+        "name": "Stakeholders & user roles"
+      },
+      {
+        "detail": "what done looks like; how you'd know it's working",
+        "name": "Success criteria"
+      },
+      {
+        "detail": "probe at minimum: performance expectations, security requirements, reliability/uptime needs, and accessibility or platform constraints. Infer from context where obvious; only ask if the domain makes NFRs non-obvious or high-stakes.",
+        "name": "Non-functional concerns"
+      },
+      {
+        "detail": "tech, time, scope, regulatory, or design limits",
+        "name": "Constraints"
+      },
+      {
+        "detail": "what's explicitly not being built in this iteration",
+        "name": "Out of scope"
+      }
+    ],
+    "heading": "**Coverage areas:**",
+    "skill": "skills/requirements/SKILL.md"
+  }
+}

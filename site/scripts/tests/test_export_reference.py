@@ -2,14 +2,12 @@
 import json
 import os
 
+import pytest
+
+import export_reference
 import export_reference as er
 
 ENTRY_KEYS = {"id", "severities", "applies_to", "fields", "summary"}
-
-
-def test_export_rules_has_both_linters():
-    payload = er.export_rules()
-    assert set(payload) == {"design", "requirements"}
 
 
 def test_export_rules_records_its_source_module():
@@ -172,3 +170,55 @@ def test_parse_agent_file_strips_quoted_description():
 
 def test_all_outputs_are_written_and_current():
     assert er.main(["--check"]) == 0
+
+
+def test_rules_export_carries_the_traceability_registry():
+    payload = export_reference.export_rules()
+    assert set(payload) == {"design", "requirements", "traceability"}
+    section = payload["traceability"]
+    assert section["linter"] == "validate_traceability.py"
+    assert {r["id"] for r in section["rules"]} == {
+        "dangling-trace",
+        "adr-driver-unresolved",
+        "dangling-reverse-trace",
+        "misplaced-requirement-trace",
+        "uncovered-fr",
+        "adr-driver-untraced",
+        "adr-driver-unlisted",
+        "index-unparseable",
+        "duplicate-id",
+    }
+
+
+def test_traceability_rules_declare_no_fields():
+    # The Fields column is meaningless for this tool; RuleTable drops it.
+    for rule in export_reference.export_rules()["traceability"]["rules"]:
+        assert rule["fields"] == []
+
+
+def test_stages_export_carries_six_areas_each():
+    payload = export_reference.export_stages()
+    assert set(payload) == {"requirements", "design"}
+    for stage in payload.values():
+        assert len(stage["areas"]) == 6
+        for area in stage["areas"]:
+            assert set(area) == {"name", "detail"}
+            assert area["name"] and area["detail"]
+
+
+def test_stages_export_reads_the_real_skill_files():
+    payload = export_reference.export_stages()
+    req = [a["name"] for a in payload["requirements"]["areas"]]
+    des = [a["name"] for a in payload["design"]["areas"]]
+    assert req[0] == "Core functionality"
+    assert req[-1] == "Out of scope"
+    assert des[0] == "Runtime and stack"
+    assert des[-1] == "Team constraints"
+
+
+def test_stages_export_raises_when_the_anchor_moves():
+    # A silent empty result is the failure mode this parser must not have:
+    # the drift gate compares committed JSON to current output, so a
+    # consistently empty extraction would read as "current" forever.
+    with pytest.raises(ValueError, match="anchor not found"):
+        export_reference._coverage_areas("no such anchor here", "## Missing")

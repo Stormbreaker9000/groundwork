@@ -43,13 +43,16 @@ for _scripts_dir in (
 
 import lint_design_content as ldc  # noqa: E402
 import lint_requirements_content as lrc  # noqa: E402
+import validate_traceability as vt  # noqa: E402
 
 
 def export_rules() -> Dict[str, Any]:
-    """Both linters' rule registries, verbatim.
+    """All three linters' rule registries, verbatim.
 
     Deliberately does not restate or reformat rule text: the registry is the
     source, and any transformation here would be a place for drift to live.
+    The design and requirements registries are advisory; the traceability
+    registry is gating.
     """
     return {
         "design": {
@@ -59,6 +62,10 @@ def export_rules() -> Dict[str, Any]:
         "requirements": {
             "linter": "lint_requirements_content.py",
             "rules": lrc.RULES,
+        },
+        "traceability": {
+            "linter": "validate_traceability.py",
+            "rules": vt.RULES,
         },
     }
 
@@ -218,6 +225,79 @@ def export_agents() -> List[Dict[str, str]]:
     return out
 
 
+# The two interviews' coverage areas, by the exact line each list follows.
+# Anchors rather than heading names because the two skills phrase the
+# introduction differently and neither is a heading.
+STAGE_SOURCES = {
+    "requirements": {
+        "skill": "skills/requirements/SKILL.md",
+        "heading": "**Coverage areas:**",
+    },
+    "design": {
+        "skill": "skills/design/SKILL.md",
+        "heading": (
+            "Six coverage areas the requirement set cannot carry, "
+            "by construction:"
+        ),
+    },
+}
+
+_AREA_ITEM_RE = re.compile(r"^\d+\.\s+\*\*(.+?)\*\*\s+—\s+(.+)$")
+
+
+def _coverage_areas(text: str, anchor: str) -> List[Dict[str, str]]:
+    """Parse the numbered coverage-area list that follows ``anchor``.
+
+    Raises rather than returning an empty list when the anchor moves or the
+    list shape changes. A parser that degrades silently here would be worse
+    than none: the drift gate only compares the committed JSON to what this
+    function currently produces, so a consistently empty extraction reads as
+    "current" forever and the published page quietly lists nothing.
+    """
+    index = text.find(anchor)
+    if index == -1:
+        raise ValueError(f"anchor not found: {anchor!r}")
+
+    areas: List[Dict[str, str]] = []
+    for line in text[index + len(anchor):].splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if areas:
+                break
+            continue
+        match = _AREA_ITEM_RE.match(stripped)
+        if not match:
+            break
+        areas.append(
+            {"name": match.group(1).strip(), "detail": match.group(2).strip()}
+        )
+
+    if not areas:
+        raise ValueError(f"no numbered areas found after anchor: {anchor!r}")
+    return areas
+
+
+def export_stages() -> Dict[str, Dict[str, Any]]:
+    """The two interviews' coverage areas, read from the skill files.
+
+    Deliberately narrow. Generating the area *names* means a page cannot list
+    five areas when the skill has six. Generating the surrounding narrative
+    would turn the two stage pages into tables, which is the opposite of what
+    they are for.
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+    for stage, source in STAGE_SOURCES.items():
+        path = os.path.join(REPO_ROOT, source["skill"])
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        out[stage] = {
+            "skill": source["skill"],
+            "heading": source["heading"],
+            "areas": _coverage_areas(text, source["heading"]),
+        }
+    return out
+
+
 def _serialize(payload: Any) -> str:
     """The single definition of what a committed reference file contains.
 
@@ -240,6 +320,7 @@ OUTPUTS = {
     "rules.json": export_rules,
     "fields.json": export_fields,
     "agents.json": export_agents,
+    "stages.json": export_stages,
 }
 
 
