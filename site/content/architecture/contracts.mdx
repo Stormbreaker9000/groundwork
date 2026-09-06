@@ -1,0 +1,82 @@
+---
+title: Hand-off contracts
+description: Every shape passed between agents, verbatim from the orchestrator that owns it.
+---
+
+import { ContractTable } from '../../components/ContractTable'
+
+# Hand-off contracts
+
+The two orchestrators own every contract in the pipeline. No specialist,
+critic, formatter or generator defines one — each of them consumes a shape an
+orchestrator declared and returns a shape an orchestrator declared, which is
+what makes an agent replaceable without renegotiating anything around it.
+
+The blocks below are the same bytes as the agent files, extracted from the
+stage sections that define them. Comments included: the `# ← TRANSIENT`
+markers are part of the contract, and re-serialising these shapes through a
+parser would drop them.
+
+## The requirements stage
+
+<ContractTable stage="requirements" />
+
+## The design stage
+
+<ContractTable stage="design" />
+
+## Why the shapes are these shapes
+
+Two things the blocks cannot say for themselves.
+
+### Why capabilities travel as prose, not IDs
+
+The design stage's component and interface authoring is circular by nature. A
+component declares `depends_on: [IF-…]`; an interface declares
+`provider: CMP-…`. Whichever specialist runs first would have to cite IDs the
+other has not allocated yet.
+
+The transient fields are how the cycle is broken. `component-specialist`
+declares what a component needs as **prose, never as an `IF-` ID** — the
+example in `agents/component-specialist.md` is literally
+`capability: "take card payments"` with a rationale beside it. Every other
+field it returns goes into the component's frontmatter verbatim, so
+`depends_on` comes back present and empty. `interface-specialist` then turns
+each capability into an interface and reports, in `consumed_by`, which
+components asked for it. The orchestrator's Stage 7 does the wiring, and does
+it mechanically: for each interface, for each component in `consumed_by`,
+append the interface ID to that component's `depends_on`, deduplicate, sort.
+No judgment, because there is none left to apply.
+
+The check that follows matters as much as the wiring. Every declared capability
+must be satisfied by exactly one interface. An unsatisfied or duplicated
+capability is a re-dispatch, not an accepted gap — and an `IF-` ID appearing in
+a component draft at all means the specialist guessed at the graph, which is
+also a re-dispatch.
+
+### Where each transient dies, and what breaks if it survives
+
+The two stages strip their transients at different points, and the difference
+is not an inconsistency.
+
+The design stage's three — `required_capabilities` on components,
+`consumed_by` and `satisfies_capabilities` on interfaces — are consumed and
+dropped at Stage 7, *before* the critique gate. By the time `design-critic`
+sees the set, the graph is already wired as IDs, which is what the critic needs
+to judge.
+
+The requirements stage's one, `applies_to`, survives further on purpose. It
+names the requirements each constraint or business rule bounds, and the
+requirements stage has no back-fill stage of its own — so the orchestrator
+carries it through the merge and through the critic, and
+`requirements-formatter` performs the back-fill at Stage 7, writing each
+constraint's ID into the named requirements' `traces_from` and stripping
+`applies_to` before writing anything.
+
+What breaks if one survives is the structural gate, immediately. Neither field
+is in its schema, `requirement.schema.json` sets `additionalProperties: false`
+and `design.schema.json` sets `unevaluatedProperties: false`, so an artifact
+carrying a transient fails validation on the formatter's own re-run. The
+failure is loud and local, which is the intended outcome — a transient that
+leaked silently would put a field in the frontmatter that nothing downstream
+knows how to read.
