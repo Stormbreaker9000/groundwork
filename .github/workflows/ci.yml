@@ -65,4 +65,6 @@ jobs:
         run: |
           grep -q 'god-component' out/guide/reference/rules/index.html
           grep -q 'id="fr-001"' out/guide/examples/tamagotchi/requirements/functional/index.html
+          grep -q 'generation_brief' out/architecture/index.html
+          grep -q 'draft_interfaces' out/architecture/contracts/index.html
         working-directory: site
