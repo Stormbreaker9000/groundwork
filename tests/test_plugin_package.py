@@ -23,9 +23,11 @@ REPO_ROOT = os.path.normpath(
 PLUGIN_DIR = os.path.join(REPO_ROOT, "plugin")
 
 # Everything a plugin install is allowed to contain, at the top level.
+# No CLAUDE.md: `claude plugin validate` reports that a CLAUDE.md at the
+# plugin root is not loaded as project context, so one here reaches nobody.
+# Context that should reach users belongs in a skill.
 RUNTIME_TOPLEVEL = {
     ".claude-plugin",
-    "CLAUDE.md",
     "LICENSE",
     "agents",
     "commands",
