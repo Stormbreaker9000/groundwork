@@ -61,11 +61,14 @@ against their YAML rather than assuming:
   YAML at all. A rule keyed on "the heading contains backticks" raises on a
   stage that was never a contract.
 
-**Transients are already marked in the source.** `required_capabilities`,
-`consumed_by` and `satisfies_capabilities` carry inline `# ← TRANSIENT` comments
-in the YAML, and design-orchestrator:274 states the rule in prose. The single
-most useful thing a contract table can tell a contributor comes free with the
-extraction.
+**Transients are already marked in the source, and there are four of them.**
+`required_capabilities`, `consumed_by` and `satisfies_capabilities` carry inline
+`# ← TRANSIENT` comments in the YAML, and design-orchestrator:274 states the rule
+in prose. STO-220's ticket lists exactly those three; a prototype of the extractor
+run against the real files also returns `applies_to` on M1's `draft_requirements`,
+which `constraint-specialist` declares and which no summary of the pipeline had
+counted. The single most useful thing a contract table can tell a contributor
+comes free with the extraction — including the entry a hand-written list missed.
 
 **The design orchestrator has retired stages.** `## Stage 11 — (retired)` and
 `## Stage 12 — (retired)`. The numbering gap is real and a reader will notice it.
