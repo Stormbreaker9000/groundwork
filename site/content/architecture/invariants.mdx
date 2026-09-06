@@ -1,0 +1,160 @@
+---
+title: Invariants
+description: The rules that hold across both stages, and the file that enforces each one.
+---
+
+# Invariants
+
+Six rules hold across both stages. Each one names the file that enforces it,
+because a rule with no named enforcer is a rule someone will break without
+anyone noticing.
+
+Where a rule is enforced by an agent instruction rather than by a script, this
+page says so. That distinction is the useful one: an instruction is a rule the
+model follows, and a script is a rule the pipeline cannot proceed past.
+
+## One artifact per file
+
+Every requirement, component, interface and ADR is one Markdown file with one
+YAML frontmatter block, named `<ID>-<kebab-title>.md` and placed in the
+subdirectory its type owns.
+
+Atomicity is what makes the rest of the pipeline work. A traceability edge
+addresses a file; a critic can reject one requirement without re-opening a
+document; a diff shows which artifact changed rather than which paragraph.
+
+**Enforced by:** `agents/requirements-formatter.md` and
+`agents/design-formatter.md` — the two agents that decide the path and the
+filename, per type. The structural validators enforce the *contents* of that
+arrangement: `lib/artifact_core.py`'s `parse_frontmatter` reads exactly one
+frontmatter block per file, `discover_files` treats every `.md` that is not a
+named project-level companion as an atomic artifact, and
+`cross_file_checks` in each validator rejects a duplicate ID across the set.
+Note the seam honestly: neither validator compares the filename to the `id`
+inside it, so a correctly-formed artifact under a wrong filename passes the
+gate. The naming convention is a formatter contract, not a gated one.
+
+## IDs are categorical, zero-padded, and allocated only by an orchestrator
+
+The prefix encodes the type — `FR`, `NFR`, `CON`, `BR`, `UC` in requirements;
+`CMP`, `IF`, `ADR` in design — followed by a three-digit zero-padded sequence.
+No specialist invents an ID.
+
+Single allocation is what keeps the two ends of every traceability edge
+agreeing. If two specialists could both mint IDs they would eventually mint the
+same one, and neither would be wrong.
+
+**Enforced by:** the schemas, structurally —
+`skills/requirements/schema/requirement.schema.json` pins
+`^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$`, and each validator's
+`cross_file_checks` rejects an ID whose prefix disagrees with its own `type`
+field. Sole allocation is an orchestrator instruction:
+`agents/requirements-orchestrator.md` Stage 3 and
+`agents/design-orchestrator.md` Stage 4, which states it as "You are the only
+ID authority" and makes an `IF-` ID appearing in a component draft a
+re-dispatch rather than a repair.
+
+## IDs are never reused
+
+A deleted artifact's ID stays retired. The artifact is marked
+`status: obsolete` rather than removed, and the next allocation continues past
+it.
+
+An ID that means one thing in a commit and another thing later makes every
+reference to it ambiguous — including references in code, tests and
+conversation, which no validator can see.
+
+**Enforced by:** `agents/requirements-orchestrator.md:103` and
+`agents/design-orchestrator.md:177`, as an instruction. It is not gated,
+because a validator that could enforce it would need the history rather than
+the set. The design orchestrator's [retired Stages 11 and
+12](/architecture/) are the same principle applied to stage numbers, and are
+what the rule looks like when it is honoured.
+
+## The critic gates judgment; the formatter gates structure
+
+The critic runs before anything is written and judges quality. The structural
+validator runs inside the formatter, against the files it has just written.
+
+This is not a preference about where to put a check. The critic **cannot** run
+the structural validator: at gate time there are no files, and in the
+requirements stage `assumptions.md` and `glossary.md` — which that validator
+hard-gates — are not even assembled until the stage after the gate passes.
+Folding the validator into the formatter rather than placing it after also
+means one agent both writes the set and answers for its structure.
+
+**Enforced by:** `agents/requirements-formatter.md`'s "Verify, then report" and
+`agents/design-formatter.md`'s "Validator re-run" sections, which run
+`validate_requirements.py` and `validate_design.py` (plus
+`validate_traceability.py` in design) as part of the write contract.
+
+Both stages' `SKILL.md` files state the invariant explicitly, and they say it
+in that form because stating it wrongly has cost twice: STO-215 and STO-207
+were both agent files describing a structural check at a point where the files
+it checks did not yet exist.
+
+## Low-confidence artifacts are triaged, never silently accepted
+
+An artifact the pipeline is unsure of is written with `confidence: low` and
+listed in `index.yaml`'s `review_queue` with a one-line reason, so a human can
+triage the uncertain items without opening every file.
+
+Uncertainty is a normal output of both stages, and the design stage inherits
+the requirements stage's queue rather than clearing it — several of those items
+are architecture decisions that correctly landed in the requirements stage's
+out-tray.
+
+**Enforced by:** `agents/design-formatter.md`, which requires `review_queue` to
+agree exactly with the `confidence: low` set and reports a
+`review_queue_count` it must match; and each stage's `SKILL.md`, which surfaces
+the same list in the sign-off summary.
+
+**A contradiction worth knowing about.** `agents/requirements-formatter.md:130`
+says the formatter *MAY* emit `index.yaml`, and that the index *MAY* carry a
+`review_queue`. `skills/requirements/SKILL.md:167` describes the formatter
+writing both as a matter of course, every generated example set has them, and
+`skills/design/SKILL.md` reads that `review_queue` as an input to the design
+stage. Neither structural validator gates the file — both skip `index.yaml` as
+a project-level companion — so nothing catches the disagreement. Filed as
+STO-269 #1; it is recorded here rather than resolved, because which way it
+resolves is a decision, not a typo.
+
+## Generated reference data is committed, and CI fails on drift
+
+Everything under `site/content/_generated/` is derived from the repository's
+own sources, committed alongside them, and re-derived by CI on every pull
+request. A change to a source that is not accompanied by a regenerated file
+reddens CI.
+
+This is the tax that makes the generated half of this site trustworthy. The
+site build itself runs no Python — it reads the committed JSON — so the drift
+gate is the only thing standing between a source edit and a published page
+that contradicts it.
+
+**Enforced by:** `.github/workflows/ci.yml`, in the `Generated reference is not
+stale` step, which runs the exporter's `--check` mode and exits 1 naming each
+stale file.
+
+You will trip it by editing any of these:
+
+- a rule in `lint_design_content.py`, `lint_requirements_content.py` or
+  `validate_traceability.py` — their `RULES` registries are `rules.json`;
+- a field in either JSON Schema — they are `fields.json`;
+- an agent's frontmatter `description:` — the roster is `agents.json`;
+- either `SKILL.md`'s coverage-area list — those are `stages.json`;
+- a stage heading or its hand-off YAML in either orchestrator — those are
+  `pipeline.json`, and the pages in this section.
+
+The fix is one command:
+
+```bash
+python3 site/scripts/export_reference.py
+```
+
+The worked example sets have their own gate, `export_examples.py --check`, and
+their own command, `python3 site/scripts/export_examples.py`.
+
+The exporters fail loudly rather than degrading. A parser that returned an
+empty result when its source moved would produce committed JSON that still
+matched what the parser currently emits, and the gate would stay green over a
+page that had quietly stopped saying anything.
