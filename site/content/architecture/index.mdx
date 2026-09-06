@@ -1,11 +1,124 @@
-# Architecture
+---
+title: How the pipeline runs
+description: The two stages, the agents in each, and what exists on disk at every point.
+---
 
-This section is not written yet.
+import { PipelineMap } from '../../components/PipelineMap'
 
-It will cover the pipeline as a whole — the stage map, the hand-off contracts
-between the fifteen agents, the cross-cutting invariants, and the reasoning
-behind the parts of the design that cannot be reconstructed from the code.
+# How the pipeline runs
 
-Tracked as **STO-220**. Until it lands, the agent files under `agents/` are
-the only complete description of the pipeline, and each one describes only
-itself.
+This section is for someone about to **change** Groundwork — add a specialist,
+move a gate, alter a hand-off shape. If you are about to *run* a stage and want
+to know what it asks you and what it writes, the [user guide](/guide/) is the
+page you want; this one assumes you have read it.
+
+Groundwork is two stages. The requirements stage turns an interview into a
+validated requirement set; the design stage turns that set into an
+architecture. Fourteen agents are dispatched across the two, seven in each,
+and every one of them is a subagent invoked by a skill or by an orchestrator —
+no agent runs itself.
+
+Each stage is an interview, then a generation pipeline, then a write. The
+pipelines are what the maps below describe. The interviews are described in
+the guide, and the write is the last stage of each pipeline rather than a
+phase of its own.
+
+## The requirements stage
+
+`skills/requirements/SKILL.md` runs the interview and then drives
+`requirements-orchestrator` through the stages below. Dispatch order inside it
+is fixed: **`fr-specialist`, then `nfr-specialist`, then
+`constraint-specialist`, then `requirements-critic`, then
+`requirements-formatter`.** The constraint specialist runs third because it
+traces constraints and business rules to concrete FR and NFR IDs, which do not
+exist until the first two have returned. The critic runs once, on the merged
+set. A seventh agent, `dod-generator`, runs after the pipeline and derives
+`definition-of-done.md` from what was written.
+
+<PipelineMap stage="requirements" />
+
+### What exists on disk
+
+**Nothing, until Stage 7.** The interview, the classification, the ID
+allocation, the three specialists and the critique gate all happen in memory,
+passing the typed objects in the hand-off column between them. This is not an
+optimisation — it is why the critic's gate is judgment only. There are no files
+for a structural validator to read at Stage 6, and `assumptions.md` and
+`glossary.md`, which that validator hard-gates, are not assembled until Stage
+6.5, after the gate has passed.
+
+There is also a human sign-off between the pipeline and the write. The stage
+summarises the generated set in conversation and asks before it writes
+anything; corrections are re-dispatched to the owning specialist rather than
+edited into files, because at that point there are no files.
+
+**At Stage 7, everything appears at once.** The formatter writes the atomic
+requirement files into their type subdirectories, plus `assumptions.md`,
+`glossary.md` and an `index.yaml` carrying a `review_queue` of every
+`confidence: low` requirement — and then, as part of the same contract, re-runs
+`validate_requirements.py` against what it has just written. That re-run is the
+pipeline's single structural gate. It is folded into the formatter rather than
+placed after it so that one agent both writes the set and answers for its
+structure.
+
+The advisory content linter runs after the gate, over the same files, and
+`dod-generator` writes `definition-of-done.md` last.
+
+## The design stage
+
+`skills/design/SKILL.md` runs its own interview and then drives
+`design-orchestrator`. The agents it dispatches, in order:
+**`component-specialist`, then `interface-specialist`, then `design-critic`,
+then `adr-generator`, then `c4-generator`, then `design-formatter`.** The
+interface specialist runs second because it needs the component set — it
+designs contracts against the capabilities those components declared. The two
+generators run after the critic's gate has passed and before the formatter,
+which is the whole reason Stages 11 and 12 are retired.
+
+<PipelineMap stage="design" />
+
+### What exists on disk
+
+`.sdlc/requirements/` exists already, and the stage reads it — Stage 2 is the
+orchestrator reading the requirement set once, on everyone's behalf, so that
+six downstream agents do not each re-read it and reach six slightly different
+readings. The stage also runs the requirements validator over that directory as
+an entry gate before any of this starts.
+
+**Nothing exists under `.sdlc/design/` until Stage 10.** Components,
+interfaces, the back-filled `depends_on` edge, the critique gate, the ADR specs
+and the C4 model all live in memory. `c4-generator` at Stage 9.6 is the clearest
+case: it returns a `draft_diagram_model` and writes no file, because the script
+that projects that model into Mermaid has to run against the files on disk, and
+they do not exist yet.
+
+**At Stage 10 the formatter writes, in a fixed order.** The CMP, IF and ADR
+files first, then `assumptions.md` and `drivers.md` — `drivers.md` specifically
+before the diagrams, because the Context view's `traces_from` is parsed out of
+its Architecturally Significant Requirements section — then `generate_c4.py`
+projects the model into `diagrams/`, then the `traces_to.diagrams` back-fill
+onto the components those diagrams name, then `index.yaml`. Only then does the
+formatter re-run `validate_design.py` over everything it wrote, diagrams
+included, followed by `validate_traceability.py` across the requirement↔design
+edge that neither structural validator covers.
+
+One writer, one structural gate, over a set that includes the diagrams.
+
+## The gap at the end of the design map
+
+The design orchestrator's Stages 11 and 12 are retired, their numbers were not
+reused, and the map renders them so that the gap is visible rather than
+inferred. Both held generators that originally ran *after* the formatter; both
+were moved before it, because a post-formatter generator is a second writer
+that re-opens files the validator has already passed and re-runs the gate.
+Renumbering the stages would have made the two orchestrators' stage numbers
+mean different things at different points in the repository's history, which is
+the same reason artifact IDs are never reused.
+
+## Where the map stops
+
+It stops where the built pipeline stops. Requirements and design are what
+exists; the milestones after them are backlog, and this section describes the
+pipeline that runs rather than the one that is planned. Documenting intent as
+though it were behaviour is the specific defect this section was written to
+avoid.
