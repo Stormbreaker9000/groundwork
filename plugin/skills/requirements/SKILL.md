@@ -38,6 +38,10 @@ resolves only when the working directory is a checkout of the groundwork
 repository. For an installed plugin the working directory is the user's own
 project, and the command fails with `No such file or directory`.
 
+When you dispatch to `requirements-orchestrator`, include this absolute path
+in the hand-off — it forwards it on to `requirements-formatter`, which shells
+out to `validate_requirements.py` and has no other way to locate it.
+
 ## Phase 1: Detect Project Context
 
 Before asking anything, determine whether this is a greenfield project or an existing codebase.

@@ -26,6 +26,7 @@ PLUGIN_DIR = os.path.join(REPO_ROOT, "plugin")
 RUNTIME_TOPLEVEL = {
     ".claude-plugin",
     "CLAUDE.md",
+    "LICENSE",
     "agents",
     "commands",
     "hooks",
@@ -52,7 +53,7 @@ def _shipped_paths():
         text=True,
         check=True,
     )
-    paths = result.stdout.split()
+    paths = result.stdout.splitlines()
     if not paths:
         raise AssertionError(
             "git ls-files plugin returned nothing — is plugin/ tracked?"
@@ -99,6 +100,36 @@ def test_an_installed_copy_runs_its_own_validator(tmp_path):
     )
 
     script = install / "skills" / "requirements" / "scripts" / "validate_requirements.py"
+    result = subprocess.run(
+        [sys.executable, str(script), ".sdlc/requirements"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_an_installed_copy_runs_the_sibling_skills_validator_too(tmp_path):
+    # The design skill reaches across to its sibling rather than owning a copy:
+    # `<design-skill>/../requirements/scripts/validate_requirements.py`. Nothing
+    # else exercises that ".." hop from a copied install, so it could silently
+    # stop resolving (a rename, a moved script) without any test noticing.
+    install = tmp_path / "install"
+    shutil.copytree(PLUGIN_DIR, install)
+
+    project = tmp_path / "project"
+    (project / ".sdlc").mkdir(parents=True)
+    shutil.copytree(
+        os.path.join(REPO_ROOT, "tests", "requirements", "fixtures", "valid"),
+        project / ".sdlc" / "requirements",
+    )
+
+    script = (
+        install / "skills" / "design" / ".."
+        / "requirements" / "scripts" / "validate_requirements.py"
+    )
+    assert script.resolve().is_file()
+
     result = subprocess.run(
         [sys.executable, str(script), ".sdlc/requirements"],
         cwd=project,

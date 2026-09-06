@@ -50,6 +50,11 @@ The entry gate at Phase 1 runs the requirements stage's validator, which lives
 in the sibling skill: `<skill-base>/../requirements/scripts/validate_requirements.py`.
 Every other command here is under this skill's own `scripts/`.
 
+When you dispatch to `design-orchestrator`, include this skill's absolute
+`scripts/` path in the hand-off — it forwards it on to `design-formatter`,
+which shells out to `generate_c4.py`, `validate_design.py`, and
+`validate_traceability.py` and has no other way to locate them.
+
 ## Phase 1 — Locate and Read the Input
 
 Find `.sdlc/requirements/`. If it is absent, stop and direct the user to the
