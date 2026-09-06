@@ -2,7 +2,7 @@
 
 The exporter lives one directory up (site/scripts/). Add that directory to
 sys.path so `import export_reference` works regardless of the directory
-pytest is invoked from. Mirrors the two conftests under skills/.
+pytest is invoked from. Mirrors the two conftests under tests/.
 """
 import os
 import sys

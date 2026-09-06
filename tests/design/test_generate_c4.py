@@ -448,7 +448,7 @@ def test_worked_example_generates_a_valid_diagram_set(tmp_path):
     sorted key order."""
     import validate_design as vd
 
-    repo_root = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+    repo_root = os.path.normpath(os.path.join(HERE, "..", ".."))
     example = os.path.join(repo_root, "docs", "requirements", "examples",
                            "tamagotchi", "design")
     out = tmp_path / "design"

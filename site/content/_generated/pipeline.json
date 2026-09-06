@@ -1,7 +1,7 @@
 {
   "design": {
     "agent": "design-orchestrator",
-    "source": "agents/design-orchestrator.md",
+    "source": "plugin/agents/design-orchestrator.md",
     "stages": [
       {
         "contracts": [],
@@ -131,7 +131,7 @@
   },
   "requirements": {
     "agent": "requirements-orchestrator",
-    "source": "agents/requirements-orchestrator.md",
+    "source": "plugin/agents/requirements-orchestrator.md",
     "stages": [
       {
         "contracts": [],

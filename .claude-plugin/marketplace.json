@@ -10,7 +10,7 @@
       "name": "groundwork",
       "description": "SDLC discipline workflows for Claude Code",
       "version": "0.1.0",
-      "source": "./"
+      "source": "./plugin"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 Run from anywhere::
 
-    pytest skills/requirements/scripts/tests
+    pytest tests/requirements
 
 The suite asserts the validator PASSES (exit 0) on the conformant fixture set
 and FAILS (non-zero exit) with a targeted message on each invalid fixture case.
@@ -214,7 +214,7 @@ def test_context_artifact_h3_assumptions_is_rejected(tmp_path):
 # ---------------------------------------------------------------------------
 # Real-world regression: the shipped worked examples
 # ---------------------------------------------------------------------------
-REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 EXAMPLES = os.path.join(REPO_ROOT, "docs", "requirements", "examples")
 
 

@@ -27,7 +27,7 @@
       }
     ],
     "heading": "Six coverage areas the requirement set cannot carry, by construction:",
-    "skill": "skills/design/SKILL.md"
+    "skill": "plugin/skills/design/SKILL.md"
   },
   "requirements": {
     "areas": [
@@ -57,6 +57,6 @@
       }
     ],
     "heading": "**Coverage areas:**",
-    "skill": "skills/requirements/SKILL.md"
+    "skill": "plugin/skills/requirements/SKILL.md"
   }
 }

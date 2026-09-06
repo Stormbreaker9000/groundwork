@@ -2,7 +2,7 @@
 
 Run from anywhere::
 
-    pytest skills/design/scripts/tests
+    pytest tests/design
 
 Each fixture case is a paired `design/` + `requirements/` tree, so every test
 runs the real CLI end to end. Fixture artifacts carry only the fields this
@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures", "traceability")
 # tests/ -> scripts/ -> design/ -> skills/ -> repo root. Resolved from this
 # file so the suite runs from any cwd, the same handling the tool itself uses.
-REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 
 
 def run(case, *extra):

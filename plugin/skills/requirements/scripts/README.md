@@ -53,7 +53,7 @@ dangling); functional requirements declare an `ears_pattern`.
 
 ## Tests
 ```bash
-pytest skills/requirements/scripts/tests
+pytest tests/requirements
 ```
 
 ## Content-quality linter — `lint_requirements_content.py`
