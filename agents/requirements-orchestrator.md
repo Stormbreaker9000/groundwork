@@ -234,7 +234,7 @@ validator's findings and re-dispatch the affected requirements the same way a
 `revise` verdict would, then re-run the critic and the formatter on the
 corrected set.
 
-## Stage 6.5 — Synthesize the context artifact
+## Stage 6.5 — Synthesize the `context_artifact`
 
 Before formatting, assemble a `context_artifact` capturing what the requirements
 set assumes, depends on, and leaves open. This forces externalization of what the

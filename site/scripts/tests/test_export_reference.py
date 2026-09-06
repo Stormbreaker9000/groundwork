@@ -222,3 +222,142 @@ def test_stages_export_raises_when_the_anchor_moves():
     # consistently empty extraction would read as "current" forever.
     with pytest.raises(ValueError, match="anchor not found"):
         export_reference._coverage_areas("no such anchor here", "## Missing")
+
+
+# --- pipeline export (STO-220) ---------------------------------------------
+
+PIPELINE_STAGE_KEYS = {"number", "label", "retired", "contracts"}
+PIPELINE_CONTRACT_KEYS = {"name", "yaml", "transients"}
+
+
+def test_pipeline_export_covers_both_orchestrators():
+    payload = er.export_pipeline()
+    assert set(payload) == {"requirements", "design"}
+    assert payload["requirements"]["agent"] == "requirements-orchestrator"
+    assert payload["design"]["agent"] == "design-orchestrator"
+    for stage in payload.values():
+        for entry in stage["stages"]:
+            assert set(entry) == PIPELINE_STAGE_KEYS
+            for contract in entry["contracts"]:
+                assert set(contract) == PIPELINE_CONTRACT_KEYS
+
+
+def test_pipeline_export_reads_the_real_stage_order():
+    payload = er.export_pipeline()
+    req = [s["number"] for s in payload["requirements"]["stages"]]
+    des = [s["number"] for s in payload["design"]["stages"]]
+    assert req == ["1", "2", "3", "4", "5", "6", "6.5", "7"]
+    assert des == ["1", "2", "3", "4", "5", "6", "7", "8",
+                   "9", "9.5", "9.6", "10", "11", "12"]
+
+
+def test_pipeline_export_names_every_contract():
+    payload = er.export_pipeline()
+
+    def names(stage):
+        return [c["name"] for s in payload[stage]["stages"] for c in s["contracts"]]
+
+    assert names("requirements") == [
+        "generation_brief", "draft_requirements", "critique_report",
+        "context_artifact", "formatter_result",
+    ]
+    assert names("design") == [
+        "generation_brief", "draft_components", "draft_interfaces",
+        "critique_report", "design_context_artifact", "formatter_result",
+    ]
+
+
+def test_pipeline_export_splits_one_fence_holding_two_contracts():
+    # Design Stage 6 defines draft_components and draft_interfaces as two
+    # top-level keys inside a single ```yaml fence. Each contract must get
+    # its own slice, not the whole block twice.
+    payload = er.export_pipeline()
+    stage6 = next(s for s in payload["design"]["stages"] if s["number"] == "6")
+    assert [c["name"] for c in stage6["contracts"]] == [
+        "draft_components", "draft_interfaces",
+    ]
+    components, interfaces = stage6["contracts"]
+    assert components["yaml"].startswith("draft_components:")
+    assert interfaces["yaml"].startswith("draft_interfaces:")
+    assert "draft_interfaces:" not in components["yaml"]
+
+
+def test_pipeline_export_skips_past_a_non_matching_first_block():
+    # Design Stage 8's section opens with a `capability_map:` block; the
+    # contract its heading names is the SECOND block. Taking the first block
+    # after the heading would publish the wrong shape under the right name.
+    payload = er.export_pipeline()
+    stage8 = next(s for s in payload["design"]["stages"] if s["number"] == "8")
+    assert [c["name"] for c in stage8["contracts"]] == ["critique_report"]
+    assert stage8["contracts"][0]["yaml"].startswith("critique_report:")
+
+
+def test_pipeline_export_ignores_a_backticked_field():
+    # Design Stage 7 is "Back-fill `depends_on`" — a field, not a contract,
+    # and it carries no YAML at all. A rule keyed on "the heading contains
+    # backticks" would raise here.
+    payload = er.export_pipeline()
+    stage7 = next(s for s in payload["design"]["stages"] if s["number"] == "7")
+    assert stage7["contracts"] == []
+
+
+def test_pipeline_export_marks_retired_stages():
+    payload = er.export_pipeline()
+    retired = [s["number"] for s in payload["design"]["stages"] if s["retired"]]
+    assert retired == ["11", "12"]
+    assert all(not s["retired"] for s in payload["requirements"]["stages"])
+
+
+def test_pipeline_export_carries_the_transient_markers():
+    payload = er.export_pipeline()
+    stage6 = next(s for s in payload["design"]["stages"] if s["number"] == "6")
+    components, interfaces = stage6["contracts"]
+    assert components["transients"] == ["required_capabilities"]
+    assert interfaces["transients"] == ["consumed_by", "satisfies_capabilities"]
+
+    # M1 has a fourth transient. STO-220's ticket lists three, all from M2;
+    # `applies_to` is declared by constraint-specialist and appears in no
+    # hand-written summary of the pipeline. Pinned here so the count cannot
+    # quietly drop back to the three someone remembered.
+    stage5 = next(s for s in payload["requirements"]["stages"] if s["number"] == "5")
+    assert stage5["contracts"][0]["transients"] == ["applies_to"]
+
+
+def test_pipeline_export_raises_when_a_named_contract_has_no_yaml():
+    # The assert-the-join behaviour. Renaming a contract in the heading but
+    # not in the YAML must fail loudly: a silent skip would shrink the
+    # published table while CI stayed green off self-consistent JSON.
+    text = (
+        "## Stage 4 — Dispatch: the `renamed_brief` hand-off\n\n"
+        "```yaml\ngeneration_brief:\n  scope: all\n```\n"
+    )
+    with pytest.raises(ValueError, match="renamed_brief"):
+        er._parse_pipeline(text, "agents/fake.md")
+
+
+def test_pipeline_export_raises_when_a_file_has_no_stages():
+    with pytest.raises(ValueError, match="no stage headings"):
+        er._parse_pipeline("# Some agent\n\nNo stages here.\n", "agents/fake.md")
+
+
+def test_contract_names_reads_the_heading_not_the_verb():
+    assert er._contract_names("Dispatch: the `generation_brief` hand-off") == [
+        "generation_brief"
+    ]
+    assert er._contract_names(
+        "Collect drafts: the `draft_components` / `draft_interfaces` hand-offs"
+    ) == ["draft_components", "draft_interfaces"]
+    assert er._contract_names("Synthesise the `design_context_artifact`") == [
+        "design_context_artifact"
+    ]
+    assert er._contract_names("Synthesize the `context_artifact`") == [
+        "context_artifact"
+    ]
+    # No "the" before the backticks: a field, not a contract.
+    assert er._contract_names("Back-fill `depends_on`") == []
+    # "the" not followed by backticks: prose, not a contract.
+    assert er._contract_names("Consume the clarification context") == []
+
+
+def test_pipeline_is_one_of_the_gated_outputs():
+    assert "pipeline.json" in export_reference.OUTPUTS

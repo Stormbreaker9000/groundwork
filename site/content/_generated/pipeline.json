@@ -1,0 +1,218 @@
+{
+  "design": {
+    "agent": "design-orchestrator",
+    "source": "agents/design-orchestrator.md",
+    "stages": [
+      {
+        "contracts": [],
+        "label": "Consume the design context",
+        "number": "1",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Read the requirement set",
+        "number": "2",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Identify architecturally significant requirements",
+        "number": "3",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Allocate categorical, zero-padded ID blocks",
+        "number": "4",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "generation_brief",
+            "transients": [],
+            "yaml": "generation_brief:\n  context: { ...full design_context... }\n  requirements_digest:               # the FULL requirement set, not just the ASRs.\n                                     # The orchestrator reads the files once; specialists never re-read.\n                                     # asr_analysis marks the significant subset within it \u2014 the\n                                     # component specialist still needs every FR to decompose against.\n    - id: NFR-002\n      type: non_functional\n      title: string\n      description: string\n      measure: string                # fit_criterion (FR), response measure (NFR), or a CON/BR's\n                                      # own fit_criterion where it states one \u2014 omitted when the\n                                      # requirement genuinely has no measure\n      priority: must | should | could | wont\n      confidence: high | medium | low\n  terms:                              # inherited verbatim from requirements/glossary.md \u2014 the design\n                                     # stage does not author vocabulary, only consumes it (STO-197 A.2)\n    - term: string\n      definition: string\n      aliases: [ string ]\n  asr_analysis: [ ...see Stage 3... ]\n  target_category: component | interface\n  id_block: { prefix: CMP | IF, start: 1 }\n  created_at: \"YYYY-MM-DD\"\n  component_set: [ ... ]             # INTERFACE BRIEF ONLY: components + their capabilities\n"
+          }
+        ],
+        "label": "Dispatch: the `generation_brief` hand-off",
+        "number": "5",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "draft_components",
+            "transients": [
+              "required_capabilities"
+            ],
+            "yaml": "draft_components:\n  - id: CMP-001\n    type: component\n    title: string\n    description: string\n    responsibility: string\n    boundary: internal | external\n    traces_from: [ FR-001, NFR-002 ]\n    traces_to: { adr: [], diagrams: [], code: [], tests: [] }\n    depends_on: []                   # left empty \u2014 the orchestrator fills it\n    required_capabilities:           # \u2190 TRANSIENT\n      - capability: \"take card payments\"\n        rationale: string\n    status: draft\n    confidence: high | medium | low\n    created_at: \"YYYY-MM-DD\"\n    body_markdown: |\n      # ...rendered body...\n"
+          },
+          {
+            "name": "draft_interfaces",
+            "transients": [
+              "consumed_by",
+              "satisfies_capabilities"
+            ],
+            "yaml": "draft_interfaces:\n  - id: IF-001\n    type: interface\n    title: string\n    description: string\n    provider: CMP-002\n    operations: [ { name, summary, interaction } ]   # interaction is PER OPERATION\n    error_modes: [ ... ]\n    consumed_by: [ CMP-001 ]         # \u2190 TRANSIENT, drives the back-fill\n    satisfies_capabilities:          # \u2190 TRANSIENT, proves nothing was dropped\n      - { component: CMP-001, capability: \"take card payments\" }\n    traces_from: [ ... ]\n    traces_to: { adr: [], diagrams: [], code: [], tests: [] }\n    status: draft\n    confidence: high | medium | low\n    created_at: \"YYYY-MM-DD\"\n    body_markdown: |\n      # ...rendered body...\n"
+          }
+        ],
+        "label": "Collect drafts: the `draft_components` / `draft_interfaces` hand-offs",
+        "number": "6",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Back-fill `depends_on`",
+        "number": "7",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "critique_report",
+            "transients": [],
+            "yaml": "critique_report:\n  gate: pass | fail\n  validator:\n    command: \"python3 skills/design/scripts/validate_design.py .sdlc/design\"\n    exit_code: 0\n    summary: string\n  per_artifact:\n    - { id: CMP-001, verdict: pass | revise, findings: [ ...42010 notes... ] }\n  asr_coverage:\n    - requirement_id: NFR-002\n      addressed_by: [ CMP-001, IF-001 ]\n      verdict: addressed | deferred_to_decision | unaddressed\n      note: string                   # optional \u2014 the evidence for this verdict\n  tradeoffs:\n    - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }\n  sensitivity_points:\n    - { point: string, affected_requirements: [ NFR-002 ], note: string }\n"
+          }
+        ],
+        "label": "Critique gate: the `critique_report` hand-off",
+        "number": "8",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "design_context_artifact",
+            "transients": [],
+            "yaml": "design_context_artifact:\n  assumptions:    [ { id: A-1, statement } ]      # architecture's own, e.g. single-writer DB\n  dependencies:   [ { id: D-1, statement } ]\n  open_questions: [ { id: Q-4, statement, owner } ]   # inherited IDs preserved + newly raised\n  drivers:\n    asrs:               [ { requirement_id, driver_type, significance } ]\n    tradeoffs:          [ { decision, gains, costs, affected: [] } ]\n    sensitivity_points: [ { point, affected_requirements: [], note } ]\n"
+          }
+        ],
+        "label": "Synthesise the `design_context_artifact`",
+        "number": "9",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "ADR generation",
+        "number": "9.5",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "C4 diagram generation",
+        "number": "9.6",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "formatter_result",
+            "transients": [],
+            "yaml": "formatter_result:\n  files_written: [ \".sdlc/design/components/CMP-001-...md\", ... ]\n  index: \".sdlc/design/index.yaml\"\n  review_queue_count: 0\n  context_artifact: \".sdlc/design/assumptions.md\"\n  drivers: \".sdlc/design/drivers.md\"\n  diagrams:\n    generated: [ \"DIA-001\", \"DIA-002\", \"DIA-003\" ]\n    exit_code: 0\n  validator_rerun: { exit_code: 0 }\n  traceability_rerun: { exit_code: 0, warnings: [] }\n"
+          }
+        ],
+        "label": "Format: the `formatter_result` hand-off",
+        "number": "10",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "(retired)",
+        "number": "11",
+        "retired": true
+      },
+      {
+        "contracts": [],
+        "label": "(retired)",
+        "number": "12",
+        "retired": true
+      }
+    ]
+  },
+  "requirements": {
+    "agent": "requirements-orchestrator",
+    "source": "agents/requirements-orchestrator.md",
+    "stages": [
+      {
+        "contracts": [],
+        "label": "Consume the clarification context",
+        "number": "1",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Classify needs into BABOK tiers",
+        "number": "2",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Allocate categorical, zero-padded IDs",
+        "number": "3",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "generation_brief",
+            "transients": [],
+            "yaml": "generation_brief:\n  context: { ...full clarification_context... }   # shared, read-only\n  target_category: functional | non_functional | constraint_and_business_rule\n  assigned_needs:                                  # only the needs this specialist owns\n    - tier: business | stakeholder | solution | transition\n      summary: string\n      category: functional | non_functional | constraint | business_rule | use_case\n      source_field: string        # which context field this need came from\n  id_block:                        # reserved IDs this specialist must draw from, in order\n    prefix: FR | NFR | CON | BR | UC\n    start: 1                       # next sequence number to use\n  created_at: \"YYYY-MM-DD\"         # today's date, passed so all files agree\n  global_id_index: [ ...all IDs allocated so far across categories... ]  # for cross-references\n"
+          }
+        ],
+        "label": "Dispatch: the `generation_brief` hand-off",
+        "number": "4",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "draft_requirements",
+            "transients": [
+              "applies_to"
+            ],
+            "yaml": "draft_requirements:\n  - id: FR-001\n    type: functional            # functional | non_functional | constraint | business_rule | use_case\n    tier: solution              # business | stakeholder | solution | transition\n    title: string\n    description: string         # EARS-phrased for FRs\n    rationale: string\n    fit_criterion: string\n    priority: must | should | could | wont\n    confidence: high | medium | low\n    verification_method: test | inspection | analysis | demonstration\n    ears_pattern: ubiquitous | event | state | unwanted | optional | complex   # FRs only; omit otherwise\n    status: draft\n    created_at: \"YYYY-MM-DD\"\n    traces_from: [ ...IDs... ]\n    traces_to: { design: [], tests: [], code: [] }\n    applies_to: [ ...IDs... ]        # \u2190 TRANSIENT, constraint/business_rule only\n    scope: project | epic | story    # reserved; default project\n    parent_scope: null               # reserved\n    body_markdown: |\n      # ...rendered body: EARS description + Gherkin AC (FR), or six-part QAS (NFR)...\n"
+          }
+        ],
+        "label": "Collect drafts: the `draft_requirements` hand-off",
+        "number": "5",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "critique_report",
+            "transients": [],
+            "yaml": "critique_report:\n  gate: pass | fail\n  validator:           # structural-gate result, folded back in from the formatter (Stage 7)\n    command: \"python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements\"\n    exit_code: 0\n    summary: string\n  per_requirement:\n    - id: FR-001\n      verdict: pass | revise\n      findings: [ ...INCOSE/29148 + anti-pattern notes... ]\n  coverage:\n    iso_25010_gaps: [ ...characteristics with no NFR + justification... ]\n  glossary_findings:\n    - term: Decay\n      issue: undefined | circular | vacuous | padding\n      note: string       # what's wrong, and (for undefined) a proposed definition\n"
+          }
+        ],
+        "label": "Critique gate: the `critique_report` hand-off",
+        "number": "6",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "context_artifact",
+            "transients": [],
+            "yaml": "context_artifact:\n  assumptions:            # statements believed true without proof\n    - id: A-1\n      statement: string\n  dependencies:           # external conditions the project relies on\n    - id: D-1\n      statement: string\n  open_questions:         # unresolved items for human follow-up\n    - id: Q-1\n      statement: string\n      owner: string       # who should resolve it (or \"unassigned\")\n  glossary:               # domain vocabulary \u2014 the M2/M3 anchor\n    - term: Decay\n      definition: The reduction of a pet's stat values over elapsed time, applied whether or not the app was running.\n      aliases: [stat decay]\n"
+          }
+        ],
+        "label": "Synthesize the `context_artifact`",
+        "number": "6.5",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "formatter_result",
+            "transients": [],
+            "yaml": "formatter_result:\n  files_written: [ \".sdlc/requirements/functional/FR-001-...md\", ... ]\n  index: \".sdlc/requirements/index.yaml\"\n  review_queue_count: 0\n  context_artifact: \".sdlc/requirements/assumptions.md\"\n  glossary: \".sdlc/requirements/glossary.md\"\n  validator_rerun: { exit_code: 0 }\n  applies_to_backfill:\n    - from: \"CON-001\"\n      into: [ \"NFR-002\" ]\n"
+          }
+        ],
+        "label": "Format: the `formatter_result` hand-off",
+        "number": "7",
+        "retired": false
+      }
+    ]
+  }
+}

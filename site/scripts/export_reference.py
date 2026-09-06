@@ -298,6 +298,132 @@ def export_stages() -> Dict[str, Dict[str, Any]]:
     return out
 
 
+# The two orchestrators are the only files that own hand-off contracts. Every
+# other agent consumes or returns one; neither describes the pipeline.
+PIPELINE_SOURCES = {
+    "requirements": "agents/requirements-orchestrator.md",
+    "design": "agents/design-orchestrator.md",
+}
+
+_STAGE_HEADING_RE = re.compile(r"^## Stage ([\d.]+) — (.+)$", re.M)
+_YAML_BLOCK_RE = re.compile(r"^```yaml\n(.*?)^```", re.M | re.S)
+_TOP_KEY_RE = re.compile(r"^([a-z_][a-z0-9_]*):", re.M)
+_TRANSIENT_RE = re.compile(r"^\s*([a-z_][a-z0-9_]*):.*TRANSIENT", re.M)
+
+# A heading names a contract when a backticked identifier follows the word
+# "the": "Dispatch: the `generation_brief` hand-off", "Synthesise the
+# `design_context_artifact`". Two shapes are deliberately NOT matched.
+# "Back-fill `depends_on`" backticks a field and carries no YAML — keying on
+# "the heading contains backticks" would raise on a stage that was never a
+# contract. "Consume the clarification context" has the word but no backticks,
+# so an intermediate shape is not promoted to a published contract. Keying on
+# "the `x`" rather than on the verb is what lets the two orchestrators keep
+# spelling Synthesi[sz]e differently without either one dropping out.
+_CONTRACT_CLAUSE_RE = re.compile(r"\bthe ((?:`[a-z_][a-z0-9_]*`(?:\s*/\s*)?)+)")
+_BACKTICKED_RE = re.compile(r"`([a-z_][a-z0-9_]*)`")
+
+
+def _contract_names(label: str) -> List[str]:
+    """The contract names a stage heading declares, in heading order."""
+    clause = _CONTRACT_CLAUSE_RE.search(label)
+    return _BACKTICKED_RE.findall(clause.group(1)) if clause else []
+
+
+def _yaml_segments(section: str) -> Dict[str, str]:
+    """Every top-level YAML key in a stage's section, mapped to its slice.
+
+    A section may hold several fenced blocks, and one block may hold several
+    top-level keys — design Stage 6 defines ``draft_components`` and
+    ``draft_interfaces`` in a single fence, and design Stage 8 opens with a
+    ``capability_map`` block before the ``critique_report`` its heading names.
+    Slicing by top-level key rather than by block is what makes both come out
+    right; taking "the first block after the heading" publishes Stage 8's
+    wrong shape under the right name, and nothing downstream could tell.
+    """
+    segments: Dict[str, str] = {}
+    for block in _YAML_BLOCK_RE.findall(section):
+        keys = list(_TOP_KEY_RE.finditer(block))
+        for index, key in enumerate(keys):
+            end = keys[index + 1].start() if index + 1 < len(keys) else len(block)
+            segments[key.group(1)] = block[key.start():end].rstrip() + "\n"
+    return segments
+
+
+def _parse_pipeline(text: str, source: str) -> List[Dict[str, Any]]:
+    """One orchestrator's stages, in file order, with the contracts they own.
+
+    Raises when a heading names a contract its own section does not define.
+    That assertion is the reason this parser exists in this shape: the drift
+    gate only compares committed JSON against current output, so a heading
+    renamed without its YAML would quietly shrink the published table and CI
+    would stay green on JSON that still matched itself. Failing loudly here is
+    the same standard ``_coverage_areas`` holds for its anchor.
+    """
+    headings = list(_STAGE_HEADING_RE.finditer(text))
+    if not headings:
+        raise ValueError(f"no stage headings found in {source}")
+
+    stages: List[Dict[str, Any]] = []
+    for index, heading in enumerate(headings):
+        end = (
+            headings[index + 1].start()
+            if index + 1 < len(headings)
+            else len(text)
+        )
+        section = text[heading.start():end]
+        label = heading.group(2).strip()
+        segments = _yaml_segments(section)
+
+        contracts: List[Dict[str, Any]] = []
+        for name in _contract_names(label):
+            if name not in segments:
+                found = ", ".join(sorted(segments)) or "none"
+                raise ValueError(
+                    f"{source} Stage {heading.group(1)} names `{name}` but its "
+                    f"section defines no such top-level YAML key (found: {found})"
+                )
+            body = segments[name]
+            contracts.append(
+                {
+                    "name": name,
+                    "yaml": body,
+                    "transients": sorted(set(_TRANSIENT_RE.findall(body))),
+                }
+            )
+
+        stages.append(
+            {
+                "number": heading.group(1),
+                "label": label,
+                "retired": label == "(retired)",
+                "contracts": contracts,
+            }
+        )
+    return stages
+
+
+def export_pipeline() -> Dict[str, Any]:
+    """The two stages' agent order and hand-off contracts, from the source.
+
+    Deliberately carries contract YAML as text rather than parsing it. These
+    blocks are illustrative shapes with inline comments — the ``# ← TRANSIENT``
+    markers among them — not loadable documents, and every script in this
+    repository is stdlib-only. Rendering the text verbatim is also what makes
+    the published contract and the agent's own contract the same bytes.
+    """
+    out: Dict[str, Any] = {}
+    for stage, source in PIPELINE_SOURCES.items():
+        path = os.path.join(REPO_ROOT, source)
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        out[stage] = {
+            "agent": os.path.basename(source)[:-len(".md")],
+            "source": source,
+            "stages": _parse_pipeline(text, source),
+        }
+    return out
+
+
 def _serialize(payload: Any) -> str:
     """The single definition of what a committed reference file contains.
 
@@ -321,6 +447,7 @@ OUTPUTS = {
     "fields.json": export_fields,
     "agents.json": export_agents,
     "stages.json": export_stages,
+    "pipeline.json": export_pipeline,
 }
 
 
