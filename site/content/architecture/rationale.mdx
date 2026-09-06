@@ -1,0 +1,138 @@
+---
+title: Why it is shaped this way
+description: The decisions that cannot be reconstructed from the code, and the failures that produced them.
+---
+
+# Why it is shaped this way
+
+Everything else in this section can be checked against a file. This page
+cannot: it is the reasoning behind decisions that look arbitrary from the
+outside and are not, recorded while the reasoning is still recoverable.
+
+Each one is stated with the failure that produced it, because a decision
+without its failure reads as taste, and taste is the first thing a later
+contributor overrides.
+
+## Why the design stage runs its own interview
+
+It looks like the requirements interview repeated. It is not, and the reason
+is structural: the requirement set cannot carry technology context, so the
+design stage either asks or invents.
+
+The precise form of that claim matters, because the loose form is false. No
+*requirement* in `.sdlc/requirements/` commits to a technology — the
+requirements content linter treats implementation bias at the business and
+stakeholder tiers as a defect, and the critic holds the line by judgment at
+its gate. But `.sdlc/requirements/` is not only requirements. The
+project-level companions carry technology words on purpose: the tamagotchi
+example's `assumptions.md` has a `Q-4` asking which of Electron, Tauri or a
+native toolkit to choose. An open question naming the options is exactly what
+an unresolved technology decision should look like at that stage.
+
+So the honest statement is: the requirement set names no technology as a
+requirement, and hands forward the technology questions it could not close.
+Which still leaves the design stage with two options, ask or invent, and the
+project's own history settled which — an earlier build took an unexamined
+Electron recommendation and paid to rip it out later.
+
+`skills/design/SKILL.md:105-106` currently states the broader version, that
+nothing in `.sdlc/requirements/` says "Tauri" or "Postgres". Its own worked
+example contradicts it. Filed as STO-269 #3; the narrow true form is what this
+page and the [design stage guide](/guide/design-stage/) publish.
+
+## Why the component/interface cycle is broken with prose capabilities
+
+A component declares `depends_on: [IF-…]` and an interface declares
+`provider: CMP-…`, so whichever specialist runs first would have to cite IDs
+the other has not allocated. The pipeline breaks that cycle with transient
+capability fields written in prose, and the orchestrator does the wiring
+mechanically afterwards.
+
+This is the pipeline's least self-evident decision and the one most likely to
+be "simplified" by someone who has not hit the cycle. The full account, with
+what each specialist returns and where each transient dies, is on the
+[hand-off contracts page](/architecture/contracts/#why-the-shapes-are-these-shapes).
+
+## Why structural gates run at the formatter, not the critic
+
+Because the artifacts do not exist when the critic runs.
+
+That is the whole reason, and it is worth stating flatly, because the
+alternative sounds better on paper: catch structural problems before writing
+anything. It cannot be done. At gate time the set is an in-memory object; in
+the requirements stage, two of the files the validator hard-gates —
+`assumptions.md` and `glossary.md` — are not assembled until the stage *after*
+the gate passes, precisely so the critic's glossary findings can feed the
+merge.
+
+The consequence is the division on the [invariants page](/architecture/invariants/):
+the critic owns judgment, the formatter owns structure, and the formatter both
+writes the set and answers for it. Two agent files have stated it wrongly and
+been fixed — STO-215 and STO-207 — which is why it is written down in three
+places now.
+
+## Why every artifact is atomic
+
+One artifact per file, rather than one document per stage. Four things follow
+from it, and none of them survive the document form.
+
+A diff shows which artifact changed. A traceability edge addresses a file, so
+`validate_traceability.py` can resolve `CMP-003 → FR-002` rather than
+searching prose for a mention. A critic can reject one requirement and
+re-dispatch it without re-litigating everything around it. And a schema can
+gate every artifact identically, because every artifact is the same shape:
+one YAML frontmatter block and a body.
+
+The cost is real — a requirement set is dozens of files, and reading one
+end-to-end means reading a directory. `index.yaml` exists to make that
+cheaper, and is derived rather than authoritative for exactly that reason.
+
+## What the standards buy
+
+Groundwork does not adopt standards for their authority. Each one is doing a
+specific job, and a contributor changing a specialist needs to know which job
+that specialist is answering to.
+
+**BABOK tiers** (business → stakeholder → solution → transition) stop a
+stakeholder's wish from being written as a system behaviour. The tier is the
+question "whose statement is this?", answered before anything else, and it is
+what keeps a business goal from arriving as an untestable FR.
+
+**EARS** gives functional requirements five sentence patterns instead of free
+prose. The value is not the grammar; it is that choosing the wrong pattern is
+visible, and an ambiguous trigger has nowhere to hide once the sentence has to
+name one.
+
+**INCOSE / ISO 29148** is the per-requirement quality checklist the
+requirements critic applies — unambiguous, verifiable, singular, feasible. It
+is what the critic's first phase *is*, rather than a general standard of care.
+
+**ISO/IEC 25010:2023** gives the NFR specialist nine quality characteristics
+to walk, plus the extensions Groundwork adds (observability, deployability,
+compliance, cost). It buys protection against omission: the failure mode for
+non-functional requirements is not writing them badly, it is not thinking of
+them at all.
+
+**ISO/IEC/IEEE 42010** is the architecture-description standard behind the
+design critic's per-artifact gate — that an artifact states its concerns and
+is intelligible to the people who hold them.
+
+**ATAM**, in the lightweight form the critic runs, requires each
+architecturally significant requirement to be addressed with its tradeoffs and
+sensitivity points named. It buys the sentence a decomposition usually
+omits: what this choice costs, and which requirement moves if it changes.
+
+**MADR 4.0** is the ADR format. Its value is the rejected options: a decision
+record with one option is a description, and the ADR generator skips an entry
+whose alternatives cannot be recovered rather than manufacturing them.
+
+**C4** gives the diagrams three fixed altitudes — context, container,
+component — so a diagram cannot mix them. The views are projected from the
+component graph by `generate_c4.py`, not drawn, which means they cannot
+disagree with the artifacts they are drawn from.
+
+---
+
+This page is the *why*. For the runnable version — what each stage asks, what
+it writes, and what to do when a gate fails — the [user guide](/guide/) is the
+place to start.

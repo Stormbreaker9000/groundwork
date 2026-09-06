@@ -1,5 +1,6 @@
 export default {
   index: 'How the pipeline runs',
   contracts: 'Hand-off contracts',
-  invariants: 'Invariants'
+  invariants: 'Invariants',
+  rationale: 'Why it is shaped this way'
 }
