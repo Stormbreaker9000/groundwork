@@ -113,7 +113,7 @@ not something you consume at gate time.
 ## Gate D — Where the structural gate lives
 
 You do not run the structural validator. `python3
-skills/requirements/scripts/validate_requirements.py .sdlc/requirements` is
+<scripts>/validate_requirements.py .sdlc/requirements` is
 owned by `requirements-formatter.md`, which re-runs it immediately after
 writing every file (see that file's "Verify, then report" section) — that run,
 reported back as `formatter_result.validator_rerun`, **is** the structural gate
@@ -147,7 +147,7 @@ Return the `critique_report` exactly as defined in
 critique_report:
   gate: pass | fail            # fail if any requirement needs revision
   validator:                   # structural-gate result AS REPORTED BACK BY THE FORMATTER
-    command: "python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements"
+    command: "python3 <scripts>/validate_requirements.py .sdlc/requirements"
     exit_code: 0
     summary: string
   per_requirement:

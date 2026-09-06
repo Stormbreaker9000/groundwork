@@ -334,7 +334,7 @@ def test_two_independent_cycles_reported_separately():
 # ---------------------------------------------------------------------------
 # The shipped worked example (STO-208 spec D7)
 # ---------------------------------------------------------------------------
-REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 TAMAGOTCHI_DESIGN = os.path.join(
     REPO_ROOT, "docs", "requirements", "examples", "tamagotchi", "design"
 )
@@ -346,6 +346,12 @@ def test_shipped_tamagotchi_example_has_no_error_findings():
     # deviations to be chosen rather than absent. No rule emits `error` today;
     # this is the pin that catches a future rule promoted to `error` silently
     # invalidating the shipped example.
+    #
+    # A wrong REPO_ROOT must fail this test, not pass it vacuously: lint_dir
+    # on a missing directory returns [], which satisfies the assertion below
+    # for the wrong reason. STO-257 moved this file two directory levels
+    # closer to the repo root and broke exactly this guard silently once.
+    assert os.path.isdir(TAMAGOTCHI_DESIGN), f"missing shipped example dir: {TAMAGOTCHI_DESIGN}"
     findings = ldc.lint_dir(TAMAGOTCHI_DESIGN)
     assert [f for f in findings if f.severity == "error"] == []
 
@@ -355,6 +361,7 @@ def test_shipped_tamagotchi_example_survives_without_pyyaml(monkeypatch):
     # may differ in fidelity under the stdlib fallback parser, but the run
     # itself must not raise. Mirrors test_validate_design.py's
     # test_valid_set_passes_in_fallback_mode.
+    assert os.path.isdir(TAMAGOTCHI_DESIGN), f"missing shipped example dir: {TAMAGOTCHI_DESIGN}"
     monkeypatch.setattr(ldc.vd.core, "HAVE_YAML", False)
     findings = ldc.lint_dir(TAMAGOTCHI_DESIGN)
     assert [f for f in findings if f.severity == "error"] == []

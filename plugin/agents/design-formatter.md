@@ -148,9 +148,15 @@ view's `traces_from` is read from its ASR section — write the forwarded
 `draft_diagram_model` to a temporary JSON file and run:
 
 ```bash
-python3 skills/design/scripts/generate_c4.py .sdlc/design \
+python3 <scripts>/generate_c4.py .sdlc/design \
   --model /tmp/diagram-model.json --created-at <the set's created_at>
 ```
+
+`<scripts>` is the absolute scripts directory named in your dispatch. If your
+dispatch did not name one, **stop and report that** rather than guessing a
+relative path. A repo-relative path resolves only inside a groundwork checkout,
+so the guess turns a locating failure into a confusing `No such file or
+directory` at the exact moment you are supposed to be gating the write.
 
 Exit 1 means the model contradicts the design set: report it to the
 orchestrator, which re-dispatches to the `c4-generator`. Do not repair the
@@ -413,7 +419,7 @@ re-run, against the files you just wrote, is where the structural gate for
 the whole pipeline actually happens:
 
 ```bash
-python3 skills/design/scripts/validate_design.py .sdlc/design
+python3 <scripts>/validate_design.py .sdlc/design
 ```
 
 Record its exit code in `formatter_result.validator_rerun.exit_code`. A
@@ -429,7 +435,7 @@ Then, and **only if `validate_design.py` exited 0**, run the cross-artifact
 validator:
 
 ```bash
-python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+python3 <scripts>/validate_traceability.py .sdlc/design \
   --requirements .sdlc/requirements
 ```
 

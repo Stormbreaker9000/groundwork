@@ -31,6 +31,30 @@ skill produces design artifacts only — component and interface specs, ADRs,
 plus `assumptions.md` and `drivers.md`. Nothing under `.sdlc/design/` is
 executable.
 
+## Locating the scripts
+
+Every command below runs a script that ships with this plugin. Skill invocation
+gives you this skill's base directory as an absolute path — the line reading
+`Base directory for this skill: …`. The scripts are in `scripts/` beneath it.
+
+Substitute that absolute path for `<skill-base>` in each command block before
+running it, and substitute it **per block**: shell state does not persist
+between tool calls, so a variable set in one command is gone by the next.
+
+Do not "simplify" it to a repo-relative path. `skills/requirements/scripts/…`
+resolves only when the working directory is a checkout of the groundwork
+repository. For an installed plugin the working directory is the user's own
+project, and the command fails with `No such file or directory`.
+
+The entry gate at Phase 1 runs the requirements stage's validator, which lives
+in the sibling skill: `<skill-base>/../requirements/scripts/validate_requirements.py`.
+Every other command here is under this skill's own `scripts/`.
+
+When you dispatch to `design-orchestrator`, include this skill's absolute
+`scripts/` path in the hand-off — it forwards it on to `design-formatter`,
+which shells out to `generate_c4.py`, `validate_design.py`, and
+`validate_traceability.py` and has no other way to locate them.
+
 ## Phase 1 — Locate and Read the Input
 
 Find `.sdlc/requirements/`. If it is absent, stop and direct the user to the
@@ -39,7 +63,7 @@ Find `.sdlc/requirements/`. If it is absent, stop and direct the user to the
 Run the entry gate:
 
 ```bash
-python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
+python3 <skill-base>/../requirements/scripts/validate_requirements.py .sdlc/requirements
 ```
 
 A non-zero exit stops the stage: designing against a structurally invalid
@@ -340,7 +364,7 @@ critic's earlier `gate: pass` was judgment only (per-artifact quality and ASR
 coverage); it never ran this command.
 
 ```bash
-python3 skills/design/scripts/validate_design.py .sdlc/design
+python3 <skill-base>/scripts/validate_design.py .sdlc/design
 ```
 
 The validator MUST exit 0. If it exits non-zero, do not treat the write as
@@ -354,7 +378,7 @@ The formatter then runs the cross-artifact validator, which resolves the
 requirement↔design edge neither structural validator checks:
 
 ```bash
-python3 skills/design/scripts/validate_traceability.py .sdlc/design \
+python3 <skill-base>/scripts/validate_traceability.py .sdlc/design \
   --requirements .sdlc/requirements
 ```
 
@@ -408,7 +432,7 @@ not exist yet. Route anything it turns up back through the critique loop to the
 owning specialist rather than editing the written files by hand:
 
 ```bash
-python3 skills/design/scripts/lint_design_content.py .sdlc/design
+python3 <skill-base>/scripts/lint_design_content.py .sdlc/design
 ```
 
 It always exits 0. `dependency-cycle` is the finding most worth acting on: it

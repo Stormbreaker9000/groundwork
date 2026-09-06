@@ -245,7 +245,7 @@ def test_mentions_cat_does_not_match_inside_category():
     assert not lc._mentions("assign a Category to each item", "Cat")
 
 
-REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 EXAMPLES = os.path.join(REPO_ROOT, "docs", "requirements", "examples")
 
 
@@ -255,7 +255,13 @@ def test_shipped_example_has_no_error_findings(name):
     the GDPR set carries one known `passive-nameless` warn, so `clean` is
     not a state this pins. This catches a future rule promoted to `error`
     silently invalidating a published set."""
-    findings = lc.lint_dir(os.path.join(EXAMPLES, name, "requirements"))
+    example_dir = os.path.join(EXAMPLES, name, "requirements")
+    # A wrong REPO_ROOT must fail this test, not pass it vacuously: lint_dir
+    # on a missing directory returns [], which satisfies the assertion below
+    # for the wrong reason. STO-257 moved this file two directory levels
+    # closer to the repo root and broke exactly this guard silently once.
+    assert os.path.isdir(example_dir), f"missing shipped example dir: {example_dir}"
+    findings = lc.lint_dir(example_dir)
     assert [f for f in findings if f.severity == "error"] == []
 
 

@@ -17,7 +17,7 @@ artifacts.
 
 `validate_design.py` needs `pyyaml` and `jsonschema` for full validation and
 degrades to a stdlib fallback without them; see
-`skills/requirements/scripts/README.md` for the install and fallback details,
+`plugin/skills/requirements/scripts/README.md` for the install and fallback details,
 which are shared. `validate_traceability.py` does no schema validation, so it
 only needs frontmatter parsing — the same fallback applies, and all three
 tools print a `reduced (stdlib fallback) mode` warning when it is in use.
@@ -119,7 +119,7 @@ shape belong to the two structural validators.
 ## Running the tests
 
 ```bash
-pytest skills/design/scripts/tests
+pytest tests/design
 ```
 
 ## Content-quality linter — `lint_design_content.py`

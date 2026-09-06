@@ -2,7 +2,7 @@
 
 Run from anywhere::
 
-    pytest skills/design/scripts/tests
+    pytest tests/design
 
 The suite asserts the validator PASSES (exit 0) on the conformant fixture set
 and FAILS (non-zero exit) with a targeted message on each invalid fixture case,
@@ -20,7 +20,7 @@ FIXTURES = os.path.join(HERE, "fixtures")
 VALID_DIR = os.path.join(FIXTURES, "valid")
 INVALID_DIR = os.path.join(FIXTURES, "invalid")
 SCHEMA = vd.default_schema_path()
-REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 
 
 def run(design_dir):

@@ -32,11 +32,17 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.normpath(os.path.join(_HERE, "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "site", "content", "_generated")
 
+# The plugin runtime moved under plugin/ in STO-257 so that docs/, site/ and
+# the pytest fixtures stop shipping to every install. REPO_ROOT still means
+# the repository; everything the plugin owns hangs off PLUGIN_ROOT, so a
+# future rename is one line.
+PLUGIN_ROOT = os.path.join(REPO_ROOT, "plugin")
+
 # The linters bootstrap lib/ onto sys.path themselves when imported; this only
 # has to make the linter modules findable.
 for _scripts_dir in (
-    os.path.join(REPO_ROOT, "skills", "design", "scripts"),
-    os.path.join(REPO_ROOT, "skills", "requirements", "scripts"),
+    os.path.join(PLUGIN_ROOT, "skills", "design", "scripts"),
+    os.path.join(PLUGIN_ROOT, "skills", "requirements", "scripts"),
 ):
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
@@ -72,10 +78,10 @@ def export_rules() -> Dict[str, Any]:
 
 SCHEMAS = {
     "design": os.path.join(
-        REPO_ROOT, "skills", "design", "schema", "design.schema.json"
+        PLUGIN_ROOT, "skills", "design", "schema", "design.schema.json"
     ),
     "requirements": os.path.join(
-        REPO_ROOT, "skills", "requirements", "schema", "requirement.schema.json"
+        PLUGIN_ROOT, "skills", "requirements", "schema", "requirement.schema.json"
     ),
 }
 
@@ -212,7 +218,7 @@ def export_agents() -> List[Dict[str, str]]:
     field. Per-file parsing is delegated to ``_parse_agent_file`` — see its
     docstring for what the extraction does and does not cover.
     """
-    agents_dir = os.path.join(REPO_ROOT, "agents")
+    agents_dir = os.path.join(PLUGIN_ROOT, "agents")
     out: List[Dict[str, str]] = []
     for filename in sorted(os.listdir(agents_dir)):
         if not filename.endswith(".md"):
@@ -230,11 +236,11 @@ def export_agents() -> List[Dict[str, str]]:
 # introduction differently and neither is a heading.
 STAGE_SOURCES = {
     "requirements": {
-        "skill": "skills/requirements/SKILL.md",
+        "skill": "plugin/skills/requirements/SKILL.md",
         "heading": "**Coverage areas:**",
     },
     "design": {
-        "skill": "skills/design/SKILL.md",
+        "skill": "plugin/skills/design/SKILL.md",
         "heading": (
             "Six coverage areas the requirement set cannot carry, "
             "by construction:"
@@ -301,8 +307,8 @@ def export_stages() -> Dict[str, Dict[str, Any]]:
 # The two orchestrators are the only files that own hand-off contracts. Every
 # other agent consumes or returns one; neither describes the pipeline.
 PIPELINE_SOURCES = {
-    "requirements": "agents/requirements-orchestrator.md",
-    "design": "agents/design-orchestrator.md",
+    "requirements": "plugin/agents/requirements-orchestrator.md",
+    "design": "plugin/agents/design-orchestrator.md",
 }
 
 _STAGE_HEADING_RE = re.compile(r"^## Stage ([\d.]+) — (.+)$", re.M)

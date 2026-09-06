@@ -95,7 +95,7 @@ def test_requirement_conditional_required_without_added_properties():
 def test_export_agents_covers_every_agent_file():
     agents = er.export_agents()
     on_disk = [
-        n[:-3] for n in os.listdir(os.path.join(er.REPO_ROOT, "agents"))
+        n[:-3] for n in os.listdir(os.path.join(er.PLUGIN_ROOT, "agents"))
         if n.endswith(".md")
     ]
     assert len(agents) == len(on_disk) == 15

@@ -1,7 +1,7 @@
 {
   "design": {
     "agent": "design-orchestrator",
-    "source": "agents/design-orchestrator.md",
+    "source": "plugin/agents/design-orchestrator.md",
     "stages": [
       {
         "contracts": [],
@@ -72,7 +72,7 @@
           {
             "name": "critique_report",
             "transients": [],
-            "yaml": "critique_report:\n  gate: pass | fail\n  validator:\n    command: \"python3 skills/design/scripts/validate_design.py .sdlc/design\"\n    exit_code: 0\n    summary: string\n  per_artifact:\n    - { id: CMP-001, verdict: pass | revise, findings: [ ...42010 notes... ] }\n  asr_coverage:\n    - requirement_id: NFR-002\n      addressed_by: [ CMP-001, IF-001 ]\n      verdict: addressed | deferred_to_decision | unaddressed\n      note: string                   # optional \u2014 the evidence for this verdict\n  tradeoffs:\n    - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }\n  sensitivity_points:\n    - { point: string, affected_requirements: [ NFR-002 ], note: string }\n"
+            "yaml": "critique_report:\n  gate: pass | fail\n  validator:\n    command: \"python3 <scripts>/validate_design.py .sdlc/design\"\n    exit_code: 0\n    summary: string\n  per_artifact:\n    - { id: CMP-001, verdict: pass | revise, findings: [ ...42010 notes... ] }\n  asr_coverage:\n    - requirement_id: NFR-002\n      addressed_by: [ CMP-001, IF-001 ]\n      verdict: addressed | deferred_to_decision | unaddressed\n      note: string                   # optional \u2014 the evidence for this verdict\n  tradeoffs:\n    - { decision: string, gains: string, costs: string, affected: [ NFR-002, CON-001 ] }\n  sensitivity_points:\n    - { point: string, affected_requirements: [ NFR-002 ], note: string }\n"
           }
         ],
         "label": "Critique gate: the `critique_report` hand-off",
@@ -131,7 +131,7 @@
   },
   "requirements": {
     "agent": "requirements-orchestrator",
-    "source": "agents/requirements-orchestrator.md",
+    "source": "plugin/agents/requirements-orchestrator.md",
     "stages": [
       {
         "contracts": [],
@@ -182,7 +182,7 @@
           {
             "name": "critique_report",
             "transients": [],
-            "yaml": "critique_report:\n  gate: pass | fail\n  validator:           # structural-gate result, folded back in from the formatter (Stage 7)\n    command: \"python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements\"\n    exit_code: 0\n    summary: string\n  per_requirement:\n    - id: FR-001\n      verdict: pass | revise\n      findings: [ ...INCOSE/29148 + anti-pattern notes... ]\n  coverage:\n    iso_25010_gaps: [ ...characteristics with no NFR + justification... ]\n  glossary_findings:\n    - term: Decay\n      issue: undefined | circular | vacuous | padding\n      note: string       # what's wrong, and (for undefined) a proposed definition\n"
+            "yaml": "critique_report:\n  gate: pass | fail\n  validator:           # structural-gate result, folded back in from the formatter (Stage 7)\n    command: \"python3 <scripts>/validate_requirements.py .sdlc/requirements\"\n    exit_code: 0\n    summary: string\n  per_requirement:\n    - id: FR-001\n      verdict: pass | revise\n      findings: [ ...INCOSE/29148 + anti-pattern notes... ]\n  coverage:\n    iso_25010_gaps: [ ...characteristics with no NFR + justification... ]\n  glossary_findings:\n    - term: Decay\n      issue: undefined | circular | vacuous | padding\n      note: string       # what's wrong, and (for undefined) a proposed definition\n"
           }
         ],
         "label": "Critique gate: the `critique_report` hand-off",

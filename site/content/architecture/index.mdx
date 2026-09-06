@@ -25,7 +25,7 @@ phase of its own.
 
 ## The requirements stage
 
-`skills/requirements/SKILL.md` runs the interview and then drives
+`plugin/skills/requirements/SKILL.md` runs the interview and then drives
 `requirements-orchestrator` through the stages below. Dispatch order inside it
 is fixed: **`fr-specialist`, then `nfr-specialist`, then
 `constraint-specialist`, then `requirements-critic`, then
@@ -66,7 +66,7 @@ The advisory content linter runs after the gate, over the same files, and
 
 ## The design stage
 
-`skills/design/SKILL.md` runs its own interview and then drives
+`plugin/skills/design/SKILL.md` runs its own interview and then drives
 `design-orchestrator`. The agents it dispatches, in order:
 **`component-specialist`, then `interface-specialist`, then `design-critic`,
 then `adr-generator`, then `c4-generator`, then `design-formatter`.** The

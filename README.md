@@ -89,12 +89,15 @@ That publishes to the real URL and stays there until the next push to `main` red
 
 ```
 groundwork/
-├── .claude-plugin/       # Plugin manifests
-├── skills/               # Markdown instruction sets (skill triggers)
-├── commands/             # Slash commands (/groundwork)
-├── hooks/                # Event-driven scripts (SessionStart)
-├── agents/               # Dispatched subagents
-├── lib/                  # Shared Python modules used by the linting/validation scripts
+├── .claude-plugin/       # Marketplace manifest — points at plugin/
+├── plugin/               # Everything that ships to an install
+│   ├── .claude-plugin/   # Plugin manifest
+│   ├── skills/           # Markdown instruction sets (skill triggers)
+│   ├── commands/         # Slash commands (/groundwork)
+│   ├── hooks/            # Event-driven scripts (SessionStart)
+│   ├── agents/           # Dispatched subagents
+│   └── lib/              # Shared Python modules used by the linting/validation scripts
+├── tests/                # Pytest suites and fixtures — repository-only
 ├── site/                 # Nextra documentation site, published to GitHub Pages
 ├── assets/               # Brand assets — the plumb-bob mark, icon and social preview
 ├── docs/                 # Internal planning docs (specs, plans, research) — not the published site

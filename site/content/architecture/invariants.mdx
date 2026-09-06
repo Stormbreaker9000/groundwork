@@ -23,10 +23,10 @@ Atomicity is what makes the rest of the pipeline work. A traceability edge
 addresses a file; a critic can reject one requirement without re-opening a
 document; a diff shows which artifact changed rather than which paragraph.
 
-**Enforced by:** `agents/requirements-formatter.md` and
-`agents/design-formatter.md` — the two agents that decide the path and the
+**Enforced by:** `plugin/agents/requirements-formatter.md` and
+`plugin/agents/design-formatter.md` — the two agents that decide the path and the
 filename, per type. The structural validators enforce the *contents* of that
-arrangement: `lib/artifact_core.py`'s `parse_frontmatter` reads exactly one
+arrangement: `plugin/lib/artifact_core.py`'s `parse_frontmatter` reads exactly one
 frontmatter block per file, `discover_files` treats every `.md` that is not a
 named project-level companion as an atomic artifact, and
 `cross_file_checks` in each validator rejects a duplicate ID across the set.
@@ -45,12 +45,12 @@ agreeing. If two specialists could both mint IDs they would eventually mint the
 same one, and neither would be wrong.
 
 **Enforced by:** the schemas, structurally —
-`skills/requirements/schema/requirement.schema.json` pins
+`plugin/skills/requirements/schema/requirement.schema.json` pins
 `^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$`, and each validator's
 `cross_file_checks` rejects an ID whose prefix disagrees with its own `type`
 field. Sole allocation is an orchestrator instruction:
-`agents/requirements-orchestrator.md` Stage 3 and
-`agents/design-orchestrator.md` Stage 4, which states it as "You are the only
+`plugin/agents/requirements-orchestrator.md` Stage 3 and
+`plugin/agents/design-orchestrator.md` Stage 4, which states it as "You are the only
 ID authority" and makes an `IF-` ID appearing in a component draft a
 re-dispatch rather than a repair.
 
@@ -64,8 +64,8 @@ An ID that means one thing in a commit and another thing later makes every
 reference to it ambiguous — including references in code, tests and
 conversation, which no validator can see.
 
-**Enforced by:** `agents/requirements-orchestrator.md:103` and
-`agents/design-orchestrator.md:177`, as an instruction. It is not gated,
+**Enforced by:** `plugin/agents/requirements-orchestrator.md:103` and
+`plugin/agents/design-orchestrator.md:177`, as an instruction. It is not gated,
 because a validator that could enforce it would need the history rather than
 the set. The design orchestrator's [retired Stages 11 and
 12](/architecture/) are the same principle applied to stage numbers, and are
@@ -83,8 +83,8 @@ hard-gates — are not even assembled until the stage after the gate passes.
 Folding the validator into the formatter rather than placing it after also
 means one agent both writes the set and answers for its structure.
 
-**Enforced by:** `agents/requirements-formatter.md`'s "Verify, then report" and
-`agents/design-formatter.md`'s "Validator re-run" sections, which run
+**Enforced by:** `plugin/agents/requirements-formatter.md`'s "Verify, then report" and
+`plugin/agents/design-formatter.md`'s "Validator re-run" sections, which run
 `validate_requirements.py` and `validate_design.py` (plus
 `validate_traceability.py` in design) as part of the write contract.
 
@@ -104,16 +104,16 @@ the requirements stage's queue rather than clearing it — several of those item
 are architecture decisions that correctly landed in the requirements stage's
 out-tray.
 
-**Enforced by:** `agents/design-formatter.md`, which requires `review_queue` to
+**Enforced by:** `plugin/agents/design-formatter.md`, which requires `review_queue` to
 agree exactly with the `confidence: low` set and reports a
 `review_queue_count` it must match; and each stage's `SKILL.md`, which surfaces
 the same list in the sign-off summary.
 
-**A contradiction worth knowing about.** `agents/requirements-formatter.md:130`
+**A contradiction worth knowing about.** `plugin/agents/requirements-formatter.md:130`
 says the formatter *MAY* emit `index.yaml`, and that the index *MAY* carry a
-`review_queue`. `skills/requirements/SKILL.md:167` describes the formatter
+`review_queue`. `plugin/skills/requirements/SKILL.md:182` describes the formatter
 writing both as a matter of course, every generated example set has them, and
-`skills/design/SKILL.md` reads that `review_queue` as an input to the design
+`plugin/skills/design/SKILL.md` reads that `review_queue` as an input to the design
 stage. Neither structural validator gates the file — both skip `index.yaml` as
 a project-level companion — so nothing catches the disagreement. Filed as
 STO-269 #1; it is recorded here rather than resolved, because which way it

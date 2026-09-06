@@ -39,15 +39,21 @@ OUT_DIR = os.path.join(
     REPO_ROOT, "site", "content", "guide", "examples"
 )
 
+# The plugin runtime moved under plugin/ in STO-257 so that docs/, site/ and
+# the pytest fixtures stop shipping to every install. REPO_ROOT still means
+# the repository; everything the plugin owns hangs off PLUGIN_ROOT, so a
+# future rename is one line.
+PLUGIN_ROOT = os.path.join(REPO_ROOT, "plugin")
+
 # Frontmatter is parsed with the validators' own parser, so this script sees
 # exactly what the gates see. artifact_core lives in lib/ and is imported
 # directly here rather than through a validator, so lib/ goes on the path
 # explicitly — the validators bootstrap it for themselves, which does not
 # help a module that never imports one.
 for _dir in (
-    os.path.join(REPO_ROOT, "lib"),
-    os.path.join(REPO_ROOT, "skills", "design", "scripts"),
-    os.path.join(REPO_ROOT, "skills", "requirements", "scripts"),
+    os.path.join(PLUGIN_ROOT, "lib"),
+    os.path.join(PLUGIN_ROOT, "skills", "design", "scripts"),
+    os.path.join(PLUGIN_ROOT, "skills", "requirements", "scripts"),
 ):
     if _dir not in sys.path:
         sys.path.insert(0, _dir)
