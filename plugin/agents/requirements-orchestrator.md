@@ -197,7 +197,7 @@ Pass the merged set, along with the `terms` siblings collected in Stage 5, to
 critique_report:
   gate: pass | fail
   validator:           # structural-gate result, folded back in from the formatter (Stage 7)
-    command: "python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements"
+    command: "python3 <scripts>/validate_requirements.py .sdlc/requirements"
     exit_code: 0
     summary: string
   per_requirement:
@@ -297,8 +297,14 @@ and `.sdlc/requirements/glossary.md`. The structural validator hard-gates
 ## Stage 7 — Format: the `formatter_result` hand-off
 
 On a passing gate, hand the approved set to `requirements-formatter`, `applies_to`
-still attached wherever the constraint specialist set it. The formatter performs
-the `applies_to` back-fill — writing each constraint/business-rule's ID into the
+still attached wherever the constraint specialist set it.
+
+Include the absolute scripts directory the skill resolved in that dispatch. The
+formatter shells out to `validate_requirements.py` as part of its own contract
+and has no other way to locate it: an installed plugin's working directory is
+the user's project, not a checkout of this repository.
+
+The formatter performs the `applies_to` back-fill — writing each constraint/business-rule's ID into the
 named requirements' `traces_from` — and strips `applies_to` before writing any
 file (see `requirements-formatter.md`, "Populate traceability"). It returns:
 

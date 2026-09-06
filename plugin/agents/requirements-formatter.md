@@ -225,8 +225,14 @@ inspection). This run, against the files you just wrote, is where the structural
 gate for the whole pipeline actually happens:
 
 ```bash
-python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
+python3 <scripts>/validate_requirements.py .sdlc/requirements
 ```
+
+`<scripts>` is the absolute scripts directory named in your dispatch. If your
+dispatch did not name one, **stop and report that** rather than guessing a
+relative path. A repo-relative path resolves only inside a groundwork checkout,
+so the guess turns a locating failure into a confusing `No such file or
+directory` at the exact moment you are supposed to be gating the write.
 
 Record its exit code in `formatter_result.validator_rerun.exit_code`. A non-zero
 exit means the set is not acceptable: you report it exactly as returned, you do

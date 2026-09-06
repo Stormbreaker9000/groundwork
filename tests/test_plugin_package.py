@@ -12,6 +12,7 @@ fixtures, against 532K of actual runtime.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -105,3 +106,26 @@ def test_an_installed_copy_runs_its_own_validator(tmp_path):
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_no_shipped_file_invokes_a_repo_relative_script_path():
+    # A bare `python3 skills/...` resolves only when the working directory is
+    # a groundwork checkout. For an installed plugin the working directory is
+    # the user's own project, so the command fails with No such file. The
+    # fix is the skill base directory the harness injects; this guards it.
+    #
+    # Matched against the path form rather than requiring a "python3 " prefix
+    # on the same line: two real references wrap the invocation across a
+    # line break (python3 ends one line, skills/... begins the next), and one
+    # is a bare mention of the script path with no python3 at all. All three
+    # are just as broken from an installed plugin as the literal form.
+    offender_pattern = re.compile(r"skills/(requirements|design)/scripts/[a-z_0-9]+\.py")
+    offenders = []
+    for path in _shipped_paths():
+        if not path.endswith(".md"):
+            continue
+        with open(os.path.join(REPO_ROOT, path), "r", encoding="utf-8") as handle:
+            text = handle.read()
+        for match in offender_pattern.finditer(text):
+            offenders.append(f"{path}: {match.group(0)}")
+    assert offenders == []

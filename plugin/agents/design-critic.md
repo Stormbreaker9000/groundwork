@@ -156,7 +156,7 @@ for itself.
 ## Where the structural gate lives
 
 You do not run the structural validator. `python3
-skills/design/scripts/validate_design.py .sdlc/design` is owned by
+<scripts>/validate_design.py .sdlc/design` is owned by
 `design-formatter.md`, which re-runs it immediately after writing every file
 (see that file's "Validator re-run" section) — that run, reported back as
 `formatter_result.validator_rerun`, **is** the structural gate for this
@@ -204,7 +204,7 @@ Stage 8:
 critique_report:
   gate: pass | fail
   validator:            # structural-gate result AS REPORTED BACK BY THE FORMATTER
-    command: "python3 skills/design/scripts/validate_design.py .sdlc/design"
+    command: "python3 <scripts>/validate_design.py .sdlc/design"
     exit_code: 0
     summary: string
   per_artifact:
@@ -259,7 +259,7 @@ duplicate — and likely disagree with — a finding you make here:
   the architecturally significant subset — not the full requirement digest.
 - **Dependency cycles, orphan interfaces, and vague `responsibility` prose as a
   lint tier.** These belong to the content linter,
-  `skills/design/scripts/lint_design_content.py`, which the skill runs at Step 4
+  `<scripts>/lint_design_content.py`, which the skill runs at Step 4
   once the files exist. Phase 1's
   single-responsibility check above is a quality judgment on the artifact you
   are reading, not a systematic prose-quality sweep across the whole set —

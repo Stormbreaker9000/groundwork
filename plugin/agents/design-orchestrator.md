@@ -361,7 +361,7 @@ It returns:
 critique_report:
   gate: pass | fail
   validator:
-    command: "python3 skills/design/scripts/validate_design.py .sdlc/design"
+    command: "python3 <scripts>/validate_design.py .sdlc/design"
     exit_code: 0
     summary: string
   per_artifact:
@@ -571,7 +571,13 @@ Hand the approved artifact set, the `design_context_artifact`, `draft_adrs`,
 and `draft_diagram_model` to `design-formatter` — all four. Omitting
 `draft_adrs` leaves the formatter with no ADRs to write and no `affects`
 data to back-fill `traces_to.adr` from; omitting `draft_diagram_model`
-leaves it with nothing to hand `generate_c4.py`. It returns:
+leaves it with nothing to hand `generate_c4.py`.
+
+Include the absolute scripts directory the skill resolved alongside them. The
+formatter shells out to `generate_c4.py`, `validate_design.py` and
+`validate_traceability.py`, and has no other way to locate any of the three.
+
+It returns:
 
 ```yaml
 formatter_result:

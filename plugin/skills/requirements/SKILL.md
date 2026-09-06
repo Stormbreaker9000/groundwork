@@ -23,6 +23,21 @@ Do NOT invoke for:
 
 Do not write any code at any point during this skill. This skill produces a requirements artifact only.
 
+## Locating the scripts
+
+Every command below runs a script that ships with this plugin. Skill invocation
+gives you this skill's base directory as an absolute path — the line reading
+`Base directory for this skill: …`. The scripts are in `scripts/` beneath it.
+
+Substitute that absolute path for `<skill-base>` in each command block before
+running it, and substitute it **per block**: shell state does not persist
+between tool calls, so a variable set in one command is gone by the next.
+
+Do not "simplify" it to a repo-relative path. `skills/requirements/scripts/…`
+resolves only when the working directory is a checkout of the groundwork
+repository. For an installed plugin the working directory is the user's own
+project, and the command fails with `No such file or directory`.
+
 ## Phase 1: Detect Project Context
 
 Before asking anything, determine whether this is a greenfield project or an existing codebase.
@@ -221,7 +236,7 @@ coverage, content lint by inspection); it never ran this command.
 
 ```bash
 mkdir -p .sdlc/requirements/{functional,non-functional,constraints,business-rules,use-cases}
-python3 skills/requirements/scripts/validate_requirements.py .sdlc/requirements
+python3 <skill-base>/scripts/validate_requirements.py .sdlc/requirements
 ```
 
 The validator MUST exit 0. If it exits non-zero, do not treat the write as done: fix the flagged files (re-dispatch to the owning specialist through the critique loop) and re-run until clean. It requires `pyyaml` and `jsonschema` (`pip install pyyaml jsonschema`); see `skills/requirements/scripts/README.md`.
@@ -241,7 +256,7 @@ did not exist yet. Route anything it turns up back through the critique loop to
 the owning specialist rather than editing the written files by hand:
 
 ```bash
-python3 skills/requirements/scripts/lint_requirements_content.py .sdlc/requirements
+python3 <skill-base>/scripts/lint_requirements_content.py .sdlc/requirements
 ```
 
 **Step 5 — Generate the Definition of Done stub:**
