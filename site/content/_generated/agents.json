@@ -45,6 +45,11 @@
     "title": "Functional Requirements Specialist"
   },
   {
+    "description": "Functional test-strategy specialist. Converts assigned FRs from the orchestrator's generation_brief, plus the design set's component boundaries, into atomic test-strategy items that say how each requirement is exercised and at what level. Returns a draft_test_strategies object.",
+    "name": "functional-test-specialist",
+    "title": "Functional Test Specialist"
+  },
+  {
     "description": "Interface design specialist. Converts each component's declared capabilities into atomic interface specs (IF-) at architecture altitude \u2014 provider, operations, interaction style, and error modes \u2014 and reports which components consume each contract so the orchestrator can back-fill depends_on. Returns a draft_interfaces object.",
     "name": "interface-specialist",
     "title": "Interface Design Specialist"
@@ -53,6 +58,26 @@
     "description": "Non-functional requirements specialist. Walks all nine ISO/IEC 25010:2023 quality characteristics plus extensions (observability, deployability, compliance, cost) against the orchestrator's generation_brief and emits each applicable NFR as a six-part quality attribute scenario. Returns a draft_requirements object.",
     "name": "nfr-specialist",
     "title": "Non-Functional Requirements Specialist"
+  },
+  {
+    "description": "Test-strategy quality critic. Runs a two-phase review over the merged draft_test_strategies set \u2014 a per-item quality gate and an ASR-coverage check keyed to drivers.md's architecturally-significant list, the same definition validate_traceability.py's uncovered-asr rule uses. The structural gate runs later, at the formatter, once qa-strategy.md exists on disk. Returns a critique_report.",
+    "name": "qa-critic",
+    "title": "QA Critic"
+  },
+  {
+    "description": "QA formatter. Takes the critic-approved test-strategy item set, the synthesised qa_context_artifact, and the qa_context interview object, and writes one atomic Markdown+YAML file per item into .sdlc/qa/strategy, plus the projected qa-strategy.md and an optional index.yaml, then re-runs validate_qa.py and validate_traceability.py against what it just wrote. Returns a formatter_result.",
+    "name": "qa-formatter",
+    "title": "QA Formatter"
+  },
+  {
+    "description": "Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the functional and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
+    "name": "qa-orchestrator",
+    "title": "QA Orchestrator"
+  },
+  {
+    "description": "Quality-attribute test-strategy specialist. Converts assigned NFRs' six-part quality-attribute scenarios from the orchestrator's generation_brief into atomic test-strategy items \u2014 the fitness functions that make each scenario's response measure testable, and the seat of the ticket's risk-based test prioritisation. Returns a draft_test_strategies object.",
+    "name": "quality-attribute-test-specialist",
+    "title": "Quality-Attribute Test Specialist"
   },
   {
     "description": "Analyzes user requests to produce structured v2 requirements artifacts with functional, non-functional, and domain requirements through hypothesis-led conversation.",

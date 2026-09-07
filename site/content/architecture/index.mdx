@@ -1,6 +1,6 @@
 ---
 title: How the pipeline runs
-description: The two stages, the agents in each, and what exists on disk at every point.
+description: The three stages, the agents in each, and what exists on disk at every point.
 ---
 
 import { PipelineMap } from '../../components/PipelineMap'
@@ -12,11 +12,12 @@ move a gate, alter a hand-off shape. If you are about to *run* a stage and want
 to know what it asks you and what it writes, the [user guide](/guide/) is the
 page you want; this one assumes you have read it.
 
-Groundwork is two stages. The requirements stage turns an interview into a
+Groundwork is three stages. The requirements stage turns an interview into a
 validated requirement set; the design stage turns that set into an
-architecture. Fourteen agents are dispatched across the two, seven in each,
-and every one of them is a subagent invoked by a skill or by an orchestrator —
-no agent runs itself.
+architecture; the QA stage turns both into a test strategy. Nineteen agents
+are dispatched across the three — seven requirements, seven design, five
+QA — and every one of them is a subagent invoked by a skill or by an
+orchestrator — no agent runs itself.
 
 Each stage is an interview, then a generation pipeline, then a write. The
 pipelines are what the maps below describe. The interviews are described in
@@ -104,6 +105,41 @@ edge that neither structural validator covers.
 
 One writer, one structural gate, over a set that includes the diagrams.
 
+## The QA stage
+
+`plugin/skills/qa/SKILL.md` runs its own interview — covering only what
+neither prior stage carries — and then drives `qa-orchestrator`, which reads
+the approved requirement and design sets once on everyone's behalf. Five
+agents are dispatched, in this fixed order: **`qa-orchestrator`, then
+`functional-test-specialist` and `quality-attribute-test-specialist` together,
+then `qa-critic`, then `qa-formatter`.** The two specialists are dispatched in
+parallel rather than in sequence — unlike the design stage's component/interface
+pair, neither needs the other's output — and the critic runs once, on their
+merged `draft_test_strategies` set.
+
+<PipelineMap stage="qa" />
+
+### What exists on disk
+
+`.sdlc/requirements/` and `.sdlc/design/` both exist already, and Stage 2 is
+the orchestrator reading both sets once, on everyone's behalf, so that neither
+specialist re-reads either directory and arrives at its own reading of it.
+
+**Nothing exists under `.sdlc/qa/` until the formatter runs.** The digest
+build, ID allocation, both specialists and the critique gate all happen in
+memory, the same discipline the other two stages hold for the same reason:
+there is nothing on disk yet for a structural validator to read, so the
+critic's gate here is judgment only too.
+
+**At the formatter, everything appears together.** It writes the atomic `TS-`
+files into `.sdlc/qa/strategy/`, projects `qa-strategy.md` from the approved
+set and the synthesised `qa_context_artifact`, and optionally writes
+`index.yaml` — all in the same pass. Only then does it re-run `validate_qa.py`
+against what it just wrote, followed by `validate_traceability.py` across the
+requirement↔design↔QA edges that neither structural validator covers on its
+own. A non-zero exit on either re-run re-opens the critique loop rather than
+reaching sign-off.
+
 ## The gap at the end of the design map
 
 The design orchestrator's Stages 11 and 12 are retired, their numbers were not
@@ -111,14 +147,19 @@ reused, and the map renders them so that the gap is visible rather than
 inferred. Both held generators that originally ran *after* the formatter; both
 were moved before it, because a post-formatter generator is a second writer
 that re-opens files the validator has already passed and re-runs the gate.
-Renumbering the stages would have made the two orchestrators' stage numbers
-mean different things at different points in the repository's history, which is
+Renumbering the stages would have made an orchestrator's stage numbers mean
+different things at different points in the repository's history, which is
 the same reason artifact IDs are never reused.
 
 ## Where the map stops
 
-It stops where the built pipeline stops. Requirements and design are what
-exists; the milestones after them are backlog, and this section describes the
+It stops where the built pipeline stops. Requirements, design and QA are what
+exists; implementation — M4 — is backlog, and this section describes the
 pipeline that runs rather than the one that is planned. Documenting intent as
 though it were behaviour is the specific defect this section was written to
 avoid.
+
+This statement has moved once already, from "design" to "QA", the moment the
+QA stage landed. It will move again when M4 does, and it changes here, in the
+same commit as whatever adds the fourth stage, rather than in a follow-up —
+the same rule this task itself was filed under.

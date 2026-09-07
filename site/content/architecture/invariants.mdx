@@ -1,11 +1,11 @@
 ---
 title: Invariants
-description: The rules that hold across both stages, and the file that enforces each one.
+description: The rules that hold across all three stages, and the file that enforces each one.
 ---
 
 # Invariants
 
-Six rules hold across both stages. Each one names the file that enforces it,
+Six rules hold across all three stages. Each one names the file that enforces it,
 because a rule with no named enforcer is a rule someone will break without
 anyone noticing.
 
@@ -23,9 +23,10 @@ Atomicity is what makes the rest of the pipeline work. A traceability edge
 addresses a file; a critic can reject one requirement without re-opening a
 document; a diff shows which artifact changed rather than which paragraph.
 
-**Enforced by:** `plugin/agents/requirements-formatter.md` and
-`plugin/agents/design-formatter.md` — the two agents that decide the path and the
-filename, per type. The structural validators enforce the *contents* of that
+**Enforced by:** `plugin/agents/requirements-formatter.md`,
+`plugin/agents/design-formatter.md` and `plugin/agents/qa-formatter.md` — the
+three agents that decide the path and the filename, per type. The structural
+validators enforce the *contents* of that
 arrangement: `plugin/lib/artifact_core.py`'s `parse_frontmatter` reads exactly one
 frontmatter block per file, `discover_files` treats every `.md` that is not a
 named project-level companion as an atomic artifact, and
@@ -37,8 +38,8 @@ gate. The naming convention is a formatter contract, not a gated one.
 ## IDs are categorical, zero-padded, and allocated only by an orchestrator
 
 The prefix encodes the type — `FR`, `NFR`, `CON`, `BR`, `UC` in requirements;
-`CMP`, `IF`, `ADR` in design — followed by a three-digit zero-padded sequence.
-No specialist invents an ID.
+`CMP`, `IF`, `ADR` in design; `TS` in QA — followed by a three-digit
+zero-padded sequence. No specialist invents an ID.
 
 Single allocation is what keeps the two ends of every traceability edge
 agreeing. If two specialists could both mint IDs they would eventually mint the
@@ -46,13 +47,16 @@ same one, and neither would be wrong.
 
 **Enforced by:** the schemas, structurally —
 `plugin/skills/requirements/schema/requirement.schema.json` pins
-`^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$`, and each validator's
-`cross_file_checks` rejects an ID whose prefix disagrees with its own `type`
-field. Sole allocation is an orchestrator instruction:
-`plugin/agents/requirements-orchestrator.md` Stage 3 and
-`plugin/agents/design-orchestrator.md` Stage 4, which states it as "You are the only
-ID authority" and makes an `IF-` ID appearing in a component draft a
-re-dispatch rather than a repair.
+`^(FR|NFR|CON|BR|UC)(-[A-Z0-9]+)*-[0-9]{3,}$` and
+`plugin/skills/qa/schema/qa.schema.json` pins `^TS(-[A-Z0-9]+)*-[0-9]{3,}$`,
+and each validator's `cross_file_checks` rejects an ID whose prefix disagrees
+with its own `type` field. Sole allocation is an orchestrator instruction:
+`plugin/agents/requirements-orchestrator.md` Stage 3,
+`plugin/agents/design-orchestrator.md` Stage 4, and
+`plugin/agents/qa-orchestrator.md` Stage 3, each of which states it as "the
+only ID authority" (or "the single authority for ID allocation") and makes an
+`IF-` ID appearing in a component draft — or a specialist minting its own
+`TS-` ID in QA — a re-dispatch rather than a repair.
 
 ## IDs are never reused
 
@@ -64,8 +68,9 @@ An ID that means one thing in a commit and another thing later makes every
 reference to it ambiguous — including references in code, tests and
 conversation, which no validator can see.
 
-**Enforced by:** `plugin/agents/requirements-orchestrator.md:103` and
-`plugin/agents/design-orchestrator.md:177`, as an instruction. It is not gated,
+**Enforced by:** `plugin/agents/requirements-orchestrator.md:103`,
+`plugin/agents/design-orchestrator.md:177` and
+`plugin/agents/qa-orchestrator.md:232`, as an instruction. It is not gated,
 because a validator that could enforce it would need the history rather than
 the set. The design orchestrator's [retired Stages 11 and
 12](/architecture/) are the same principle applied to stage numbers, and are
@@ -83,13 +88,15 @@ hard-gates — are not even assembled until the stage after the gate passes.
 Folding the validator into the formatter rather than placing it after also
 means one agent both writes the set and answers for its structure.
 
-**Enforced by:** `plugin/agents/requirements-formatter.md`'s "Verify, then report" and
-`plugin/agents/design-formatter.md`'s "Validator re-run" sections, which run
-`validate_requirements.py` and `validate_design.py` (plus
-`validate_traceability.py` in design) as part of the write contract.
+**Enforced by:** `plugin/agents/requirements-formatter.md`'s "Verify, then report",
+`plugin/agents/design-formatter.md`'s "Validator re-run" and
+`plugin/agents/qa-formatter.md`'s "Verify, then report" sections, which run
+`validate_requirements.py`, `validate_design.py` and `validate_qa.py`
+respectively (plus `validate_traceability.py` in design and QA) as part of the
+write contract.
 
-Both stages' `SKILL.md` files state the invariant explicitly, and they say it
-in that form because stating it wrongly has cost twice: STO-215 and STO-207
+All three stages' `SKILL.md` files state the invariant explicitly, and they say
+it in that form because stating it wrongly has cost twice: STO-215 and STO-207
 were both agent files describing a structural check at a point where the files
 it checks did not yet exist.
 
@@ -99,15 +106,17 @@ An artifact the pipeline is unsure of is written with `confidence: low` and
 listed in `index.yaml`'s `review_queue` with a one-line reason, so a human can
 triage the uncertain items without opening every file.
 
-Uncertainty is a normal output of both stages, and the design stage inherits
-the requirements stage's queue rather than clearing it — several of those items
-are architecture decisions that correctly landed in the requirements stage's
-out-tray.
+Uncertainty is a normal output of all three stages, and each downstream stage
+inherits the one before it's queue rather than clearing it — the design stage
+inherits the requirements stage's, and the QA stage inherits the design
+stage's `inherited_review_queue` in turn. Several of those items are decisions
+that correctly landed in an earlier stage's out-tray and are still unresolved.
 
-**Enforced by:** `plugin/agents/design-formatter.md`, which requires `review_queue` to
-agree exactly with the `confidence: low` set and reports a
-`review_queue_count` it must match; and each stage's `SKILL.md`, which surfaces
-the same list in the sign-off summary.
+**Enforced by:** `plugin/agents/design-formatter.md` and
+`plugin/agents/qa-formatter.md`, which require `review_queue` to agree exactly
+with the `confidence: low` set and report a `review_queue_count` each must
+match; and each stage's `SKILL.md`, which surfaces the same list in the
+sign-off summary.
 
 **A contradiction worth knowing about.** `plugin/agents/requirements-formatter.md:130`
 says the formatter *MAY* emit `index.yaml`, and that the index *MAY* carry a
@@ -139,10 +148,10 @@ You will trip it by editing any of these:
 
 - a rule in `lint_design_content.py`, `lint_requirements_content.py` or
   `validate_traceability.py` — their `RULES` registries are `rules.json`;
-- a field in either JSON Schema — they are `fields.json`;
+- a field in any of the three JSON Schemas — they are `fields.json`;
 - an agent's frontmatter `description:` — the roster is `agents.json`;
-- either `SKILL.md`'s coverage-area list — those are `stages.json`;
-- a stage heading or its hand-off YAML in either orchestrator — those are
+- any `SKILL.md`'s coverage-area list — those are `stages.json`;
+- a stage heading or its hand-off YAML in any orchestrator — those are
   `pipeline.json`, and the pages in this section.
 
 The fix is one command:

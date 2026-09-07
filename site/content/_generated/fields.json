@@ -225,6 +225,162 @@
       "type": "string"
     }
   ],
+  "qa": [
+    {
+      "description": "Categorical, zero-padded, stable ID. Optional uppercase category infix allowed (e.g. TS-PERF-004).",
+      "enum": [],
+      "name": "id",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "type",
+      "required_for": [
+        "*"
+      ],
+      "type": ""
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "title",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "description",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The level this strategy item operates at. Drives grouping in the rendered qa-strategy.md.",
+      "enum": [
+        "unit",
+        "integration",
+        "contract",
+        "e2e",
+        "performance",
+        "security"
+      ],
+      "name": "test_level",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Derived from the quality-attribute scenarios and requirements this item covers. Orders the rendered prioritisation section.",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "name": "risk_level",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Why this risk level. Mandatory at every level, including low: an unexplained 'low' is the one a reader cannot check.",
+      "enum": [],
+      "name": "risk_rationale",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Whether CI actually checks this. STO-104 reads it to tell a real DoD gate from one a human must remember.",
+      "enum": [
+        "ci",
+        "manual",
+        "none"
+      ],
+      "name": "enforcement",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "The requirement and design IDs this item covers. The QA->upstream edge is stored here and nowhere else; validate_traceability.py walks it backwards.",
+      "enum": [],
+      "name": "traces_from",
+      "required_for": [
+        "*"
+      ],
+      "type": "array"
+    },
+    {
+      "description": "Downstream references to real test and source files, filled in when code exists. Empty through M3 by design.",
+      "enum": [],
+      "name": "traces_to",
+      "required_for": [
+        "*"
+      ],
+      "type": "object"
+    },
+    {
+      "description": "",
+      "enum": [
+        "draft",
+        "approved",
+        "obsolete"
+      ],
+      "name": "status",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "name": "confidence",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "created_at",
+      "required_for": [
+        "*"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "scope",
+      "required_for": [],
+      "type": "string"
+    },
+    {
+      "description": "",
+      "enum": [],
+      "name": "parent_scope",
+      "required_for": [],
+      "type": "string"
+    }
+  ],
   "requirements": [
     {
       "description": "Categorical, zero-padded, stable ID. Prefix encodes type: FR->functional, NFR->non_functional, CON->constraint, BR->business_rule, UC->use_case. An optional uppercase category infix is allowed (e.g. FR-ORDER-014).",
