@@ -411,7 +411,6 @@ def render_unenforced(qa: List[Artifact], root: str) -> List[str]:
 # is taken wholesale: only the head token is parsed, so Observability,
 # Deployability, Compliance and Cost share one bucket (spec D8).
 DOC_CHARACTERISTICS = ("Security", "Reliability", "Extension")
-DEPLOY_CHARACTERISTICS = ("Security", "Reliability")
 
 
 def nfrs_by_characteristic(reqs: List[Artifact]) -> Dict[str, List[Artifact]]:
@@ -421,11 +420,9 @@ def nfrs_by_characteristic(reqs: List[Artifact]) -> Dict[str, List[Artifact]]:
     return out
 
 
-def _id_list(artifacts: List[Artifact], with_characteristic: Optional[str] = None) -> str:
+def _id_list(artifacts: List[Artifact]) -> str:
     if not artifacts:
         return "none"
-    if with_characteristic:
-        return ", ".join(f"{a.id} ({with_characteristic})" for a in artifacts)
     return ", ".join(str(a.id) for a in artifacts)
 
 
