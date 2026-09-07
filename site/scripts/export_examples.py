@@ -77,7 +77,7 @@ GROUPS: List[Tuple[str, str, str]] = [
 #
 # definition-of-done.md still sits under requirements/ in both committed
 # example sets. STO-104 moved the generated path to .sdlc/definition-of-done.md;
-# the follow-up ticket that regenerates the examples moves these entries.
+# STO-309, which regenerates the examples, moves these entries.
 PROJECT_FILES: Dict[str, List[str]] = {
     "requirements": ["glossary.md", "assumptions.md", "definition-of-done.md"],
     "design": ["drivers.md", "assumptions.md"],

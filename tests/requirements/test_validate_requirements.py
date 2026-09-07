@@ -60,6 +60,8 @@ INVALID_CASES = {
     "context_artifact_missing_heading": "missing required heading",
     "missing_glossary": "glossary artifact",
     "glossary_missing_heading": "missing required heading",
+    "nfr_missing_iso_heading": "ISO 25010 Characteristic",
+    "nfr_missing_response_measure": "Response measure",
 }
 
 
@@ -72,6 +74,16 @@ def test_invalid_case_fails(case, needle, capsys):
     assert needle.lower() in out.lower(), (
         f"case '{case}' did not report expected error containing '{needle}'\n{out}"
     )
+
+
+def test_every_invalid_fixture_is_exercised():
+    """A fixture directory nobody parametrizes is a case nobody tests — the
+    same guard tests/dod and tests/qa already carry."""
+    on_disk = sorted(
+        d for d in os.listdir(INVALID_DIR)
+        if os.path.isdir(os.path.join(INVALID_DIR, d))
+    )
+    assert on_disk == sorted(INVALID_CASES)
 
 
 # ---------------------------------------------------------------------------
@@ -233,22 +245,18 @@ def test_shipped_example_passes_structural_gate(name, capsys):
 # ---------------------------------------------------------------------------
 # NFR body sections (STO-104): the DoD generator parses these, so they are gated
 # ---------------------------------------------------------------------------
-def test_nfr_missing_iso_heading_fails(capsys):
-    code = run(os.path.join(INVALID_DIR, "nfr_missing_iso_heading"))
-    out = capsys.readouterr().out
-    assert code != 0
-    assert "ISO 25010 Characteristic" in out
-
-
-def test_nfr_missing_response_measure_fails(capsys):
-    code = run(os.path.join(INVALID_DIR, "nfr_missing_response_measure"))
-    out = capsys.readouterr().out
-    assert code != 0
-    assert "Response measure" in out
-
-
 def test_functional_requirement_needs_no_nfr_body_sections(capsys):
-    """The gate is NFR-only: an FR without a QAS is not a violation."""
+    """The gate is NFR-only. VALID_DIR carries FR-001, CON-001 and BR-001
+    alongside NFR-001 with none of the two required NFR body sections — so
+    this fails if check_nfr_body_sections is ever applied to a functional
+    requirement, a constraint, or a business rule, and passes only because
+    the ``type != "non_functional"`` guard excludes them.
+
+    Discrimination proven by hand: with that guard temporarily removed from
+    validate_requirements.py's check_nfr_body_sections, this test failed
+    (VALID_DIR's FR-001/CON-001/BR-001 each reported the missing headings);
+    with the guard restored, it passes again.
+    """
     code = run(VALID_DIR)
     out = capsys.readouterr().out
     assert code == 0, out

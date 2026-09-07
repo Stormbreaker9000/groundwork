@@ -708,8 +708,10 @@ future pass does not rediscover them from scratch.
   currently unmet**" note about `traces_to.tests` being empty on every
   `must` item. The second is correct — no tests exist for these examples
   — but it is a template artifact that will read as an alarm to anyone
-  who has not read this paragraph. Both want a `dod-generator` re-run in
-  a later pass.
+  who has not read this paragraph. Both want a `generate_dod.py` re-run in
+  a later pass, writing to the root-level `.sdlc/definition-of-done.md`
+  (the `dod-generator` agent this note originally named no longer ships —
+  STO-104 replaced it with that script).
 
 ---
 

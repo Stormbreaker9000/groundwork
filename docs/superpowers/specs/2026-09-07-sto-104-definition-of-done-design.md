@@ -332,7 +332,8 @@ a case nobody tests.
   go stale the moment this lands. Worse, neither example set has a committed
   `qa/` directory — STO-103's end-to-end run was not kept — so a full
   three-stage DoD cannot be demonstrated without generating a QA set first.
-  That is STO-219's shape and wants its own ticket, filed rather than absorbed.
+  That is STO-219's shape and wants its own ticket, filed rather than
+  absorbed: STO-309.
 - **A DoD content linter.** M1 and M2 each got theirs as a separate ticket
   (STO-136, STO-208), and M3's is already filed as STO-306.
 
