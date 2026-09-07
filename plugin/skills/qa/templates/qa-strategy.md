@@ -1,9 +1,9 @@
 # QA Strategy
 
-This document is projected from the emitted `TS-` item set and the
-`qa_context_artifact` — it is never hand-authored. See `qa-formatter.md`,
-"Render the strategy document", for the exact rule that fills each section
-below.
+This document is projected from the emitted `TS-` item set, the
+`qa_context_artifact`, and `qa_context` — it is never hand-authored. See
+`qa-formatter.md`, "Render the strategy document", for the exact rule that
+fills each section below.
 
 ## Test Levels and Rationale
 One subsection per `test_level` present in the emitted set, in the schema's
@@ -19,12 +19,13 @@ Every item, ordered `high` before `medium` before `low`, each with its
 `risk_rationale` as the stated reason.
 
 ## Tooling
-The `qa_context.test_tooling` and `qa_context.ci_enforcement` answers from the
-interview, carried by the `qa_context_artifact`.
+The `qa_context.test_tooling` and `qa_context.ci_enforcement` answers from
+the interview, read directly from `qa_context` — raw interview answers that
+`qa_context_artifact` carries no copy of.
 
 ## Coverage Targets
-The `qa_context.coverage_targets` answer from the interview, carried by the
-`qa_context_artifact`.
+The `qa_context.coverage_targets` answer from the interview, read directly
+from `qa_context` — the same source as Tooling, above.
 
 ## Accepted Risks
 The `qa_context_artifact.accepted_risks` register — every requirement or
