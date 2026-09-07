@@ -404,6 +404,77 @@ def render_unenforced(qa: List[Artifact], root: str) -> List[str]:
     return lines
 
 
+# ---------------------------------------------------------------------------
+# Documentation + deployment readiness (spec D4)
+# ---------------------------------------------------------------------------
+# Characteristics whose NFRs need runbook or configuration notes. "Extension"
+# is taken wholesale: only the head token is parsed, so Observability,
+# Deployability, Compliance and Cost share one bucket (spec D8).
+DOC_CHARACTERISTICS = ("Security", "Reliability", "Extension")
+DEPLOY_CHARACTERISTICS = ("Security", "Reliability")
+
+
+def nfrs_by_characteristic(reqs: List[Artifact]) -> Dict[str, List[Artifact]]:
+    out: Dict[str, List[Artifact]] = {}
+    for req in by_type(reqs, "non_functional"):
+        out.setdefault(parse_iso_characteristic(req), []).append(req)
+    return out
+
+
+def _id_list(artifacts: List[Artifact], with_characteristic: Optional[str] = None) -> str:
+    if not artifacts:
+        return "none"
+    if with_characteristic:
+        return ", ".join(f"{a.id} ({with_characteristic})" for a in artifacts)
+    return ", ".join(str(a.id) for a in artifacts)
+
+
+def _chars(by_char: Dict[str, List[Artifact]], names) -> List[str]:
+    parts: List[str] = []
+    for name in names:
+        for req in by_char.get(name, []):
+            parts.append(f"{req.id} ({name})")
+    return parts
+
+
+def render_documentation(
+    reqs: List[Artifact], by_char: Dict[str, List[Artifact]]
+) -> List[str]:
+    must_frs = [r for r in by_type(reqs, "functional") if r.get("priority") == "must"]
+    operational = _chars(by_char, DOC_CHARACTERISTICS)
+    return [
+        "## Documentation Requirements",
+        "",
+        f"- [ ] Public-facing behaviour of every `must` functional requirement "
+        f"is documented: {_id_list(must_frs)}.",
+        f"- [ ] Operational NFRs have runbook or configuration notes: "
+        f"{', '.join(operational) if operational else 'none'}.",
+        "- [ ] Every implemented artifact carries `status: implemented` (or "
+        "`verified`) and a populated `traces_to.code`.",
+        "",
+    ]
+
+
+def render_deployment(
+    reqs: List[Artifact], by_char: Dict[str, List[Artifact]]
+) -> List[str]:
+    security = by_char.get("Security", [])
+    reliability = by_char.get("Reliability", [])
+    rules = by_type(reqs, "constraint", "business_rule")
+    return [
+        "## Deployment / Operational Readiness",
+        "",
+        f"- [ ] Security NFR gates pass before release: {_id_list(security)}.",
+        f"- [ ] Reliability targets are met or have an accepted waiver: "
+        f"{_id_list(reliability)}.",
+        "- [ ] Observability is in place for the response measures asserted "
+        "above.",
+        f"- [ ] Constraints and business rules hold in the deployed "
+        f"configuration: {_id_list(rules)}.",
+        "",
+    ]
+
+
 def render_document(
     reqs: Optional[List[Artifact]],
     design: Optional[List[Artifact]],
@@ -441,6 +512,10 @@ def render_document(
         if reqs:
             body += render_coverage(reqs, coverage, roots["requirements"])
         body += render_unenforced(qa, roots["qa"])
+    if reqs:
+        by_char = nfrs_by_characteristic(reqs)
+        body += render_documentation(reqs, by_char)
+        body += render_deployment(reqs, by_char)
     lines += body
     lines += [
         "---",

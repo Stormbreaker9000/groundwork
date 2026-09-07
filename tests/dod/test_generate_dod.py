@@ -151,18 +151,12 @@ def test_qas_missing_field_raises():
 # A fixture directory nobody parametrizes is a case nobody tests. This list and
 # the guard below are the same pattern tests/qa/test_validate_qa.py uses.
 #
-# nfr_missing_response_measure now reaches parse_qas_field via
-# render_nfr_gates (Task 4), so it exits 1 like any other malformed artifact.
-# nfr_missing_iso_heading still xfails: it is reached only by
-# parse_iso_characteristic, which is not called until Task 7 — its marker
-# must survive Tasks 4-6.
+# nfr_missing_response_measure reaches parse_qas_field via render_nfr_gates
+# (Task 4). nfr_missing_iso_heading reaches parse_iso_characteristic via
+# nfrs_by_characteristic (Task 7). Both exit 1 like any other malformed
+# artifact.
 INVALID_CASES_WITH_MARKS = [
-    pytest.param(
-        "nfr_missing_iso_heading",
-        marks=pytest.mark.xfail(
-            reason="ISO parsing is first called in Task 7", strict=True
-        ),
-    ),
+    pytest.param("nfr_missing_iso_heading"),
     pytest.param("nfr_missing_response_measure"),
 ]
 INVALID_CASE_NAMES = [case.values[0] for case in INVALID_CASES_WITH_MARKS]
@@ -288,9 +282,44 @@ def test_unenforced_register_is_not_a_checklist(tmp_path):
     """A register records what is not gated; a checkbox would imply it is."""
     _, text = generate(FULL, tmp_path)
     register = text.split("## Declared Unenforced", 1)[1]
-    assert "- [ ]" not in register.split("---")[0]
+    assert "- [ ]" not in register.split("\n## ", 1)[0]
 
 
 def test_unenforced_section_absent_when_nothing_is_unenforced(tmp_path):
     _, text = generate(REQS_ONLY, tmp_path)
     assert "## Declared Unenforced" not in text
+
+
+# ---------------------------------------------------------------------------
+# Documentation + deployment readiness (spec D4)
+# ---------------------------------------------------------------------------
+def test_documentation_section_lists_must_frs(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## Documentation Requirements" in text
+    docs = text.split("## Documentation Requirements", 1)[1]
+    assert "FR-001" in docs
+
+
+def test_documentation_section_lists_operational_nfrs(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    docs = text.split("## Documentation Requirements", 1)[1]
+    assert "NFR-002 (Security)" in docs
+
+
+def test_deployment_section_lists_security_nfrs_and_rules(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## Deployment / Operational Readiness" in text
+    deploy = text.split("## Deployment / Operational Readiness", 1)[1]
+    assert "NFR-002" in deploy
+    assert "CON-001" in deploy
+    assert "BR-001" in deploy
+
+
+def test_non_operational_nfr_is_not_a_deployment_gate(tmp_path):
+    """NFR-001 is Performance Efficiency — neither Security nor Reliability."""
+    _, text = generate(REQS_ONLY, tmp_path)
+    deploy = text.split("## Deployment / Operational Readiness", 1)[1]
+    security_line = [
+        line for line in deploy.splitlines() if "Security NFR gates" in line
+    ][0]
+    assert "NFR-001" not in security_line
