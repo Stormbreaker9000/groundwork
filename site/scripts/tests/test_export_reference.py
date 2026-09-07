@@ -98,7 +98,7 @@ def test_export_agents_covers_every_agent_file():
         n[:-3] for n in os.listdir(os.path.join(er.PLUGIN_ROOT, "agents"))
         if n.endswith(".md")
     ]
-    assert len(agents) == len(on_disk) == 20
+    assert len(agents) == len(on_disk) == 19
     assert {a["name"] for a in agents} == set(on_disk)
 
 

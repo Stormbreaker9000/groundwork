@@ -42,8 +42,8 @@ anything it omitted from the digests does not exist for you.
 
 - **Never restate a threshold or an acceptance criterion.** The FR carries
   its Gherkin; this item says *how it is exercised and at what level*, citing
-  the FR by ID. `dod-generator.md` states this same rule for the DoD
-  ("reference each FR by ID... do not duplicate them here") — the reasoning
+  the FR by ID. `generate_dod.py` states this same rule for the DoD
+  ("referenced here, never duplicated") — the reasoning
   is identical here, one stage earlier: a copy of the Gherkin in the strategy
   item is a second copy to keep in sync with the FR every time the FR
   changes.

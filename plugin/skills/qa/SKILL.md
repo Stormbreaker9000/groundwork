@@ -59,6 +59,9 @@ here:
 - `<skill-base>/../design/scripts/validate_traceability.py` — this is also
   where the cross-artifact traceability check lives; there is no separate
   copy under this skill's own `scripts/`.
+- `<skill-base>/../requirements/scripts/generate_dod.py` — the Definition of
+  Done generator. It reads all three stages, so it lives in the earliest one
+  and every stage reaches it sideways.
 
 When you dispatch to `qa-orchestrator`, include this skill's absolute
 `scripts/` path (as `scripts_dir`) in the hand-off — it forwards it on to
@@ -370,9 +373,25 @@ warning surviving here is not necessarily wrong — Stage 6.5 may already have
 recorded it as an accepted risk — so report the warning and its disposition
 together. Warnings are advisory and do not block the commit.
 
+**Step 4c — Regenerate the Definition of Done:**
+
+```bash
+python3 <skill-base>/../requirements/scripts/generate_dod.py \
+  --requirements .sdlc/requirements \
+  --design .sdlc/design \
+  --qa .sdlc/qa \
+  --out .sdlc/definition-of-done.md \
+  --title "<feature name>"
+```
+
+This is the complete form. With the QA set on disk the generator can say which
+gates CI actually enforces, which need a person, and which the project
+declared unenforced — so `## PR Checklist` becomes accurate here and nowhere
+earlier.
+
 **Step 5 — Commit:**
 
 ```bash
-git add .sdlc/qa/
+git add .sdlc/qa/ .sdlc/definition-of-done.md
 git commit -m "docs: add test-strategy artifact set for <feature-name>"
 ```

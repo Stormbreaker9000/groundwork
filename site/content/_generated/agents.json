@@ -35,11 +35,6 @@
     "title": "Design Orchestrator"
   },
   {
-    "description": "Generates the project-wide Definition of Done checklist from emitted requirements. Runs after the requirements-formatter writes atomic FR/NFR files, derives functional acceptance gates, NFR fitness gates, and test/documentation/deployment readiness checks, and writes .sdlc/requirements/definition-of-done.md. M1 stub expanded by STO-104 in M3.",
-    "name": "dod-generator",
-    "title": "Definition of Done Generator"
-  },
-  {
     "description": "Functional requirements specialist. Converts assigned needs from the orchestrator's generation_brief into atomic functional requirements written in EARS notation (choosing the correct pattern per requirement), each with a mandatory rationale, fit criterion, and Gherkin (Given/When/Then) acceptance criteria. Returns a draft_requirements object.",
     "name": "fr-specialist",
     "title": "Functional Requirements Specialist"

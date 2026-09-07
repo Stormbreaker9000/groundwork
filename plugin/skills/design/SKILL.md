@@ -448,10 +448,26 @@ clean, not skipped) and surface them to the user before committing: each
 and do not block the commit — acting on them is the user's call, not a
 condition of Step 5.
 
+**Step 4c — Regenerate the Definition of Done:**
+
+```bash
+python3 <skill-base>/../requirements/scripts/generate_dod.py \
+  --requirements .sdlc/requirements \
+  --design .sdlc/design \
+  --out .sdlc/definition-of-done.md \
+  --title "<feature name>"
+```
+
+The generator lives in the requirements skill and is reached sideways, the
+same way this stage's validators are. It rewrites the file the requirements
+stage wrote, adding architectural conformance gates from the accepted ADRs and
+the declared `depends_on` edges. Skipping this step leaves a Definition of
+Done on disk that predates the architecture it should reflect.
+
 **Step 5 — Commit:**
 
 ```bash
-git add .sdlc/design/
+git add .sdlc/design/ .sdlc/definition-of-done.md
 git commit -m "docs: add design artifact set for <feature-name>"
 ```
 
@@ -487,3 +503,7 @@ Dependency-cycle detection, orphan-interface detection, and prose-quality
 sweeps over design artifacts *are* produced, but not by this skill's judgment
 either — `lint_design_content.py` runs at Step 4, advisory, once the files
 exist, per `agents/design-critic.md`'s *Scope boundaries*.
+
+The Definition of Done *is* regenerated, but not by this skill's judgment —
+`generate_dod.py` projects it from the requirement and design sets at Step 4c,
+and the QA stage rewrites it again once test strategy exists.

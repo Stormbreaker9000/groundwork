@@ -395,3 +395,32 @@ def test_gate_count_only_grows_as_stages_are_added(tmp_path):
             return handle.read().count("- [ ] ")
 
     assert gates(out_b) > gates(out_a)
+
+
+# ---------------------------------------------------------------------------
+# Wiring: every stage skill must invoke the generator, and the agent must be
+# gone. A skill that stops calling it leaves a stale DoD on disk, which is the
+# failure this ticket exists to end.
+# ---------------------------------------------------------------------------
+REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
+PLUGIN = os.path.join(REPO_ROOT, "plugin")
+
+
+@pytest.mark.parametrize("stage", ["requirements", "design", "qa"])
+def test_every_stage_skill_invokes_the_generator(stage):
+    path = os.path.join(PLUGIN, "skills", stage, "SKILL.md")
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    assert "generate_dod.py" in text, f"{stage} SKILL.md does not run generate_dod.py"
+    assert ".sdlc/definition-of-done.md" in text
+
+
+def test_dod_generator_agent_is_gone():
+    assert not os.path.exists(os.path.join(PLUGIN, "agents", "dod-generator.md"))
+
+
+def test_dod_template_is_gone():
+    assert not os.path.exists(
+        os.path.join(PLUGIN, "skills", "requirements", "templates",
+                     "definition-of-done.md")
+    )
