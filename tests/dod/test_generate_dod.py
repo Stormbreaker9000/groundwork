@@ -8,6 +8,7 @@ import generate_dod as gd
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures")
 REQS_ONLY = os.path.join(FIXTURES, "reqs_only")
+FULL = os.path.join(FIXTURES, "full")
 
 
 def generate(fixture_dir, tmp_path, **kwargs):
@@ -221,3 +222,35 @@ def test_without_qa_gates_annotate_verification_method(tmp_path):
     _, text = generate(REQS_ONLY, tmp_path)
     assert "`[verification: test]`" in text
     assert "`[CI]`" not in text
+
+
+# ---------------------------------------------------------------------------
+# Architectural conformance (spec D6)
+# ---------------------------------------------------------------------------
+def test_accepted_adr_becomes_a_conformance_gate(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "## Architectural Conformance Gates" in text
+    assert "**ADR-001 — Oracle as the order store**" in text
+    assert "Oracle 19c as the system of record" in text
+
+
+def test_rejected_adr_is_not_a_gate(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "ADR-002" not in text
+
+
+def test_component_dependency_edges_become_a_gate(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "**CMP-001 — Order Service**" in text
+    assert "IF-001" in text
+
+
+def test_component_without_dependencies_has_no_gate(tmp_path):
+    """Nothing to assert is not the same as an empty assertion."""
+    _, text = generate(FULL, tmp_path)
+    assert "CMP-002" not in text
+
+
+def test_conformance_section_absent_without_a_design_set(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## Architectural Conformance Gates" not in text

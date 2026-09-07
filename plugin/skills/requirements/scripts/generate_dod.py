@@ -295,6 +295,48 @@ def render_nfr_gates(
     return lines
 
 
+def render_conformance_gates(design: List[Artifact], root: str) -> List[str]:
+    """Accepted decisions and declared dependency edges.
+
+    Not "fitness functions": design.schema.json carries no threshold, target or
+    measure anywhere. A fitness function has a measure; these have a rule. The
+    measurable architecture gates are the NFR fitness gates above.
+    """
+    adrs = [
+        a for a in by_type(design, "adr")
+        if a.get("decision_status") == "accepted"
+    ]
+    components = [
+        c for c in by_type(design, "component") if c.get("depends_on")
+    ]
+    if not adrs and not components:
+        return []
+    lines = [
+        "## Architectural Conformance Gates",
+        "",
+        "Decisions the implementation must not quietly reverse, and the "
+        "dependency edges the design declared.",
+        "",
+    ]
+    for adr in adrs:
+        lines += [
+            f"- [ ] **{adr.id} — {adr.get('title')}** `[manual]`",
+            f"  The implementation conforms to the chosen option: "
+            f"{adr.get('chosen_option')}",
+            f"  Source: {_rel_source(adr, root, '.sdlc/design')}",
+            "",
+        ]
+    for cmp_ in components:
+        edges = ", ".join(str(d) for d in cmp_.get("depends_on") or [])
+        lines += [
+            f"- [ ] **{cmp_.id} — {cmp_.get('title')}** `[manual]`",
+            f"  Depends on nothing outside its declared interfaces: {edges}.",
+            f"  Source: {_rel_source(cmp_, root, '.sdlc/design')}",
+            "",
+        ]
+    return lines
+
+
 def render_document(
     reqs: Optional[List[Artifact]],
     design: Optional[List[Artifact]],
@@ -326,6 +368,8 @@ def render_document(
             reqs, roots["requirements"], coverage, qa_present
         )
         body += render_nfr_gates(reqs, roots["requirements"], coverage, qa_present)
+    if design:
+        body += render_conformance_gates(design, roots["design"])
     lines += body
     lines += [
         "---",
