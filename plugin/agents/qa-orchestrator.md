@@ -136,11 +136,28 @@ design_digest:
     title: string
     responsibility: string
     boundary: string
+  - id: IF-007
+    title: string
+    provider: CMP-013          # the single component that provides this contract
+    operations: [string, ...]  # operation names only — enough to name what a
+                                # contract-level item exercises
 ```
 
-Include every FR and NFR that is not `status: obsolete`, and every component.
-Restricting either digest to some pre-filtered subset would leave a specialist
-authoring against a system or a requirement set it cannot see.
+Include every FR and NFR that is not `status: obsolete`, and every component
+**and interface**. Restricting either digest to some pre-filtered subset would
+leave a specialist authoring against a system or a requirement set it cannot
+see.
+
+`design.schema.json`'s interface branch also carries `error_modes` and each
+operation's `summary`/`interaction`. None of that rides in the digest: a
+specialist cites an interface by ID for a contract-level item exactly the way
+it cites an NFR's `fit_criterion` — by reference, not by restating the design
+judgment already recorded there. `id`, `title`, and `provider` are enough to
+say which component furnishes the contract; the operation names are enough to
+say what a contract-level item exercises. Carrying the rest would duplicate
+the interface spec itself inside every `generation_brief`, the same ceremony
+the FR/NFR digest already avoids by carrying `fit_criterion` instead of the
+whole NFR body.
 
 An NFR's `scenario` is read from its body, not its frontmatter — the six
 bolded bullets under `## Quality Attribute Scenario` ("Source of stimulus",
@@ -246,6 +263,10 @@ generation_brief:
       title: string
       responsibility: string
       boundary: string
+    - id: IF-007
+      title: string
+      provider: CMP-013
+      operations: [string, ...]
   id_block:
     functional: [TS-001, TS-002]      # allocated to the functional specialist
     quality_attribute: [TS-003, TS-004]
@@ -258,9 +279,9 @@ generation_brief:
 ID — `functional-test-specialist` covers the `assigned.functional` entries,
 `quality-attribute-test-specialist` the `assigned.quality_attribute` entries.
 `design_digest` is shared, read-only background for both: a functional item
-may need to name the component whose boundary a test crosses, and a
-quality-attribute item may need to name the component the scenario is measured
-against.
+may need to name the component whose boundary a test crosses, or the
+interface a `contract`-level item actually validates, and a quality-attribute
+item may need to name the component the scenario is measured against.
 
 `scripts_dir` has no use to either specialist. It rides along in
 `generation_brief` anyway because that is the one object you construct once

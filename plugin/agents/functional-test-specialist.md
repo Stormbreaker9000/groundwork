@@ -40,7 +40,9 @@ from the digests does not exist for you.
     so the test needs their real collaboration (not a stub) to say anything.
   - **contract** — the behavior is the shape of an interaction across a
     boundary itself (a request/response shape, an event schema) rather than
-    the business behavior that flows through it.
+    the business behavior that flows through it — this is what an `IF-`
+    interface entry in `design_digest` names, so a `contract` item cites the
+    interface it validates, not only the components on either side of it.
   - **e2e** — the behavior is only observable by performing it the way a user
     would, through the full stack, because no lower boundary reproduces what
     matters (ordering across requests, session state, everything wired
@@ -55,11 +57,13 @@ from the digests does not exist for you.
   boundary the test crosses (for `integration`, `contract`, and `e2e` items,
   name every component the behavior spans; for `unit` items, name the one
   component if the digest identifies it, or omit the component and rely on
-  the FR ID alone if it doesn't). Every ID here must already appear in
-  `requirement_digest` or `design_digest` — an ID from neither is not
-  something you may name, no matter how obviously true it seems; the
-  orchestrator is the only agent that can confirm an ID actually exists in
-  either set.
+  the FR ID alone if it doesn't). For a `contract` item specifically, name
+  the `IF-` interface entry it validates, not only the components on either
+  side of it — the interface is the thing under test, and the components are
+  context for it. Every ID here must already appear in `requirement_digest`
+  or `design_digest` — an ID from neither is not something you may name, no
+  matter how obviously true it seems; the orchestrator is the only agent that
+  can confirm an ID actually exists in either set.
 
 - **Never mint an ID.** Draw from `id_block.functional` in order. If your
   assigned FRs genuinely need more coverage than the range allows — one FR
