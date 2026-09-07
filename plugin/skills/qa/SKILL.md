@@ -275,7 +275,8 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
    formatter projects them, so the structural check belongs downstream.
 4. **qa-formatter** — writes the atomic `TS-` files, projects
    `qa-strategy.md` from the approved set and the synthesised
-   `qa_context_artifact`, optionally writes `index.yaml`, then re-runs
+   `qa_context_artifact`, writes `index.yaml` (mandatory, not optional),
+   then re-runs
    `validate_qa.py` and `validate_traceability.py` against everything it just
    wrote — the pipeline's single structural gate. **Runs only on
    `gate: pass`.** Do not advance past the critic on a failing or partial
@@ -335,7 +336,8 @@ and M2's invariant exactly and it is not relaxed here.
 **Step 4 — Write, then validate (hard gate):**
 
 On confirmation, run the formatter. It writes the `TS-` files, projects
-`qa-strategy.md`, optionally writes `index.yaml`, then immediately re-runs
+`qa-strategy.md`, writes `index.yaml` (mandatory, not optional), then
+immediately re-runs
 the structural gate against everything it just wrote — the first point at
 which structure *can* be checked, since nothing was on disk before now. The
 critic's earlier `gate: pass` was judgment only; it never ran these

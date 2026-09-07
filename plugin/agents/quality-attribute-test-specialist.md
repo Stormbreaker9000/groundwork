@@ -21,7 +21,8 @@ from the NFR body); use `design_digest` for component `id`, `responsibility`,
 and `boundary` when the scenario's artifact needs naming as an ID. A
 `scenario` part the orchestrator could not find arrives as `null` rather than
 being omitted — treat a `null` part as a gap to flag (in `risk_rationale` or
-as a `confidence: low` item), never as a part to invent. Never re-read the
+as a `confidence: low` item), never as a part to invent. Use `created_at` for
+the date stamp you write into every item you emit. Never re-read the
 requirement or design files yourself — the orchestrator is the only agent
 that read both sets.
 
@@ -63,7 +64,11 @@ that read both sets.
   a single component under a functional-correctness stimulus (see ISO 25010's
   Functional Suitability characteristic) can legitimately be `unit` or
   `integration`; do not default every quality-attribute item to
-  `performance`/`security` out of habit.
+  `performance`/`security` out of habit. `unit` and `integration` are defined
+  by which boundary the behavior crosses, not by this agent — see
+  `functional-test-specialist.md`, "`test_level` is a judgment about the
+  boundary being crossed, not about effort," for the four boundary
+  definitions this schema's enum shares across both specialists.
 
 - **`risk_level` comes from the quality attribute's own severity, not from
   how hard the scenario is to test.** The instinct to rank by test

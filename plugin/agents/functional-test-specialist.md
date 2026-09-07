@@ -33,7 +33,8 @@ never have to infer the type from which optional keys are present:
   from a constraint or a business rule" below.
 
 Use `design_digest` for component `id`, `responsibility`, and `boundary` when
-a behavior's boundary needs naming. Never re-read the requirement or design
+a behavior's boundary needs naming, and `created_at` for the date stamp you
+write into every item you emit. Never re-read the requirement or design
 files yourself — the orchestrator is the only agent that read both sets, and
 anything it omitted from the digests does not exist for you.
 
@@ -177,13 +178,14 @@ difficulty of checking it.
 # <ID> — <Title>
 
 ## Covers
-<the FR(s) this item exercises, and any component(s) whose boundary it
-crosses, each named by ID with a one-line note of the relationship>
+<the FR(s), constraint(s), or business rule(s) this item exercises, and any
+component(s) whose boundary it crosses, each named by ID with a one-line note
+of the relationship>
 
 ## Test Design
 <how the item is exercised: the setup, the action, and what is observed —
-in prose, never the Gherkin itself; cite the FR's AC by ID for the exact
-scenario>
+in prose, never the Gherkin itself; cite the requirement by ID for the exact
+scenario — an FR's AC, or a CON/BR's fit_criterion>
 
 ## Test Level Rationale
 <why this is the level named in frontmatter — which boundary is crossed,

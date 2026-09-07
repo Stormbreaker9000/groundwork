@@ -65,7 +65,7 @@
     "title": "QA Critic"
   },
   {
-    "description": "QA formatter. Takes the critic-approved test-strategy item set, the synthesised qa_context_artifact, and the qa_context interview object, and writes one atomic Markdown+YAML file per item into .sdlc/qa/strategy, plus the projected qa-strategy.md and an optional index.yaml, then re-runs validate_qa.py and validate_traceability.py against what it just wrote. Returns a formatter_result.",
+    "description": "QA formatter. Takes the critic-approved test-strategy item set, the synthesised qa_context_artifact, and the qa_context interview object, and writes one atomic Markdown+YAML file per item into .sdlc/qa/strategy, plus the projected qa-strategy.md and a mandatory index.yaml, then re-runs validate_qa.py and validate_traceability.py against what it just wrote. Returns a formatter_result.",
     "name": "qa-formatter",
     "title": "QA Formatter"
   },

@@ -189,6 +189,7 @@ def test_rules_export_carries_the_traceability_registry():
         "adr-driver-unlisted",
         "index-unparseable",
         "duplicate-id",
+        "empty-asr-source",
     }
 
 

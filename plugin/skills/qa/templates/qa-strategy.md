@@ -32,3 +32,16 @@ The `qa_context_artifact.accepted_risks` register — every requirement or
 design ID the team declined to test or the critic found uncovered with a
 justification. Not one of the validator's five required headings, so it can
 be visibly empty (`None identified`) rather than silently missing.
+
+## Assumptions
+The `qa_context_artifact.assumptions` list — one bullet per `A-#` entry. Not
+gated, for the same reason Accepted Risks is not: it must be visibly, honestly
+empty (`None identified`) rather than silently missing.
+
+## Dependencies
+The `qa_context_artifact.dependencies` list — one bullet per `D-#` entry.
+Same non-gated, visibly-empty rule as Assumptions.
+
+## Open Questions
+The `qa_context_artifact.open_questions` list — one bullet per `Q-#` entry.
+Same non-gated, visibly-empty rule as Assumptions.

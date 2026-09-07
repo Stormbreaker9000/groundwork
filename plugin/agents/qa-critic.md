@@ -179,9 +179,10 @@ For every ID in the sidecar list:
   a concrete, specific reason no test at any level is warranted (the system
   has no user-facing surface for an `e2e` item; the requirement is fully
   subsumed by another item's coverage; the team declined coverage of exactly
-  this thing per `qa_context.declined_coverage`, if the digests or sidecar
-  make that visible to you). List it in `coverage.uncovered_asrs` with that
-  reason attached. **A justification names why no test is warranted; it does
+  this thing per `qa_context.declined_coverage` — a declared input of yours,
+  see above, so this is always visible to you, not conditional on what the
+  digests or sidecar happen to carry). List it in `coverage.uncovered_asrs`
+  with that reason attached. **A justification names why no test is warranted; it does
   not restate that none exists.** "No item covers this," "missing coverage,"
   and "not tested" are restatements of the finding itself, not justifications,
   and do not pass — "no e2e items, because this is a library with no

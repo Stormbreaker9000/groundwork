@@ -187,6 +187,18 @@ RULES: List[Dict[str, Any]] = [
             "Two files claim the same ID; only the last one read was indexed."
         ),
     },
+    {
+        "id": "empty-asr-source",
+        "severities": [WARN],
+        "applies_to": "drivers.md",
+        "fields": [],
+        "summary": (
+            "drivers.md is missing, unreadable, or has no '## Architecturally "
+            "Significant Requirements' heading, so the ASR list came back "
+            "empty and uncovered-asr could not fire this run — a clean "
+            "uncovered-asr sweep does not mean every ASR is covered."
+        ),
+    },
 ]
 
 
@@ -449,14 +461,41 @@ def _read_asrs(design_dir: str) -> List[str]:
 
     A missing or unreadable drivers.md, or one lacking the heading, resolves
     to [] here exactly as it does in generate_c4.py (that method also prints
-    a stderr warning distinguishing the two cases; this call inherits it).
-    That is not re-reported as a finding of its own — a missing heading is
-    validate_design.py's structural finding when drivers.md exists at all —
-    but it does mean rule_uncovered_asr goes silent over a design set
-    malformed in that specific way, which is accepted rather than duplicated
-    as a second warning channel for the same underlying defect.
+    a stderr warning distinguishing the two cases; this call inherits it, but
+    that stderr line is about DIA-001's traces_from — a different tool's
+    concern — and easy to miss when this tool runs on its own). Because an
+    honest "no ASRs" drivers.md (the heading present, `- None identified.`
+    beneath it) also resolves to [], `rule_uncovered_asr` cannot tell the two
+    apart from this return value alone and calls `_asr_source_unavailable`
+    itself to tell them apart and report the missing-source case in this
+    tool's own voice.
     """
     return gc4.DesignSet._read_asrs(design_dir)
+
+
+def _asr_source_unavailable(design_dir: str) -> Optional[str]:
+    """Why the ASR list came back empty because its *source* is missing, or
+    ``None`` when `drivers.md` exists and has the ASR heading — meaning an
+    empty list from `_read_asrs` is the honest "no ASRs" case instead.
+
+    This re-derives only the two existence checks `generate_c4.py`'s own
+    `_read_asrs` already makes (file readable, heading present) — not the
+    ASR-line parser itself, which stays declared once, there, per
+    `_read_asrs`'s docstring above. Answering "does a source exist to read
+    ASRs from" is a different, smaller question than "what does that source
+    say", and asking it again here is what lets `rule_uncovered_asr` report
+    the failure in this tool's own findings rather than only ever seeing
+    `generate_c4.py`'s stderr line about a different artifact.
+    """
+    path = os.path.join(design_dir, "drivers.md")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as exc:
+        return f"could not read {path} ({exc})"
+    if gc4.ASR_HEADING not in text:
+        return f"{path} has no '{gc4.ASR_HEADING}' heading"
+    return None
 
 
 def rule_uncovered_asr(
@@ -487,6 +526,20 @@ def rule_uncovered_asr(
         covered.update(ts.traces_from)
 
     findings: List[Finding] = []
+    if not asrs:
+        reason = _asr_source_unavailable(design_dir)
+        if reason is not None:
+            findings.append(Finding(
+                rule="empty-asr-source",
+                severity=WARN,
+                artifact_id="drivers.md",
+                path=os.path.join(design_dir, "drivers.md"),
+                message=(
+                    f"the ASR list came back empty because {reason} — "
+                    "uncovered-asr could not fire this run, so a clean "
+                    "sweep here does not mean every ASR is covered"
+                ),
+            ))
     for asr_id in sorted(set(asrs)):
         req = req_index.get(asr_id)
         if req is None:
@@ -799,17 +852,19 @@ def index_caveat_findings(skipped: List[str], duplicates: List[str]) -> List[Fin
 
 def collect_findings(
     design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
-) -> Tuple[List[Finding], int, int, List[str], List[str]]:
+) -> Tuple[List[Finding], int, int, Optional[int], List[str], List[str]]:
     """Run every rule.
 
-    Returns (findings, design_count, req_count, skipped, duplicate_ids).
+    Returns (findings, design_count, req_count, qa_count, skipped, duplicate_ids).
 
     ``qa_dir`` defaults to None — the design stage runs this tool at its own
     Step 4, long before any QA artifact exists, and a path default would make
     every M2 run report a missing directory. When it is None, the QA index is
     never built and neither QA rule runs; the caller does not merely see an
     empty QA set, which would report every architecturally significant
-    requirement as uncovered.
+    requirement as uncovered. ``qa_count`` is ``None`` in that same case, for
+    the same reason — a run with no ``--qa`` never resolved a QA directory and
+    has no count to report, not a count of zero.
     """
     req_index, req_skipped, req_dupes = index_requirements(reqs_dir)
     design_index, design_skipped, design_dupes = index_design(design_dir)
@@ -824,8 +879,10 @@ def collect_findings(
     findings.extend(rule_dangling_reverse_trace(req_index, design_index))
     findings.extend(rule_misplaced_requirement_trace(req_index))
 
+    qa_count: Optional[int] = None
     if qa_dir is not None:
         qa_index, qa_skipped, qa_dupes = index_qa(qa_dir)
+        qa_count = len(qa_index)
         skipped = skipped + qa_skipped
         duplicates = duplicates + qa_dupes
         findings.extend(rule_dangling_qa_trace(qa_index, req_index, design_index))
@@ -834,7 +891,7 @@ def collect_findings(
     duplicates = sorted(set(duplicates))
     findings.extend(index_caveat_findings(skipped, duplicates))
 
-    return findings, len(design_index), len(req_index), skipped, duplicates
+    return findings, len(design_index), len(req_index), qa_count, skipped, duplicates
 
 
 def print_report(
@@ -846,9 +903,23 @@ def print_report(
     skipped: List[str],
     duplicates: List[str],
     quiet: bool,
+    qa_dir: Optional[str] = None,
+    qa_count: Optional[int] = None,
 ) -> None:
-    print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
-    print(f"Indexed {design_count} design artifact(s), {req_count} requirement(s).")
+    # A --qa run must be visible in this header, not just in its findings — a
+    # run over design <-> requirements <-> qa was otherwise textually
+    # indistinguishable from one that never looked at qa/ at all, which is
+    # exactly what forced the end-to-end run to invent a mutation control
+    # before it could trust a clean sweep.
+    if qa_dir is not None:
+        print(f"Validating traceability: {design_dir} <-> {reqs_dir} <-> {qa_dir}")
+        print(
+            f"Indexed {design_count} design artifact(s), {req_count} "
+            f"requirement(s), {qa_count} qa artifact(s)."
+        )
+    else:
+        print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
+        print(f"Indexed {design_count} design artifact(s), {req_count} requirement(s).")
     if not core.HAVE_YAML:
         # The two structural validators announce this; so must this one. Its
         # whole job is reading list fields out of frontmatter, and the stdlib
@@ -928,7 +999,7 @@ def main(argv=None) -> int:
         print(f"ERROR: qa directory not found: {args.qa}", file=sys.stderr)
         return 2
 
-    findings, design_count, req_count, skipped, duplicates = collect_findings(
+    findings, design_count, req_count, qa_count, skipped, duplicates = collect_findings(
         args.design_dir, args.requirements, args.qa
     )
     errors = sum(1 for f in findings if f.severity == ERROR)
@@ -951,6 +1022,7 @@ def main(argv=None) -> int:
         print_report(
             findings, args.design_dir, args.requirements,
             design_count, req_count, skipped, duplicates, args.quiet,
+            qa_dir=args.qa, qa_count=qa_count,
         )
 
     if errors or (args.strict and warns):

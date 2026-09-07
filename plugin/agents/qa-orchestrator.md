@@ -267,8 +267,8 @@ gets the literal IDs it is to use, in order:
 
 ```yaml
 id_block:
-  functional: [TS-001, TS-002]
-  quality_attribute: [TS-003, TS-004]
+  functional: [TS-001, TS-002, TS-003, TS-004]
+  quality_attribute: [TS-005]
 ```
 
 Size each range from the digests and `assigned` lists you are about to build
@@ -339,8 +339,9 @@ generation_brief:
       provider: CMP-013
       operations: [string, ...]
   id_block:
-    functional: [TS-001, TS-002]      # allocated to the functional specialist
-    quality_attribute: [TS-003, TS-004]
+    functional: [TS-001, TS-002, TS-003, TS-004]  # allocated to the functional specialist
+    quality_attribute: [TS-005]
+  created_at: "YYYY-MM-DD"         # today's date, passed so all files agree
   assigned:
     functional: [FR-001, FR-002, CON-002, BR-001]
     quality_attribute: [NFR-004]
@@ -545,11 +546,13 @@ Sources, in order:
    no ID is minted for an entry that then collapses into another.
 
 If a section has no items, emit a single `None identified` entry — an honest
-empty section beats an invented one. The formatter writes this artifact's
-content into `.sdlc/qa/qa-strategy.md`'s `## Accepted Risks` section (not one
-of the validator's required headings — see `qa-formatter.md`) and folds
-`assumptions`/`dependencies`/`open_questions` in the same form the other two
-stages use.
+empty section beats an invented one. The formatter renders this artifact's
+content into `.sdlc/qa/qa-strategy.md`: `accepted_risks` into `## Accepted
+Risks`, and `assumptions`, `dependencies`, and `open_questions` into their own
+`## Assumptions`, `## Dependencies`, and `## Open Questions` sections — none
+of the four are among the validator's required headings (see
+`qa-formatter.md`), because each must be able to be visibly, honestly empty
+rather than silently missing.
 
 ## Stage 7 — Format: the `formatter_result` hand-off
 

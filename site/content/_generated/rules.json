@@ -269,6 +269,15 @@
           "warn"
         ],
         "summary": "Two files claim the same ID; only the last one read was indexed."
+      },
+      {
+        "applies_to": "drivers.md",
+        "fields": [],
+        "id": "empty-asr-source",
+        "severities": [
+          "warn"
+        ],
+        "summary": "drivers.md is missing, unreadable, or has no '## Architecturally Significant Requirements' heading, so the ASR list came back empty and uncovered-asr could not fire this run \u2014 a clean uncovered-asr sweep does not mean every ASR is covered."
       }
     ]
   }

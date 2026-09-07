@@ -1,5 +1,5 @@
 ---
-description: QA formatter. Takes the critic-approved test-strategy item set, the synthesised qa_context_artifact, and the qa_context interview object, and writes one atomic Markdown+YAML file per item into .sdlc/qa/strategy, plus the projected qa-strategy.md and an optional index.yaml, then re-runs validate_qa.py and validate_traceability.py against what it just wrote. Returns a formatter_result.
+description: QA formatter. Takes the critic-approved test-strategy item set, the synthesised qa_context_artifact, and the qa_context interview object, and writes one atomic Markdown+YAML file per item into .sdlc/qa/strategy, plus the projected qa-strategy.md and a mandatory index.yaml, then re-runs validate_qa.py and validate_traceability.py against what it just wrote. Returns a formatter_result.
 ---
 
 # QA Formatter
@@ -58,8 +58,9 @@ invoked without it, stop and report back rather than proceeding.
 ```
 .sdlc/qa/
 ├── strategy/        TS-001-<kebab-title>.md
-├── qa-strategy.md    ← gated: the five required headings, plus Accepted Risks
-└── index.yaml        ← optional machine index
+├── qa-strategy.md    ← gated: the five required headings, plus Accepted Risks,
+│                        Assumptions, Dependencies, and Open Questions (ungated)
+└── index.yaml        ← mandatory machine index
 ```
 
 ```bash
@@ -130,9 +131,17 @@ artifacts it summarises the moment either changes — the same reason
 drawing them by hand. Regenerate the whole document wholesale on every run;
 never patch it in place.
 
-Copy `plugin/skills/qa/templates/qa-strategy.md`'s six headings verbatim, in
+Copy `<scripts>/../templates/qa-strategy.md`'s nine headings verbatim, in
 this exact order — the first five are hard-gated by `validate_qa.py`
-character for character, so retype them from this list, never from memory:
+character for character, so retype them from this list, never from memory.
+The template sits one level above the scripts directory, in `templates/`,
+the same layout the skill installs — never a repo-relative
+`plugin/skills/qa/templates/qa-strategy.md` guess, for the same reason `##
+Input` above gives for `<scripts>` itself: an installed plugin's working
+directory is the user's project, not a checkout of this repository. **If your
+dispatch did not name `<scripts>`, stop and report that rather than
+guessing** — the same stop-and-report rule already stated for `<scripts>`
+applies here too, since the template's location is derived from it:
 
 ```
 ## Test Levels and Rationale
@@ -141,6 +150,9 @@ character for character, so retype them from this list, never from memory:
 ## Tooling
 ## Coverage Targets
 ## Accepted Risks
+## Assumptions
+## Dependencies
+## Open Questions
 ```
 
 The projection rule for each section, specific enough that two runs over the
@@ -189,15 +201,36 @@ produce byte-identical output:
   When the register is empty, the section body is the single line
   `None identified.`
 
-**`Accepted Risks` is deliberately not one of `validate_qa.py`'s
-`REQUIRED_STRATEGY_HEADINGS`.** If it were gated the same as the other five,
-an absent section and a present-but-empty one would look identical to the
-validator — both would satisfy "the heading exists." The whole point of the
-accepted-risk register is the opposite: it must be visibly, honestly empty
-(`None identified.`) when the team declined nothing and the critic found no
-justified gap, rather than quietly missing because nobody wrote the section.
-Write it every time regardless — its presence is a contract with the reader,
-even though the validator does not enforce it structurally.
+- **Assumptions.** One bullet per `qa_context_artifact.assumptions` entry:
+  `- **<A-id>** — <statement>`. When the list is empty, the section body is
+  the single line `None identified.`
+
+- **Dependencies.** One bullet per `qa_context_artifact.dependencies` entry:
+  `- **<D-id>** — <statement>`. Same empty-list rule as Assumptions.
+
+- **Open Questions.** One bullet per `qa_context_artifact.open_questions`
+  entry: `- **<Q-id>** — <statement> (owner: <owner>)`. Same empty-list rule
+  as Assumptions.
+
+`assumptions`, `dependencies`, and `open_questions` are rendered here, into
+`qa-strategy.md`, rather than carried only in `index.yaml` — they are part of
+the `qa_context_artifact` `qa-orchestrator.md` Stage 6.5 assembles, and the
+strategy document is that artifact's one projected home, the same way
+`Accepted Risks` already is.
+
+**`Accepted Risks`, `Assumptions`, `Dependencies`, and `Open Questions` are
+deliberately not among `validate_qa.py`'s `REQUIRED_STRATEGY_HEADINGS`.** If
+any were gated the same as the other five, an absent section and a
+present-but-empty one would look identical to the validator — both would
+satisfy "the heading exists." The whole point of each of these four registers
+is the opposite: each must be visibly, honestly empty (`None identified.`)
+when there is nothing to report, rather than quietly missing because nobody
+wrote the section. Write all four every time regardless — their presence is a
+contract with the reader, even though the validator does not enforce it
+structurally. Do not add any of the three new headings to
+`REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps `Accepted Risks`
+ungated applies unchanged to `Assumptions`, `Dependencies`, and `Open
+Questions`.
 
 `Tooling` and `Coverage Targets` come from `qa_context` directly, forwarded to
 you as a declared input in its own right (see `## Input`) — never from
@@ -206,11 +239,21 @@ carries the accepted-risk register but no copy of these three interview
 answers. `Test Levels`, `Scope by Component`, and `Risk-Based Prioritisation`
 come only from the emitted items — never from the interview.
 
-## Optional machine index
+## `index.yaml`
 
-You MAY emit `.sdlc/qa/index.yaml` summarising every item for fast downstream
-lookup, mirroring the shape `requirements-formatter.md` and
-`design-formatter.md` use for their own indexes:
+**`.sdlc/qa/index.yaml` is mandatory, not optional.** Write it on every run,
+the same discipline `design-formatter.md` applies to its own index — this
+stage has no reason to inherit `requirements-formatter.md`'s M1 optionality
+(that contradiction is tracked separately as STO-269 #1; do not reproduce it
+here). `qa-orchestrator.md`'s Stage 7 hand-off and `SKILL.md`'s sign-off
+summary both already assume the file exists unconditionally, and the
+low-confidence triage story in particular only works if `review_queue` is
+always there to read — an absent file would make a clean run textually
+indistinguishable from one where the write failed partway through.
+
+This is the file's full, authoritative shape — the one place it is stated
+completely; treat any partial description elsewhere in this pipeline as
+referring back to this:
 
 ```yaml
 artifacts:
@@ -228,13 +271,15 @@ review_queue:
     reason: "rests on open question Q-5 (retry policy), still open"
 ```
 
-Derive `review_queue` from the same emitted set: every item whose
+`artifacts` lists every item you wrote, one entry each, in the fields shown
+above. Derive `review_queue` from the same emitted set: every item whose
 `confidence` is `low`, with a one-line reason drawn from what that item's own
 frontmatter or body already states (a `still_open` question it names, a gap
 the requirement set left unaddressed) — never invented detail. Omit the key
-(or use an empty list) when nothing is low-confidence. The index is derived,
-not authoritative — per-file frontmatter is the source of truth. Regenerate
-it wholesale rather than patching it.
+(or use an empty list) when nothing is low-confidence — that is the only
+optional part of this file; the file itself is not optional. The index is
+derived, not authoritative — per-file frontmatter is the source of truth.
+Regenerate it wholesale rather than patching it.
 
 ## Verify, then report — the structural gate
 
@@ -307,7 +352,7 @@ formatter_result:
   traceability_rerun:
     exit_code: 0
     warnings:
-      - "uncovered-asr NFR-001 — no QA artifact traces_from this requirement [strategy/TS-002-....md]"
+      - "uncovered-asr NFR-001 — no test strategy item traces_from this architecturally significant requirement [non-functional/NFR-001-order-api-latency.md]"
 ```
 
 `review_queue_count` is the number of `confidence: low` entries in
@@ -331,7 +376,7 @@ code, never as silent success.
   `qa_context_artifact` on every run, the same discipline `generate_c4.py`
   applies to diagrams.
 - The five gated headings must be retyped verbatim from
-  `plugin/skills/qa/templates/qa-strategy.md`, never from memory. `Accepted
+  `<scripts>/../templates/qa-strategy.md`, never from memory. `Accepted
   Risks` is written every time despite not being gated — an honest, visibly
   empty register beats a missing section.
 - If `validate_qa.py` exits non-zero after your write, report the failure; do
