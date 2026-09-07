@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://groundwork.dev/schema/qa.schema.json",
+  "title": "Groundwork QA artifact",
+  "description": "Schema for a single atomic test-strategy file's YAML frontmatter. One artifact per Markdown file under .sdlc/qa/strategy/<ID>-<kebab-title>.md. Flat rather than branched: the QA stage emits one type, so additionalProperties:false is sufficient and the base-plus-branch composition design.schema.json needs would be ceremony here.",
+  "type": "object",
+  "required": [
+    "id", "type", "title", "description", "test_level", "risk_level",
+    "risk_rationale", "enforcement", "traces_from", "traces_to",
+    "status", "confidence", "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Categorical, zero-padded, stable ID. Optional uppercase category infix allowed (e.g. TS-PERF-004).",
+      "pattern": "^TS(-[A-Z0-9]+)*-[0-9]{3,}$"
+    },
+    "type": { "const": "test_strategy" },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "test_level": {
+      "type": "string",
+      "description": "The level this strategy item operates at. Drives grouping in the rendered qa-strategy.md.",
+      "enum": ["unit", "integration", "contract", "e2e", "performance", "security"]
+    },
+    "risk_level": {
+      "type": "string",
+      "description": "Derived from the quality-attribute scenarios and requirements this item covers. Orders the rendered prioritisation section.",
+      "enum": ["high", "medium", "low"]
+    },
+    "risk_rationale": {
+      "type": "string",
+      "description": "Why this risk level. Mandatory at every level, including low: an unexplained 'low' is the one a reader cannot check.",
+      "minLength": 1
+    },
+    "enforcement": {
+      "type": "string",
+      "description": "Whether CI actually checks this. STO-104 reads it to tell a real DoD gate from one a human must remember.",
+      "enum": ["ci", "manual", "none"]
+    },
+    "traces_from": {
+      "type": "array",
+      "description": "The requirement and design IDs this item covers. The QA->upstream edge is stored here and nowhere else; validate_traceability.py walks it backwards.",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "traces_to": {
+      "type": "object",
+      "description": "Downstream references to real test and source files, filled in when code exists. Empty through M3 by design.",
+      "additionalProperties": false,
+      "properties": {
+        "tests": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "code": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "status": { "type": "string", "enum": ["draft", "approved", "obsolete"] },
+    "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "created_at": { "type": "string", "format": "date" },
+    "scope": {
+      "type": "string",
+      "description": "RESERVED (agile planning scope). Present-but-optional; mirrors the requirement schema.",
+      "enum": ["project", "epic", "story"]
+    },
+    "parent_scope": {
+      "type": ["string", "null"],
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional."
+    }
+  }
+}

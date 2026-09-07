@@ -29,6 +29,24 @@
     "heading": "Six coverage areas the requirement set cannot carry, by construction:",
     "skill": "plugin/skills/design/SKILL.md"
   },
+  "qa": {
+    "areas": [
+      {
+        "detail": "the framework in use, and any existing suite whose conventions new tests must match",
+        "name": "Test tooling and existing suite"
+      },
+      {
+        "detail": "what the pipeline can actually run and fail on, which decides every item's `enforcement` value",
+        "name": "CI enforcement capability"
+      },
+      {
+        "detail": "the targets the team holds itself to, and the areas it has decided not to test",
+        "name": "Coverage targets and risk appetite"
+      }
+    ],
+    "heading": "Three coverage areas neither prior stage carries:",
+    "skill": "plugin/skills/qa/SKILL.md"
+  },
   "requirements": {
     "areas": [
       {

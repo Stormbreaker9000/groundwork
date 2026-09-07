@@ -23,13 +23,14 @@ shape belong to the two structural validators; this tool only resolves IDs.
 Usage
 -----
     python3 validate_traceability.py [DESIGN_DIR] [--requirements DIR]
-                                     [--json] [--strict] [--quiet]
+                                     [--qa DIR] [--json] [--strict] [--quiet]
 
 Exit codes
 ----------
     0  no errors (warnings may be present, unless --strict)
     1  one or more errors, or any warning under --strict
-    2  usage / environment error (either directory missing)
+    2  usage / environment error (the design directory, the requirements
+       directory, or — when --qa is given — the qa directory is missing)
 """
 from __future__ import annotations
 
@@ -39,7 +40,7 @@ import os
 import re
 import sys
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # This script spans two stages, so both stage script dirs and the shared lib/
 # go on the path. Resolved relative to this file, so cwd does not matter —
@@ -55,6 +56,7 @@ for _p in (
         sys.path.insert(0, _p)
 
 import artifact_core as core  # noqa: E402
+import generate_c4 as gc4  # noqa: E402
 import validate_design as vd  # noqa: E402
 import validate_requirements as vr  # noqa: E402
 from artifact_core import parse_frontmatter  # noqa: E402
@@ -115,6 +117,16 @@ RULES: List[Dict[str, Any]] = [
         ),
     },
     {
+        "id": "dangling-qa-trace",
+        "severities": [ERROR],
+        "applies_to": "qa artifact",
+        "fields": [],
+        "summary": (
+            "A QA artifact's traces_from names an ID that exists in neither "
+            "the requirements set nor the design set."
+        ),
+    },
+    {
         "id": "uncovered-fr",
         "severities": [WARN],
         "applies_to": "requirement",
@@ -122,6 +134,16 @@ RULES: List[Dict[str, Any]] = [
         "summary": (
             "A functional requirement is cited by no component. Excludes "
             "priority: wont and status: obsolete."
+        ),
+    },
+    {
+        "id": "uncovered-asr",
+        "severities": [WARN],
+        "applies_to": "requirement",
+        "fields": [],
+        "summary": (
+            "An architecturally significant requirement is covered by no test "
+            "strategy item. Excludes priority: wont and status: obsolete."
         ),
     },
     {
@@ -165,6 +187,18 @@ RULES: List[Dict[str, Any]] = [
             "Two files claim the same ID; only the last one read was indexed."
         ),
     },
+    {
+        "id": "empty-asr-source",
+        "severities": [WARN],
+        "applies_to": "drivers.md",
+        "fields": [],
+        "summary": (
+            "drivers.md is missing, unreadable, or has no '## Architecturally "
+            "Significant Requirements' heading, so the ASR list came back "
+            "empty and uncovered-asr could not fire this run — a clean "
+            "uncovered-asr sweep does not mean every ASR is covered."
+        ),
+    },
 ]
 
 
@@ -192,6 +226,14 @@ class Requirement:
 @dataclass
 class DesignArtifact:
     design_id: str
+    type: str
+    path: str
+    traces_from: List[str] = field(default_factory=list)
+
+
+@dataclass
+class QAArtifact:
+    qa_id: str
     type: str
     path: str
     traces_from: List[str] = field(default_factory=list)
@@ -271,6 +313,41 @@ def index_design(
     return index, skipped, duplicates
 
 
+# validate_qa.py's own SKIP_FILENAMES, restated rather than imported: this
+# module already reaches into the requirements and design skills' scripts for
+# discover_files, and pulling in the QA skill's structural validator as well
+# would couple that script to this one for no reason — this tool only ever
+# needs the skip set, not any of validate_qa.py's schema logic.
+QA_SKIP_FILENAMES = {"qa-strategy.md", "index.yaml"}
+
+
+def index_qa(
+    qa_dir: str,
+) -> Tuple[Dict[str, QAArtifact], List[str], List[str]]:
+    """Index every QA artifact by ID.
+
+    Returns (index, unparseable_paths, duplicate_ids). See
+    ``index_requirements`` for why duplicates are surfaced.
+    """
+    index: Dict[str, QAArtifact] = {}
+    skipped: List[str] = []
+    duplicates: List[str] = []
+    for path in core.discover_files(qa_dir, QA_SKIP_FILENAMES, set()):
+        data, err = parse_frontmatter(path)
+        if err or not isinstance(data, dict) or not isinstance(data.get("id"), str):
+            skipped.append(path)
+            continue
+        if data["id"] in index:
+            duplicates.append(data["id"])
+        index[data["id"]] = QAArtifact(
+            qa_id=data["id"],
+            type=_text(data.get("type")),
+            path=os.path.relpath(path, qa_dir),
+            traces_from=_str_list(data.get("traces_from")),
+        )
+    return index, skipped, duplicates
+
+
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
@@ -294,6 +371,38 @@ def rule_dangling_trace(
                     path=art.path,
                     message=f"traces_from -> '{target}' is not a known requirement id",
                 ))
+    return findings
+
+
+def rule_dangling_qa_trace(
+    qa_index: Dict[str, QAArtifact],
+    req_index: Dict[str, Requirement],
+    design_index: Dict[str, DesignArtifact],
+) -> List[Finding]:
+    """Every QA artifact's traces_from must resolve to a requirement or a
+    design artifact.
+
+    A TS covers either half of the pipeline — an FR/NFR straight out of the
+    requirements set, or a component/interface/ADR it targets instead — so the
+    resolution set is the union of both indexes, not either alone. Only
+    traces_from is resolved: traces_to (tests, code) is future work the QA
+    stage hands off to, not an edge this tool owns (spec D8).
+    """
+    findings: List[Finding] = []
+    for art in sorted(qa_index.values(), key=lambda a: a.qa_id):
+        for target in art.traces_from:
+            if target in req_index or target in design_index:
+                continue
+            findings.append(Finding(
+                rule="dangling-qa-trace",
+                severity=ERROR,
+                artifact_id=art.qa_id,
+                path=art.path,
+                message=(
+                    f"traces_from -> '{target}' is not a known requirement or "
+                    f"design artifact id"
+                ),
+            ))
     return findings
 
 
@@ -334,6 +443,123 @@ def rule_uncovered_fr(
             artifact_id=req.req_id,
             path=req.path,
             message="no component traces_from this functional requirement",
+        ))
+    return findings
+
+
+def _read_asrs(design_dir: str) -> List[str]:
+    """Every ASR ID in drivers.md's '## Architecturally Significant
+    Requirements' section, or [] if the file, or the section, is absent.
+
+    There is exactly one authoritative ASR list in this pipeline: drivers.md,
+    written by the design formatter and already read by generate_c4.py
+    (``DesignSet._read_asrs``) to seed each diagram's traces_from. This
+    delegates to that same method rather than writing a second parser over
+    the same section — two parsers of "what counts as an ASR" is precisely
+    the drift this discipline exists to prevent, and ``ASR_HEADING`` /
+    ``_ASR_LINE_RE`` live there, not here.
+
+    A missing or unreadable drivers.md, or one lacking the heading, resolves
+    to [] here exactly as it does in generate_c4.py (that method also prints
+    a stderr warning distinguishing the two cases; this call inherits it, but
+    that stderr line is about DIA-001's traces_from — a different tool's
+    concern — and easy to miss when this tool runs on its own). Because an
+    honest "no ASRs" drivers.md (the heading present, `- None identified.`
+    beneath it) also resolves to [], `rule_uncovered_asr` cannot tell the two
+    apart from this return value alone and calls `_asr_source_unavailable`
+    itself to tell them apart and report the missing-source case in this
+    tool's own voice.
+    """
+    return gc4.DesignSet._read_asrs(design_dir)
+
+
+def _asr_source_unavailable(design_dir: str) -> Optional[str]:
+    """Why the ASR list came back empty because its *source* is missing, or
+    ``None`` when `drivers.md` exists and has the ASR heading — meaning an
+    empty list from `_read_asrs` is the honest "no ASRs" case instead.
+
+    This re-derives only the two existence checks `generate_c4.py`'s own
+    `_read_asrs` already makes (file readable, heading present) — not the
+    ASR-line parser itself, which stays declared once, there, per
+    `_read_asrs`'s docstring above. Answering "does a source exist to read
+    ASRs from" is a different, smaller question than "what does that source
+    say", and asking it again here is what lets `rule_uncovered_asr` report
+    the failure in this tool's own findings rather than only ever seeing
+    `generate_c4.py`'s stderr line about a different artifact.
+    """
+    path = os.path.join(design_dir, "drivers.md")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as exc:
+        return f"could not read {path} ({exc})"
+    if gc4.ASR_HEADING not in text:
+        return f"{path} has no '{gc4.ASR_HEADING}' heading"
+    return None
+
+
+def rule_uncovered_asr(
+    req_index: Dict[str, Requirement],
+    qa_index: Dict[str, QAArtifact],
+    design_dir: str,
+) -> List[Finding]:
+    """Every architecturally significant requirement must be cited by at
+    least one test strategy item.
+
+    "Architecturally significant" means exactly what drivers.md's ASR list
+    says it means (see ``_read_asrs``) — not a proxy such as "cited by some
+    design artifact's traces_from". Those two sets differ in both
+    directions: a design artifact may cite a requirement for reasons other
+    than architectural significance, and an ASR may end up addressed by no
+    single artifact's traces_from. The rule is named uncovered-*asr*, so it
+    has to resolve against the actual ASR list or the name would lie.
+
+    Reuses rule_uncovered_fr's exclusion filters rather than inventing a
+    second definition of "excluded from coverage sweeps": a `wont` or
+    `obsolete` requirement is excluded from this sweep for the same reason it
+    is excluded from that one (spec D4).
+    """
+    asrs = _read_asrs(design_dir)
+
+    covered: set = set()
+    for ts in qa_index.values():
+        covered.update(ts.traces_from)
+
+    findings: List[Finding] = []
+    if not asrs:
+        reason = _asr_source_unavailable(design_dir)
+        if reason is not None:
+            findings.append(Finding(
+                rule="empty-asr-source",
+                severity=WARN,
+                artifact_id="drivers.md",
+                path=os.path.join(design_dir, "drivers.md"),
+                message=(
+                    f"the ASR list came back empty because {reason} — "
+                    "uncovered-asr could not fire this run, so a clean "
+                    "sweep here does not mean every ASR is covered"
+                ),
+            ))
+    for asr_id in sorted(set(asrs)):
+        req = req_index.get(asr_id)
+        if req is None:
+            # Not a known requirement id (dangling, or an ASR line naming a
+            # CMP-/IF- id by mistake). Resolving drivers.md's ASR list against
+            # the requirements set is not this rule's job; it only asks
+            # whether a *known* ASR requirement has test coverage.
+            continue
+        if req.priority in COVERAGE_EXCLUDED_PRIORITIES:
+            continue
+        if req.status in COVERAGE_EXCLUDED_STATUSES:
+            continue
+        if req.req_id in covered:
+            continue
+        findings.append(Finding(
+            rule="uncovered-asr",
+            severity=WARN,
+            artifact_id=req.req_id,
+            path=req.path,
+            message="no test strategy item traces_from this architecturally significant requirement",
         ))
     return findings
 
@@ -625,17 +851,26 @@ def index_caveat_findings(skipped: List[str], duplicates: List[str]) -> List[Fin
 
 
 def collect_findings(
-    design_dir: str, reqs_dir: str
-) -> Tuple[List[Finding], int, int, List[str], List[str]]:
+    design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
+) -> Tuple[List[Finding], int, int, Optional[int], List[str], List[str]]:
     """Run every rule.
 
-    Returns (findings, design_count, req_count, skipped, duplicate_ids).
+    Returns (findings, design_count, req_count, qa_count, skipped, duplicate_ids).
+
+    ``qa_dir`` defaults to None — the design stage runs this tool at its own
+    Step 4, long before any QA artifact exists, and a path default would make
+    every M2 run report a missing directory. When it is None, the QA index is
+    never built and neither QA rule runs; the caller does not merely see an
+    empty QA set, which would report every architecturally significant
+    requirement as uncovered. ``qa_count`` is ``None`` in that same case, for
+    the same reason — a run with no ``--qa`` never resolved a QA directory and
+    has no count to report, not a count of zero.
     """
     req_index, req_skipped, req_dupes = index_requirements(reqs_dir)
     design_index, design_skipped, design_dupes = index_design(design_dir)
 
     skipped = req_skipped + design_skipped
-    duplicates = sorted(set(req_dupes + design_dupes))
+    duplicates = req_dupes + design_dupes
 
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
@@ -643,9 +878,20 @@ def collect_findings(
     findings.extend(rule_adr_drivers(design_index, req_index, design_dir))
     findings.extend(rule_dangling_reverse_trace(req_index, design_index))
     findings.extend(rule_misplaced_requirement_trace(req_index))
+
+    qa_count: Optional[int] = None
+    if qa_dir is not None:
+        qa_index, qa_skipped, qa_dupes = index_qa(qa_dir)
+        qa_count = len(qa_index)
+        skipped = skipped + qa_skipped
+        duplicates = duplicates + qa_dupes
+        findings.extend(rule_dangling_qa_trace(qa_index, req_index, design_index))
+        findings.extend(rule_uncovered_asr(req_index, qa_index, design_dir))
+
+    duplicates = sorted(set(duplicates))
     findings.extend(index_caveat_findings(skipped, duplicates))
 
-    return findings, len(design_index), len(req_index), skipped, duplicates
+    return findings, len(design_index), len(req_index), qa_count, skipped, duplicates
 
 
 def print_report(
@@ -657,9 +903,23 @@ def print_report(
     skipped: List[str],
     duplicates: List[str],
     quiet: bool,
+    qa_dir: Optional[str] = None,
+    qa_count: Optional[int] = None,
 ) -> None:
-    print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
-    print(f"Indexed {design_count} design artifact(s), {req_count} requirement(s).")
+    # A --qa run must be visible in this header, not just in its findings — a
+    # run over design <-> requirements <-> qa was otherwise textually
+    # indistinguishable from one that never looked at qa/ at all, which is
+    # exactly what forced the end-to-end run to invent a mutation control
+    # before it could trust a clean sweep.
+    if qa_dir is not None:
+        print(f"Validating traceability: {design_dir} <-> {reqs_dir} <-> {qa_dir}")
+        print(
+            f"Indexed {design_count} design artifact(s), {req_count} "
+            f"requirement(s), {qa_count} qa artifact(s)."
+        )
+    else:
+        print(f"Validating traceability: {design_dir} <-> {reqs_dir}")
+        print(f"Indexed {design_count} design artifact(s), {req_count} requirement(s).")
     if not core.HAVE_YAML:
         # The two structural validators announce this; so must this one. Its
         # whole job is reading list fields out of frontmatter, and the stdlib
@@ -713,6 +973,11 @@ def main(argv=None) -> int:
         default=".sdlc/requirements",
         help="Directory of requirement files (default: .sdlc/requirements).",
     )
+    parser.add_argument(
+        "--qa",
+        default=None,
+        help="Directory of QA files (default: none — QA rules are skipped).",
+    )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable findings.")
     parser.add_argument(
         "--strict", action="store_true", help="Exit non-zero on warnings as well as errors."
@@ -730,9 +995,12 @@ def main(argv=None) -> int:
     if not os.path.isdir(args.requirements):
         print(f"ERROR: requirements directory not found: {args.requirements}", file=sys.stderr)
         return 2
+    if args.qa is not None and not os.path.isdir(args.qa):
+        print(f"ERROR: qa directory not found: {args.qa}", file=sys.stderr)
+        return 2
 
-    findings, design_count, req_count, skipped, duplicates = collect_findings(
-        args.design_dir, args.requirements
+    findings, design_count, req_count, qa_count, skipped, duplicates = collect_findings(
+        args.design_dir, args.requirements, args.qa
     )
     errors = sum(1 for f in findings if f.severity == ERROR)
     warns = sum(1 for f in findings if f.severity == WARN)
@@ -754,6 +1022,7 @@ def main(argv=None) -> int:
         print_report(
             findings, args.design_dir, args.requirements,
             design_count, req_count, skipped, duplicates, args.quiet,
+            qa_dir=args.qa, qa_count=qa_count,
         )
 
     if errors or (args.strict and warns):

@@ -83,6 +83,9 @@ SCHEMAS = {
     "requirements": os.path.join(
         PLUGIN_ROOT, "skills", "requirements", "schema", "requirement.schema.json"
     ),
+    "qa": os.path.join(
+        PLUGIN_ROOT, "skills", "qa", "schema", "qa.schema.json"
+    ),
 }
 
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
@@ -246,6 +249,10 @@ STAGE_SOURCES = {
             "by construction:"
         ),
     },
+    "qa": {
+        "skill": "plugin/skills/qa/SKILL.md",
+        "heading": "Three coverage areas neither prior stage carries:",
+    },
 }
 
 _AREA_ITEM_RE = re.compile(r"^\d+\.\s+\*\*(.+?)\*\*\s+—\s+(.+)$")
@@ -309,6 +316,7 @@ def export_stages() -> Dict[str, Dict[str, Any]]:
 PIPELINE_SOURCES = {
     "requirements": "plugin/agents/requirements-orchestrator.md",
     "design": "plugin/agents/design-orchestrator.md",
+    "qa": "plugin/agents/qa-orchestrator.md",
 }
 
 _STAGE_HEADING_RE = re.compile(r"^## Stage ([\d.]+) — (.+)$", re.M)

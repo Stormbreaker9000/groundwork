@@ -129,6 +129,90 @@
       }
     ]
   },
+  "qa": {
+    "agent": "qa-orchestrator",
+    "source": "plugin/agents/qa-orchestrator.md",
+    "stages": [
+      {
+        "contracts": [],
+        "label": "Consume the qa context",
+        "number": "1",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Read the requirement and design sets",
+        "number": "2",
+        "retired": false
+      },
+      {
+        "contracts": [],
+        "label": "Allocate categorical, zero-padded IDs",
+        "number": "3",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "generation_brief",
+            "transients": [],
+            "yaml": "generation_brief:\n  qa_context: { ...the Stage 1 object, forwarded verbatim... }\n  scripts_dir: string           # absolute; supplied by the skill, threaded to the formatter\n  requirement_digest:           # what Stage 2 read, so specialists do not re-read\n    - id: FR-001\n      type: functional\n      title: string\n      tier: string\n      priority: string\n      acceptance_criteria: string    # BODY \u2014 \"## Acceptance Criteria\"\n    - id: NFR-004\n      type: non_functional\n      title: string\n      quality_attribute: string      # BODY \u2014 \"## ISO 25010 Characteristic\"\n      fit_criterion: string          # the threshold \u2014 carried so the specialist can cite it, never restate it\n      scenario:                      # BODY \u2014 the six-part QAS under \"## Quality Attribute Scenario\"\n        source: string\n        stimulus: string\n        environment: string\n        artifact: string\n        response: string\n        response_measure: string\n    - id: CON-002                    # and BR- entries, in the same shape\n      type: constraint               # or business_rule\n      title: string\n      tier: string\n      priority: string\n      description: string            # the normative rule itself, from frontmatter\n      fit_criterion: string          # the countable or binary check \u2014 cite it, never restate it\n      verification_method: test | inspection | analysis | demonstration\n      bounds: [ FR-009, NFR-005 ]    # BODY \u2014 \"## Bounds / Implemented by\" or \"## Implemented by\"\n  design_digest:\n    - id: CMP-013\n      title: string\n      responsibility: string\n      boundary: string\n    - id: IF-007\n      title: string\n      provider: CMP-013\n      operations: [string, ...]\n  id_block:\n    functional: [TS-001, TS-002, TS-003, TS-004]  # allocated to the functional specialist\n    quality_attribute: [TS-005]\n  created_at: \"YYYY-MM-DD\"         # today's date, passed so all files agree\n  assigned:\n    functional: [FR-001, FR-002, CON-002, BR-001]\n    quality_attribute: [NFR-004]\n"
+          }
+        ],
+        "label": "Dispatch: the `generation_brief` hand-off",
+        "number": "4",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "draft_test_strategies",
+            "transients": [],
+            "yaml": "draft_test_strategies:\n  items:\n    - id: TS-001\n      type: test_strategy\n      title: string\n      description: string\n      test_level: unit | integration | contract | e2e | performance | security\n      risk_level: high | medium | low\n      risk_rationale: string\n      enforcement: ci | manual | none\n      traces_from: [ FR-001, CMP-013 ]\n      traces_to: { tests: [], code: [] }\n      status: draft\n      confidence: high | medium | low\n      created_at: \"YYYY-MM-DD\"\n      body_markdown: |\n        # ...rendered body...\n  assumptions: [ ...optional sibling statements... ]\n  dependencies: [ ...optional sibling statements... ]\n"
+          }
+        ],
+        "label": "Collect drafts: the `draft_test_strategies` hand-off",
+        "number": "5",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "critique_report",
+            "transients": [],
+            "yaml": "critique_report:\n  gate: pass | fail\n  validator:           # structural-gate result, folded back in from the formatter (Stage 7)\n    command: \"python3 <scripts>/validate_qa.py .sdlc/qa\"\n    exit_code: 0\n    summary: string\n  per_item:\n    - id: TS-001\n      verdict: pass | revise\n      findings: [ ...quality and altitude notes... ]\n  coverage:\n    uncovered_asrs: [ ...requirement IDs no item covers, with justification... ]\n    level_gaps: [ ...test levels the set omits, with justification... ]\n"
+          }
+        ],
+        "label": "Critique gate: the `critique_report` hand-off",
+        "number": "6",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "qa_context_artifact",
+            "transients": [],
+            "yaml": "qa_context_artifact:\n  assumptions:\n    - id: A-1\n      statement: string\n  dependencies:\n    - id: D-1\n      statement: string\n  open_questions:\n    - id: Q-1\n      statement: string\n      owner: string\n  accepted_risks:              # the \"what we are not testing\" register\n    - id: AR-1\n      statement: string\n      requirement: FR-007      # or a design ID\n      rationale: string\n"
+          }
+        ],
+        "label": "Synthesise the `qa_context_artifact`",
+        "number": "6.5",
+        "retired": false
+      },
+      {
+        "contracts": [
+          {
+            "name": "formatter_result",
+            "transients": [],
+            "yaml": "formatter_result:\n  files_written: [ \".sdlc/qa/strategy/TS-001-...md\", ... ]\n  strategy: \".sdlc/qa/qa-strategy.md\"\n  index: \".sdlc/qa/index.yaml\"\n  review_queue_count: 0\n  validator_rerun: { exit_code: 0 }\n  traceability_rerun: { exit_code: 0, warnings: [] }\n"
+          }
+        ],
+        "label": "Format: the `formatter_result` hand-off",
+        "number": "7",
+        "retired": false
+      }
+    ]
+  },
   "requirements": {
     "agent": "requirements-orchestrator",
     "source": "plugin/agents/requirements-orchestrator.md",

@@ -65,9 +65,9 @@ def test_check_mode_detects_clean_stale_and_missing(tmp_path, monkeypatch, capsy
     assert not (tmp_path / "rules.json").exists()
 
 
-def test_export_fields_covers_both_schemas():
+def test_export_fields_covers_every_schema():
     payload = er.export_fields()
-    assert set(payload) == {"design", "requirements"}
+    assert set(payload) == {"design", "requirements", "qa"}
 
 
 def test_design_fields_include_base_and_conditional_properties():
@@ -98,7 +98,7 @@ def test_export_agents_covers_every_agent_file():
         n[:-3] for n in os.listdir(os.path.join(er.PLUGIN_ROOT, "agents"))
         if n.endswith(".md")
     ]
-    assert len(agents) == len(on_disk) == 15
+    assert len(agents) == len(on_disk) == 20
     assert {a["name"] for a in agents} == set(on_disk)
 
 
@@ -182,11 +182,14 @@ def test_rules_export_carries_the_traceability_registry():
         "adr-driver-unresolved",
         "dangling-reverse-trace",
         "misplaced-requirement-trace",
+        "dangling-qa-trace",
         "uncovered-fr",
+        "uncovered-asr",
         "adr-driver-untraced",
         "adr-driver-unlisted",
         "index-unparseable",
         "duplicate-id",
+        "empty-asr-source",
     }
 
 
@@ -196,24 +199,40 @@ def test_traceability_rules_declare_no_fields():
         assert rule["fields"] == []
 
 
-def test_stages_export_carries_six_areas_each():
+def test_stages_export_covers_every_stage():
     payload = export_reference.export_stages()
-    assert set(payload) == {"requirements", "design"}
+    assert set(payload) == {"requirements", "design", "qa"}
     for stage in payload.values():
-        assert len(stage["areas"]) == 6
         for area in stage["areas"]:
             assert set(area) == {"name", "detail"}
             assert area["name"] and area["detail"]
+
+
+def test_stages_export_carries_six_areas_for_requirements_and_design():
+    payload = export_reference.export_stages()
+    assert len(payload["requirements"]["areas"]) == 6
+    assert len(payload["design"]["areas"]) == 6
+
+
+def test_stages_export_carries_three_areas_for_qa():
+    payload = export_reference.export_stages()
+    assert len(payload["qa"]["areas"]) == 3
 
 
 def test_stages_export_reads_the_real_skill_files():
     payload = export_reference.export_stages()
     req = [a["name"] for a in payload["requirements"]["areas"]]
     des = [a["name"] for a in payload["design"]["areas"]]
+    qa = [a["name"] for a in payload["qa"]["areas"]]
     assert req[0] == "Core functionality"
     assert req[-1] == "Out of scope"
     assert des[0] == "Runtime and stack"
     assert des[-1] == "Team constraints"
+    assert qa == [
+        "Test tooling and existing suite",
+        "CI enforcement capability",
+        "Coverage targets and risk appetite",
+    ]
 
 
 def test_stages_export_raises_when_the_anchor_moves():
@@ -230,11 +249,12 @@ PIPELINE_STAGE_KEYS = {"number", "label", "retired", "contracts"}
 PIPELINE_CONTRACT_KEYS = {"name", "yaml", "transients"}
 
 
-def test_pipeline_export_covers_both_orchestrators():
+def test_pipeline_export_covers_every_orchestrator():
     payload = er.export_pipeline()
-    assert set(payload) == {"requirements", "design"}
+    assert set(payload) == {"requirements", "design", "qa"}
     assert payload["requirements"]["agent"] == "requirements-orchestrator"
     assert payload["design"]["agent"] == "design-orchestrator"
+    assert payload["qa"]["agent"] == "qa-orchestrator"
     for stage in payload.values():
         for entry in stage["stages"]:
             assert set(entry) == PIPELINE_STAGE_KEYS
@@ -251,6 +271,12 @@ def test_pipeline_export_reads_the_real_stage_order():
                    "9", "9.5", "9.6", "10", "11", "12"]
 
 
+def test_pipeline_export_reads_the_qa_stage_order():
+    payload = er.export_pipeline()
+    qa = [s["number"] for s in payload["qa"]["stages"]]
+    assert qa == ["1", "2", "3", "4", "5", "6", "6.5", "7"]
+
+
 def test_pipeline_export_names_every_contract():
     payload = er.export_pipeline()
 
@@ -264,6 +290,18 @@ def test_pipeline_export_names_every_contract():
     assert names("design") == [
         "generation_brief", "draft_components", "draft_interfaces",
         "critique_report", "design_context_artifact", "formatter_result",
+    ]
+
+
+def test_pipeline_export_names_every_qa_contract():
+    payload = er.export_pipeline()
+
+    def names(stage):
+        return [c["name"] for s in payload[stage]["stages"] for c in s["contracts"]]
+
+    assert names("qa") == [
+        "generation_brief", "draft_test_strategies", "critique_report",
+        "qa_context_artifact", "formatter_result",
     ]
 
 
@@ -306,6 +344,7 @@ def test_pipeline_export_marks_retired_stages():
     retired = [s["number"] for s in payload["design"]["stages"] if s["retired"]]
     assert retired == ["11", "12"]
     assert all(not s["retired"] for s in payload["requirements"]["stages"])
+    assert all(not s["retired"] for s in payload["qa"]["stages"])
 
 
 def test_pipeline_export_carries_the_transient_markers():

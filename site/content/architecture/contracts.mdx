@@ -7,7 +7,7 @@ import { ContractTable } from '../../components/ContractTable'
 
 # Hand-off contracts
 
-The two orchestrators own every contract in the pipeline. No specialist,
+The three orchestrators own every contract in the pipeline. No specialist,
 critic, formatter or generator defines one — each of them consumes a shape an
 orchestrator declared and returns a shape an orchestrator declared, which is
 what makes an agent replaceable without renegotiating anything around it.
@@ -24,6 +24,10 @@ parser would drop them.
 ## The design stage
 
 <ContractTable stage="design" />
+
+## The QA stage
+
+<ContractTable stage="qa" />
 
 ## Why the shapes are these shapes
 

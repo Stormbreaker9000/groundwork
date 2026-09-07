@@ -35,4 +35,14 @@ The groundwork plugin provides structured SDLC workflows. Each workflow is a ski
 
 ---
 
+### qa
+
+**Trigger:** A validated requirement set *and* an approved design set both exist and you're ready to define the test strategy ("what should we test?", "let's define the QA strategy", "write the test plan").
+
+**Purpose:** Runs a QA interview covering only what neither prior stage carries — test tooling and any existing suite's conventions, what CI can actually run and fail on, and coverage targets and risk appetite (including what the team has decided not to test) — opening with any open questions the design stage left unresolved. The entry gate runs all three structural validators (requirements, design, and cross-artifact traceability) before anything else, because this stage is about to add a third set of edges to that graph. Then runs a multi-agent pipeline (orchestrator → functional/quality-attribute test specialists → critic → formatter) that emits **atomic Markdown+YAML test-strategy files** with categorical IDs (`TS-`) under `.sdlc/qa/`, plus a projected `qa-strategy.md` covering test levels, scope by component, risk-based prioritisation, tooling, coverage targets, and an accepted-risk register. A structural validator and the cross-artifact traceability check both gate after writing. No files are written until you sign off.
+
+**Why it matters:** A coverage number nobody believes is worse than an honest gap. This stage forces the team to say what CI can actually enforce and what it has deliberately declined to test, and records both as first-class, traceable artifacts instead of leaving them as tribal knowledge.
+
+---
+
 *More workflows will be added as groundwork matures. Run `/groundwork` after updating the plugin to see new additions.*

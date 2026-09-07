@@ -87,6 +87,24 @@ The cost is real — a requirement set is dozens of files, and reading one
 end-to-end means reading a directory. `index.yaml` exists to make that
 cheaper, and is derived rather than authoritative for exactly that reason.
 
+## Why the QA stage emits atomic artifacts, not the document its ticket asked for
+
+STO-103 asked for a QA strategy document — test types and rationale, scope by
+component, risk-based prioritisation, tooling, and coverage targets, written
+to `.sdlc/qa/qa-strategy.md`. The stage still writes that file. It is just not
+the artifact: it is rendered from one.
+
+The reason is the one [above](#why-every-artifact-is-atomic), applied to a
+stage whose own ticket asked for the document form. STO-104's Definition of
+Done and STO-105's traceability graph both consume this stage's output, and
+prose is neither a citable gate nor a graph node — the same gap a single
+prose document would have left unaddressed for either downstream ticket. So
+the emitted set is atomic `TS-` files, schema-gated like every other artifact
+in the pipeline, and `qa-strategy.md` is projected from that set at the
+formatter rather than authored directly — the same relationship
+`generate_c4.py`'s diagrams have to the component graph — so the document a
+reader opens and the artifacts a validator gates can never disagree.
+
 ## What the standards buy
 
 Groundwork does not adopt standards for their authority. Each one is doing a

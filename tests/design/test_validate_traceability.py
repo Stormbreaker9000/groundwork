@@ -26,11 +26,16 @@ REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 def run(case, *extra):
     """Invoke the CLI against a fixture case; return the exit code."""
     root = os.path.join(FIXTURES, case)
-    return vt.main(
-        [os.path.join(root, "design"),
-         "--requirements", os.path.join(root, "requirements"),
-         *extra]
-    )
+    argv = [
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+    ]
+    # QA is optional: a fixture without a qa/ directory must keep invoking the
+    # CLI exactly as before, or every pre-existing case changes behaviour.
+    qa_dir = os.path.join(root, "qa")
+    if os.path.isdir(qa_dir):
+        argv += ["--qa", qa_dir]
+    return vt.main([*argv, *extra])
 
 
 # ---------------------------------------------------------------------------
@@ -492,7 +497,8 @@ def test_rules_registry_entries_are_complete():
         # Traceability findings carry no `field`, unlike the content linters'.
         assert rule["fields"] == []
         assert rule["applies_to"] in {
-            "design artifact", "requirement", "adr", "the index",
+            "design artifact", "requirement", "adr", "the index", "qa artifact",
+            "drivers.md",
         }
 
 
@@ -512,3 +518,133 @@ def test_every_declared_rule_is_exercised_by_a_fixture(capsys):
         payload = json.loads(capsys.readouterr().out)
         seen.update(f["rule"] for f in payload["findings"])
     assert {r["id"] for r in vt.RULES} <= seen
+
+
+# --- QA edge (STO-103) ------------------------------------------------------
+
+def test_qa_trace_resolving_to_a_requirement_passes():
+    root = os.path.join(FIXTURES, "qa_clean")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    assert code == 0
+
+
+def test_qa_trace_resolving_to_a_component_passes():
+    # A TS may cover a design artifact as well as a requirement; both halves
+    # of the union must resolve, not just the requirements half.
+    root = os.path.join(FIXTURES, "qa_traces_component")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    assert code == 0
+
+
+def test_dangling_qa_trace_is_an_error(capsys):
+    root = os.path.join(FIXTURES, "qa_dangling")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "ERROR" in out
+    assert "dangling-qa-trace" in out
+    assert "FR-999" in out
+
+
+def test_uncovered_asr_warns_but_does_not_fail():
+    root = os.path.join(FIXTURES, "qa_uncovered")
+    findings, _, _, _, _, _ = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=os.path.join(root, "qa"),
+    )
+    ids = [f.rule for f in findings]
+    assert "uncovered-asr" in ids
+    assert all(f.severity == vt.WARN for f in findings if f.rule == "uncovered-asr")
+
+
+def test_uncovered_asr_reads_drivers_md_not_design_citations():
+    # qa_uncovered/design/drivers.md declares NFR-001, and only NFR-001, an
+    # ASR. IF-001 additionally cites NFR-002 in its own traces_from, but
+    # NFR-002 is not in the ASR list. Neither is covered by TS-001. If this
+    # rule still used "cited by some design artifact's traces_from" as its
+    # proxy for architectural significance, NFR-002 would fire too; it must
+    # not, or the fix regressed to the proxy definition.
+    root = os.path.join(FIXTURES, "qa_uncovered")
+    findings, _, _, _, _, _ = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=os.path.join(root, "qa"),
+    )
+    asr_findings = {f.artifact_id: f for f in findings if f.rule == "uncovered-asr"}
+    assert "NFR-001" in asr_findings
+    assert "NFR-002" not in asr_findings
+
+
+def test_missing_drivers_md_reports_empty_asr_source(capsys):
+    """qa_clean's design/ has no drivers.md at all — one of three of the four
+    QA fixtures that lack it (spec review, Important 5). `_read_asrs` quietly
+    returns [] in that case, indistinguishable from an honest "no ASRs"
+    drivers.md unless this rule says so itself, in its own voice, rather than
+    relying on generate_c4.py's stderr line about a different artifact
+    (DIA-001's traces_from)."""
+    root = os.path.join(FIXTURES, "qa_clean")
+    findings, _, _, _, _, _ = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=os.path.join(root, "qa"),
+    )
+    matches = [f for f in findings if f.rule == "empty-asr-source"]
+    assert len(matches) == 1
+    finding = matches[0]
+    assert finding.severity == vt.WARN
+    assert "drivers.md" in finding.message
+    assert "uncovered-asr" in finding.message
+
+
+def test_missing_drivers_md_does_not_block(capsys):
+    """The gap is real but non-blocking, the same as every other coverage
+    warning this tool emits — see uncovered-asr and uncovered-fr."""
+    root = os.path.join(FIXTURES, "qa_clean")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "empty-asr-source" in out
+
+
+def test_qa_directory_and_count_are_named_in_the_report(capsys):
+    """A --qa run must be textually distinguishable from one that never
+    looked at qa/ — see print_report, Important 5."""
+    root = os.path.join(FIXTURES, "qa_clean")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert os.path.join(root, "qa") in out
+    assert "1 qa artifact(s)" in out
+
+
+def test_omitting_the_qa_directory_runs_the_old_rules_only():
+    # The QA stage is optional: a project that has not run it must still
+    # validate cleanly, and no QA rule may fire against an absent directory.
+    root = os.path.join(FIXTURES, "clean")
+    findings, _, _, _, _, _ = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=None,
+    )
+    assert not [f for f in findings if f.rule in ("dangling-qa-trace", "uncovered-asr")]
