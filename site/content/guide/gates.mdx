@@ -59,7 +59,12 @@ carry `## Assumptions`, `## Dependencies` and `## Open Questions`, and
 under those headings is never gated, and a section reading `None identified` is
 legal and passes.
 
-`definition-of-done.md` and `index.yaml` are skipped.
+`index.yaml` is skipped, and so is any file named `definition-of-done.md` —
+that entry survives even though `generate_dod.py` no longer writes into this
+directory, so a copy left behind at the old path by an older run does not
+start failing the validator. The generator now writes
+`.sdlc/definition-of-done.md`, at the root of `.sdlc/`, outside the tree this
+validator scans.
 
 ## `validate_design.py`
 

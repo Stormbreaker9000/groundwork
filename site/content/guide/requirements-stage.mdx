@@ -184,7 +184,6 @@ not a single flat document.
   use-cases/
   assumptions.md
   glossary.md
-  definition-of-done.md
   index.yaml
 ```
 
@@ -194,10 +193,13 @@ hand-off to architecture and QA. `index.yaml` carries a `review_queue` listing
 every requirement the pipeline marked `confidence: low` — the same list the
 triage block showed you at the second gate.
 
-`definition-of-done.md` is derived from the requirement set by a separate
-agent after the files are written: functional acceptance gates, non-functional
-fitness gates, constraint and business-rule compliance, test coverage, docs and
-deployment readiness. It is currently a stub that a later milestone expands.
+This stage also writes `.sdlc/definition-of-done.md` — at the root of `.sdlc/`,
+not under `requirements/`, because it derives from every stage that has run,
+not just this one. The `generate_dod.py` script projects it from the
+requirement set: functional acceptance gates, non-functional fitness gates,
+constraint and business-rule compliance, test coverage, docs and deployment
+readiness. This is its requirements-only form; the design and QA stages
+rewrite the same file as they add gates of their own.
 
 Immediately after writing, the formatter runs the structural validator against
 what it just wrote. That is the pipeline's single structural gate, and it is
