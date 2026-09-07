@@ -122,8 +122,15 @@ requirement_digest:
     acceptance_criteria: string
   - id: NFR-004
     title: string
-    quality_attribute: string
-    fit_criterion: string
+    quality_attribute: string      # the ISO 25010 characteristic
+    fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
+    scenario:                      # the six-part QAS, read from the body's "## Quality Attribute Scenario"
+      source: string
+      stimulus: string
+      environment: string
+      artifact: string
+      response: string
+      response_measure: string
 design_digest:
   - id: CMP-013
     title: string
@@ -134,6 +141,27 @@ design_digest:
 Include every FR and NFR that is not `status: obsolete`, and every component.
 Restricting either digest to some pre-filtered subset would leave a specialist
 authoring against a system or a requirement set it cannot see.
+
+An NFR's `scenario` is read from its body, not its frontmatter — the six
+bolded bullets under `## Quality Attribute Scenario` ("Source of stimulus",
+"Stimulus", "Environment", "Artifact", "Response", "Response measure"), one
+digest field each. This is not incidental detail: it is the whole reason
+`quality-attribute-test-specialist` exists as a separate agent rather than
+folding into the functional one, and the specialist never re-reads the
+requirement files, so any part missing from this digest is a part it will
+never see. **A part absent from the body is carried as `scenario.<part>: null`,
+never omitted from the object** — an omitted key and an empty one are
+indistinguishable to a reader downstream, and the specialist needs to be able
+to tell "this NFR has no stated response measure" from "the digest builder
+dropped it."
+
+`fit_criterion` rides alongside `scenario` for citation, not restatement: the
+specialist references the NFR by ID and states how the criterion is measured,
+and never copies the threshold itself into the test-strategy item. This is the
+same rule `dod-generator.md` already states for acceptance criteria
+("reference each FR by ID... do not duplicate them here"), stated here because
+this is the field where a future editor would otherwise be tempted to inline
+the number.
 
 **Separately, read `drivers.md`'s `## Architecturally Significant Requirements`
 section and hold the requirement IDs it lists.** This ASR list is not part of
@@ -204,8 +232,15 @@ generation_brief:
       acceptance_criteria: string
     - id: NFR-004
       title: string
-      quality_attribute: string
-      fit_criterion: string
+      quality_attribute: string      # the ISO 25010 characteristic
+      fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
+      scenario:                      # the six-part QAS, read from the body's "## Quality Attribute Scenario"
+        source: string
+        stimulus: string
+        environment: string
+        artifact: string
+        response: string
+        response_measure: string
   design_digest:
     - id: CMP-013
       title: string
