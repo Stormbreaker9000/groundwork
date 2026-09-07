@@ -337,6 +337,73 @@ def render_conformance_gates(design: List[Artifact], root: str) -> List[str]:
     return lines
 
 
+def render_coverage(
+    reqs: List[Artifact], coverage: Dict[str, List[Artifact]], root: str
+) -> List[str]:
+    """Which test-strategy items cite each requirement.
+
+    Derivation, not enforcement. validate_traceability.py's uncovered-fr and
+    uncovered-asr rules own the gate over this same edge; rendering it here
+    twice would put the rule in two places.
+    """
+    items = by_type(reqs, "functional", "non_functional", "constraint", "business_rule")
+    if not items:
+        return []
+    lines = [
+        "## Test Coverage",
+        "",
+        "Derived from each test-strategy item's `traces_from`. A requirement "
+        "no item cites is a gap, not a pass.",
+        "",
+    ]
+    for req in items:
+        covering = coverage.get(req.id or "", [])
+        if covering:
+            described = ", ".join(
+                f"{item.id} ({item.get('test_level')}, {item.get('enforcement')})"
+                for item in sorted(covering, key=lambda a: a.id or "")
+            )
+            lines.append(f"- [ ] **{req.id}** — covered by {described}")
+        else:
+            lines.append(
+                f"- [ ] **{req.id}** — **no test-strategy item cites this "
+                f"requirement**"
+            )
+    lines.append("")
+    return lines
+
+
+def render_unenforced(qa: List[Artifact], root: str) -> List[str]:
+    """Items that declared themselves unenforced.
+
+    A DoD that lists every gate but drops the items marked `enforcement: none`
+    is claiming coverage the project does not have. Not a checklist: there is
+    nothing here for anyone to tick.
+    """
+    items = [
+        a for a in by_type(qa, "test_strategy") if a.get("enforcement") == "none"
+    ]
+    if not items:
+        return []
+    lines = [
+        "## Declared Unenforced",
+        "",
+        "Test strategy the project decided not to enforce. Recorded so the "
+        "coverage claimed above is not read as coverage delivered.",
+        "",
+    ]
+    for item in items:
+        covers = ", ".join(str(t) for t in item.get("traces_from") or [])
+        lines += [
+            f"- **{item.id} — {item.get('title')}** "
+            f"(`{item.get('test_level')}`, risk: {item.get('risk_level')})",
+            f"  Rationale: {item.get('risk_rationale')}",
+            f"  Covers: {covers}. Source: {_rel_source(item, root, '.sdlc/qa')}",
+            "",
+        ]
+    return lines
+
+
 def render_document(
     reqs: Optional[List[Artifact]],
     design: Optional[List[Artifact]],
@@ -370,6 +437,10 @@ def render_document(
         body += render_nfr_gates(reqs, roots["requirements"], coverage, qa_present)
     if design:
         body += render_conformance_gates(design, roots["design"])
+    if qa:
+        if reqs:
+            body += render_coverage(reqs, coverage, roots["requirements"])
+        body += render_unenforced(qa, roots["qa"])
     lines += body
     lines += [
         "---",

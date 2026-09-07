@@ -254,3 +254,43 @@ def test_component_without_dependencies_has_no_gate(tmp_path):
 def test_conformance_section_absent_without_a_design_set(tmp_path):
     _, text = generate(REQS_ONLY, tmp_path)
     assert "## Architectural Conformance Gates" not in text
+
+
+# ---------------------------------------------------------------------------
+# Coverage + declared-unenforced register (spec D5, D7)
+# ---------------------------------------------------------------------------
+def test_coverage_lists_the_items_covering_each_requirement(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "## Test Coverage" in text
+    assert "TS-001" in text
+    assert "TS-002" in text
+
+
+def test_uncovered_requirement_is_visible_as_a_gap(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "no test-strategy item cites this requirement" in text
+
+
+def test_enforcement_tag_is_derived_from_covering_items(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "**FR-001 — Cancel a pending order** (must) `[CI]`" in text
+    assert "**NFR-002 — Audit log integrity** (must) `[manual]`" in text
+
+
+def test_unenforced_items_get_their_own_register(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "## Declared Unenforced" in text
+    assert "TS-004" in text
+    assert "The cut-off is a single conditional" in text
+
+
+def test_unenforced_register_is_not_a_checklist(tmp_path):
+    """A register records what is not gated; a checkbox would imply it is."""
+    _, text = generate(FULL, tmp_path)
+    register = text.split("## Declared Unenforced", 1)[1]
+    assert "- [ ]" not in register.split("---")[0]
+
+
+def test_unenforced_section_absent_when_nothing_is_unenforced(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## Declared Unenforced" not in text
