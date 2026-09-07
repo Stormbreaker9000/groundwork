@@ -116,21 +116,33 @@ Build two digests, flattened to what a specialist actually needs:
 ```yaml
 requirement_digest:
   - id: FR-001
+    type: functional
     title: string
     tier: string
     priority: string
-    acceptance_criteria: string
+    acceptance_criteria: string    # BODY, not frontmatter — the Gherkin under "## Acceptance Criteria"
   - id: NFR-004
+    type: non_functional
     title: string
-    quality_attribute: string      # the ISO 25010 characteristic
+    quality_attribute: string      # BODY, not frontmatter — the ISO 25010 characteristic under "## ISO 25010 Characteristic"
     fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
-    scenario:                      # the six-part QAS, read from the body's "## Quality Attribute Scenario"
+    scenario:                      # BODY, not frontmatter — the six-part QAS under "## Quality Attribute Scenario"
       source: string
       stimulus: string
       environment: string
       artifact: string
       response: string
       response_measure: string
+  - id: CON-002                    # and BR- entries, in the same shape
+    type: constraint               # or business_rule
+    title: string
+    tier: string
+    priority: string
+    description: string            # the normative rule itself, from frontmatter
+    fit_criterion: string          # the countable or binary check — cite it, never restate it
+    verification_method: test | inspection | analysis | demonstration
+    bounds: [ FR-009, NFR-005 ]    # BODY — the FR/NFR IDs named under "## Bounds / Implemented by"
+                                    # (constraints) or "## Implemented by" (business rules)
 design_digest:
   - id: CMP-013
     title: string
@@ -143,10 +155,37 @@ design_digest:
                                 # contract-level item exercises
 ```
 
-Include every FR and NFR that is not `status: obsolete`, and every component
-**and interface**. Restricting either digest to some pre-filtered subset would
-leave a specialist authoring against a system or a requirement set it cannot
-see.
+Include **every requirement of every type** that is not `status: obsolete` —
+functional, non-functional, constraint **and business rule** — and every
+component **and interface**. Restricting either digest to some pre-filtered
+subset would leave a specialist authoring against a system or a requirement
+set it cannot see.
+
+**Constraints and business rules are in the digest because `drivers.md`'s ASR
+list puts them there.** That list is what Stage 6's coverage check and
+`validate_traceability.py`'s `uncovered-asr` rule both measure against, and it
+routinely names `CON-` and `BR-` IDs alongside `FR-` and `NFR-` ones — five of
+the twenty ASRs in the published tamagotchi design set are of those two types.
+A digest carrying only FRs and NFRs would forbid every specialist from naming
+those IDs (Stage 5's `traces_from` rule), while Gate B still demanded their
+coverage and the prescribed re-dispatch remedy could reach no specialist that
+was allowed to author them. That deadlock is real; it stalled the first
+end-to-end run of this pipeline, and it is why the digest is typed by
+requirement rather than filtered to two of the four types. `BR-001` in the
+published set carries `verification_method: test` in its own frontmatter, so
+"no test at any level is warranted" is not a justification a critic can
+honestly offer for it either.
+
+A constraint or business-rule entry carries a different field set from an FR's
+because the artifact does: there is no Gherkin under a `## Acceptance
+Criteria` heading to flatten, the normative rule lives in `description` (and,
+identically, under the body's `## Statement`), and `verification_method` — a
+field no FR or NFR entry needs — decides whether an executable test item is
+even the right answer. `bounds` names the FR/NFR IDs the rule reaches, which is
+what lets the specialist write an item that adds to the existing coverage of
+those requirements instead of duplicating it. `type` is carried on **every**
+entry, of every shape, so the discriminator is read rather than inferred from
+which optional keys happen to be present.
 
 `design.schema.json`'s interface branch also carries `error_modes` and each
 operation's `summary`/`interaction`. None of that rides in the digest: a
@@ -159,7 +198,24 @@ the interface spec itself inside every `generation_brief`, the same ceremony
 the FR/NFR digest already avoids by carrying `fit_criterion` instead of the
 whole NFR body.
 
-An NFR's `scenario` is read from its body, not its frontmatter — the six
+**Four digest fields are read from the artifact's body, not its frontmatter.**
+Every other field above is a frontmatter key of the same name, so these four
+are the ones a digest builder silently gets wrong — the field comes back
+`None`, the entry looks merely sparse, and nothing downstream can tell a
+requirement that genuinely lacks the section from a builder that looked in the
+wrong place. The four, and where each lives:
+
+- **`acceptance_criteria`** (FR) — the Gherkin blocks under
+  `## Acceptance Criteria`.
+- **`quality_attribute`** (NFR) — the ISO 25010 characteristic named under
+  `## ISO 25010 Characteristic`. There is no `quality_attribute` frontmatter
+  key on any NFR; the characteristic is body-only.
+- **`scenario`** (NFR) — detailed immediately below.
+- **`bounds`** (CON/BR) — the FR/NFR IDs named in the prose under
+  `## Bounds / Implemented by` (constraints) or `## Implemented by` (business
+  rules). The heading name differs by type; read both.
+
+An NFR's `scenario` is the most consequential of the four — the six
 bolded bullets under `## Quality Attribute Scenario` ("Source of stimulus",
 "Stimulus", "Environment", "Artifact", "Response", "Response measure"), one
 digest field each. This is not incidental detail: it is the whole reason
@@ -217,7 +273,11 @@ id_block:
 
 Size each range from the digests and `assigned` lists you are about to build
 in Stage 4: allocate at least one ID per assigned requirement, since a
-strategy item exists to cover something. This is a floor, not an exact count —
+strategy item exists to cover something. **Count the constraints and business
+rules in `assigned.functional` when you size that range** — they are assigned
+requirements like any other, and sizing the functional range to the FR count
+alone is the arithmetic that forces a re-dispatch on the first run. This is a
+floor, not an exact count —
 one item legitimately covers several requirements via `traces_from`, so a
 specialist may return fewer items than IDs it was handed. An unused ID in a
 range is simply unused and leaves no gap; do not renumber to close one. This is
@@ -243,21 +303,32 @@ generation_brief:
   scripts_dir: string           # absolute; supplied by the skill, threaded to the formatter
   requirement_digest:           # what Stage 2 read, so specialists do not re-read
     - id: FR-001
+      type: functional
       title: string
       tier: string
       priority: string
-      acceptance_criteria: string
+      acceptance_criteria: string    # BODY — "## Acceptance Criteria"
     - id: NFR-004
+      type: non_functional
       title: string
-      quality_attribute: string      # the ISO 25010 characteristic
+      quality_attribute: string      # BODY — "## ISO 25010 Characteristic"
       fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
-      scenario:                      # the six-part QAS, read from the body's "## Quality Attribute Scenario"
+      scenario:                      # BODY — the six-part QAS under "## Quality Attribute Scenario"
         source: string
         stimulus: string
         environment: string
         artifact: string
         response: string
         response_measure: string
+    - id: CON-002                    # and BR- entries, in the same shape
+      type: constraint               # or business_rule
+      title: string
+      tier: string
+      priority: string
+      description: string            # the normative rule itself, from frontmatter
+      fit_criterion: string          # the countable or binary check — cite it, never restate it
+      verification_method: test | inspection | analysis | demonstration
+      bounds: [ FR-009, NFR-005 ]    # BODY — "## Bounds / Implemented by" or "## Implemented by"
   design_digest:
     - id: CMP-013
       title: string
@@ -271,13 +342,28 @@ generation_brief:
     functional: [TS-001, TS-002]      # allocated to the functional specialist
     quality_attribute: [TS-003, TS-004]
   assigned:
-    functional: [FR-001, FR-002]
+    functional: [FR-001, FR-002, CON-002, BR-001]
     quality_attribute: [NFR-004]
 ```
 
 `assigned` is each specialist's work list, drawn from `requirement_digest` by
 ID — `functional-test-specialist` covers the `assigned.functional` entries,
 `quality-attribute-test-specialist` the `assigned.quality_attribute` entries.
+
+**Every constraint and business rule goes in `assigned.functional`**, with the
+FRs, drawing from the same `id_block.functional` range. There is no third key
+and no third specialist: a constraint or a business rule is a behavioural or
+compliance check over boundaries the functional specialist already reasons
+about, not a quality-attribute scenario, and it carries no six-part scenario
+for `quality-attribute-test-specialist` to map. One work list per specialist
+keeps Stage 3's range invariant and Stage 6's re-dispatch rule ("the
+specialist whose `id_block` range the item's ID came from") true without
+qualification. The specialist tells an FR entry from a constraint or
+business-rule entry by reading the entry's own `type` field — which is why
+Stage 2 puts `type` on every entry — and derives the item accordingly; see
+`functional-test-specialist.md`, "Deriving an item from a constraint or a
+business rule."
+
 `design_digest` is shared, read-only background for both: a functional item
 may need to name the component whose boundary a test crosses, or the
 interface a `contract`-level item actually validates, and a quality-attribute
@@ -536,6 +622,12 @@ disposition together rather than a bare warning that looks unaddressed.
   requirement some component or interface cites in its own `traces_from` is
   not automatically an ASR, and treating it as one is the mistake Task 2's
   `uncovered-asr` rule was fixed once already to not make.
+- That ASR list is **not** restricted to FRs and NFRs. It routinely names
+  `CON-` and `BR-` IDs, so `requirement_digest` carries every requirement type
+  and `assigned.functional` carries the constraints and business rules
+  alongside the FRs. A digest filtered to two of the four types puts IDs in
+  Gate B's coverage check that no specialist is permitted to name — a deadlock
+  no re-dispatch can clear, because no specialist owns them.
 - Pass a single `created_at` date to every specialist so all files agree.
 - Any item resting on a `still_open` inherited question is `confidence: low`.
   The full set of `confidence: low` items is the triage queue: the formatter

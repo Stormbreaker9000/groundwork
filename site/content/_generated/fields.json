@@ -367,18 +367,25 @@
       "type": "string"
     },
     {
-      "description": "",
-      "enum": [],
+      "description": "RESERVED (agile planning scope). Present-but-optional; mirrors the requirement schema.",
+      "enum": [
+        "project",
+        "epic",
+        "story"
+      ],
       "name": "scope",
       "required_for": [],
       "type": "string"
     },
     {
-      "description": "",
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional.",
       "enum": [],
       "name": "parent_scope",
       "required_for": [],
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ]
     }
   ],
   "requirements": [

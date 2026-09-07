@@ -89,6 +89,19 @@ specific `findings`:
   arguing "this is hard to set up" rather than "this boundary must be
   crossed" is arguing the wrong thing and is a `revise` regardless of which
   level it lands on.
+
+  **`performance` and `security` are not the quality-attribute specialist's
+  exclusively.** A constraint-derived item from `functional-test-specialist`
+  may legitimately carry either — a constraint bounding a resource budget is
+  `performance`, one bounding what may leave the machine is `security` — and
+  the schema's enum has no value at all for a pure inspection or analysis, so
+  a `CON-`/`BR-` item whose `verification_method` is `inspection` or
+  `analysis` records the level its *executable* half runs at and says so in
+  its rationale (`functional-test-specialist.md`, "Deriving an item from a
+  constraint or a business rule", point 3). Do not `revise` such an item for
+  carrying a level outside the four boundary definitions, and do not `revise`
+  it for the static half having no level of its own — check that the
+  rationale names which half the level describes, and gate on that.
 - **`risk_rationale` explains, not asserts.** A functional item's rationale
   must give the actual consequence-of-failure reasoning (loud vs. silent,
   recoverable vs. not) behind its `risk_level`; a quality-attribute item's
@@ -148,6 +161,15 @@ check the merged set as a whole. This is the same definition
 requirements some component or interface happens to name in its own
 `traces_from`, which is a different set populated by a different judgment.
 Confusing the two cost Task 2 a fix round on that rule; do not repeat it here.
+
+The sidecar list is **not** restricted to `FR-` and `NFR-` IDs: `drivers.md`
+routinely marks constraints and business rules architecturally significant
+too, and every one of them is assigned to `functional-test-specialist` and is
+therefore coverable like any other requirement. A `CON-` or `BR-` ID arriving
+in this list is an ordinary coverage obligation, not a special case to
+justify away — if several appear at once in `uncovered_asrs`, suspect a brief
+that failed to assign them rather than a set that reasonably declined them,
+and say so in the finding.
 
 For every ID in the sidecar list:
 

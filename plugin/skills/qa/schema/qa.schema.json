@@ -58,7 +58,14 @@
     "status": { "type": "string", "enum": ["draft", "approved", "obsolete"] },
     "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
     "created_at": { "type": "string", "format": "date" },
-    "scope": { "type": "string" },
-    "parent_scope": { "type": "string" }
+    "scope": {
+      "type": "string",
+      "description": "RESERVED (agile planning scope). Present-but-optional; mirrors the requirement schema.",
+      "enum": ["project", "epic", "story"]
+    },
+    "parent_scope": {
+      "type": ["string", "null"],
+      "description": "RESERVED. Parent scope ID, or null. Present-but-optional."
+    }
   }
 }

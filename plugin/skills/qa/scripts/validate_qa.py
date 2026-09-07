@@ -88,6 +88,7 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
         "enforcement": {"ci", "manual", "none"},
         "status": {"draft", "approved", "obsolete"},
         "confidence": {"high", "medium", "low"},
+        "scope": {"project", "epic", "story"},
     }
     for field, allowed in enums.items():
         value = data.get(field)

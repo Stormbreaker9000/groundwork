@@ -45,7 +45,7 @@
     "title": "Functional Requirements Specialist"
   },
   {
-    "description": "Functional test-strategy specialist. Converts assigned FRs from the orchestrator's generation_brief, plus the design set's component boundaries, into atomic test-strategy items that say how each requirement is exercised and at what level. Returns a draft_test_strategies object.",
+    "description": "Functional test-strategy specialist. Converts the assigned functional requirements, constraints and business rules from the orchestrator's generation_brief, plus the design set's component boundaries, into atomic test-strategy items that say how each requirement is exercised and at what level. Returns a draft_test_strategies object.",
     "name": "functional-test-specialist",
     "title": "Functional Test Specialist"
   },
