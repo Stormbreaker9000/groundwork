@@ -39,7 +39,7 @@ import os
 import re
 import sys
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # This script spans two stages, so both stage script dirs and the shared lib/
 # go on the path. Resolved relative to this file, so cwd does not matter —
@@ -115,6 +115,16 @@ RULES: List[Dict[str, Any]] = [
         ),
     },
     {
+        "id": "dangling-qa-trace",
+        "severities": [ERROR],
+        "applies_to": "qa artifact",
+        "fields": [],
+        "summary": (
+            "A QA artifact's traces_from names an ID that exists in neither "
+            "the requirements set nor the design set."
+        ),
+    },
+    {
         "id": "uncovered-fr",
         "severities": [WARN],
         "applies_to": "requirement",
@@ -122,6 +132,16 @@ RULES: List[Dict[str, Any]] = [
         "summary": (
             "A functional requirement is cited by no component. Excludes "
             "priority: wont and status: obsolete."
+        ),
+    },
+    {
+        "id": "uncovered-asr",
+        "severities": [WARN],
+        "applies_to": "requirement",
+        "fields": [],
+        "summary": (
+            "An architecturally significant requirement is covered by no test "
+            "strategy item. Excludes priority: wont and status: obsolete."
         ),
     },
     {
@@ -192,6 +212,14 @@ class Requirement:
 @dataclass
 class DesignArtifact:
     design_id: str
+    type: str
+    path: str
+    traces_from: List[str] = field(default_factory=list)
+
+
+@dataclass
+class QAArtifact:
+    qa_id: str
     type: str
     path: str
     traces_from: List[str] = field(default_factory=list)
@@ -271,6 +299,41 @@ def index_design(
     return index, skipped, duplicates
 
 
+# validate_qa.py's own SKIP_FILENAMES, restated rather than imported: this
+# module already reaches into the requirements and design skills' scripts for
+# discover_files, and pulling in the QA skill's structural validator as well
+# would couple that script to this one for no reason — this tool only ever
+# needs the skip set, not any of validate_qa.py's schema logic.
+QA_SKIP_FILENAMES = {"qa-strategy.md", "index.yaml"}
+
+
+def index_qa(
+    qa_dir: str,
+) -> Tuple[Dict[str, QAArtifact], List[str], List[str]]:
+    """Index every QA artifact by ID.
+
+    Returns (index, unparseable_paths, duplicate_ids). See
+    ``index_requirements`` for why duplicates are surfaced.
+    """
+    index: Dict[str, QAArtifact] = {}
+    skipped: List[str] = []
+    duplicates: List[str] = []
+    for path in core.discover_files(qa_dir, QA_SKIP_FILENAMES, set()):
+        data, err = parse_frontmatter(path)
+        if err or not isinstance(data, dict) or not isinstance(data.get("id"), str):
+            skipped.append(path)
+            continue
+        if data["id"] in index:
+            duplicates.append(data["id"])
+        index[data["id"]] = QAArtifact(
+            qa_id=data["id"],
+            type=_text(data.get("type")),
+            path=os.path.relpath(path, qa_dir),
+            traces_from=_str_list(data.get("traces_from")),
+        )
+    return index, skipped, duplicates
+
+
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
@@ -294,6 +357,38 @@ def rule_dangling_trace(
                     path=art.path,
                     message=f"traces_from -> '{target}' is not a known requirement id",
                 ))
+    return findings
+
+
+def rule_dangling_qa_trace(
+    qa_index: Dict[str, QAArtifact],
+    req_index: Dict[str, Requirement],
+    design_index: Dict[str, DesignArtifact],
+) -> List[Finding]:
+    """Every QA artifact's traces_from must resolve to a requirement or a
+    design artifact.
+
+    A TS covers either half of the pipeline — an FR/NFR straight out of the
+    requirements set, or a component/interface/ADR it targets instead — so the
+    resolution set is the union of both indexes, not either alone. Only
+    traces_from is resolved: traces_to (tests, code) is future work the QA
+    stage hands off to, not an edge this tool owns (spec D8).
+    """
+    findings: List[Finding] = []
+    for art in sorted(qa_index.values(), key=lambda a: a.qa_id):
+        for target in art.traces_from:
+            if target in req_index or target in design_index:
+                continue
+            findings.append(Finding(
+                rule="dangling-qa-trace",
+                severity=ERROR,
+                artifact_id=art.qa_id,
+                path=art.path,
+                message=(
+                    f"traces_from -> '{target}' is not a known requirement or "
+                    f"design artifact id"
+                ),
+            ))
     return findings
 
 
@@ -334,6 +429,55 @@ def rule_uncovered_fr(
             artifact_id=req.req_id,
             path=req.path,
             message="no component traces_from this functional requirement",
+        ))
+    return findings
+
+
+def rule_uncovered_asr(
+    design_index: Dict[str, DesignArtifact],
+    req_index: Dict[str, Requirement],
+    qa_index: Dict[str, QAArtifact],
+) -> List[Finding]:
+    """Every architecturally significant requirement must be cited by at
+    least one test strategy item.
+
+    "Architecturally significant" is not a field on disk; it is derived from
+    the same signal the design stage already acted on when it decided a
+    requirement needed a component, interface, or ADR — i.e. a requirement
+    named in some design artifact's traces_from. Unlike rule_uncovered_fr this
+    counts every design artifact type, not components only: an ASR can be
+    addressed by an interface's contract or a decision record just as validly
+    as by a component.
+
+    Reuses rule_uncovered_fr's exclusion filters rather than inventing a
+    second definition of "architecturally significant": a `wont` or `obsolete`
+    requirement is excluded from this sweep for the same reason it is excluded
+    from that one (spec D4).
+    """
+    significant: set = set()
+    for art in design_index.values():
+        significant.update(art.traces_from)
+
+    covered: set = set()
+    for ts in qa_index.values():
+        covered.update(ts.traces_from)
+
+    findings: List[Finding] = []
+    for req in sorted(req_index.values(), key=lambda r: r.req_id):
+        if req.req_id not in significant:
+            continue
+        if req.priority in COVERAGE_EXCLUDED_PRIORITIES:
+            continue
+        if req.status in COVERAGE_EXCLUDED_STATUSES:
+            continue
+        if req.req_id in covered:
+            continue
+        findings.append(Finding(
+            rule="uncovered-asr",
+            severity=WARN,
+            artifact_id=req.req_id,
+            path=req.path,
+            message="no test strategy item traces_from this architecturally significant requirement",
         ))
     return findings
 
@@ -624,18 +768,25 @@ def index_caveat_findings(skipped: List[str], duplicates: List[str]) -> List[Fin
     return findings
 
 
-def collect_findings(
-    design_dir: str, reqs_dir: str
+def _collect_all(
+    design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
 ) -> Tuple[List[Finding], int, int, List[str], List[str]]:
-    """Run every rule.
+    """Run every rule, building each index exactly once.
 
     Returns (findings, design_count, req_count, skipped, duplicate_ids).
+
+    ``qa_dir`` defaults to None — the design stage runs this tool at its own
+    Step 4, long before any QA artifact exists, and a path default would make
+    every M2 run report a missing directory. When it is None, the QA index is
+    never built and neither QA rule runs; the caller does not merely see an
+    empty QA set, which would report every architecturally significant
+    requirement as uncovered.
     """
     req_index, req_skipped, req_dupes = index_requirements(reqs_dir)
     design_index, design_skipped, design_dupes = index_design(design_dir)
 
     skipped = req_skipped + design_skipped
-    duplicates = sorted(set(req_dupes + design_dupes))
+    duplicates = req_dupes + design_dupes
 
     findings: List[Finding] = []
     findings.extend(rule_dangling_trace(design_index, req_index))
@@ -643,9 +794,32 @@ def collect_findings(
     findings.extend(rule_adr_drivers(design_index, req_index, design_dir))
     findings.extend(rule_dangling_reverse_trace(req_index, design_index))
     findings.extend(rule_misplaced_requirement_trace(req_index))
+
+    if qa_dir is not None:
+        qa_index, qa_skipped, qa_dupes = index_qa(qa_dir)
+        skipped = skipped + qa_skipped
+        duplicates = duplicates + qa_dupes
+        findings.extend(rule_dangling_qa_trace(qa_index, req_index, design_index))
+        findings.extend(rule_uncovered_asr(design_index, req_index, qa_index))
+
+    duplicates = sorted(set(duplicates))
     findings.extend(index_caveat_findings(skipped, duplicates))
 
     return findings, len(design_index), len(req_index), skipped, duplicates
+
+
+def collect_findings(
+    design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
+) -> List[Finding]:
+    """Run every rule and return the findings alone.
+
+    A thin wrapper around ``_collect_all`` for callers that only need the
+    findings, not the index sizes ``main()`` prints in its header.
+    """
+    findings, _design_count, _req_count, _skipped, _duplicates = _collect_all(
+        design_dir, reqs_dir, qa_dir
+    )
+    return findings
 
 
 def print_report(
@@ -713,6 +887,11 @@ def main(argv=None) -> int:
         default=".sdlc/requirements",
         help="Directory of requirement files (default: .sdlc/requirements).",
     )
+    parser.add_argument(
+        "--qa",
+        default=None,
+        help="Directory of QA files (default: none — QA rules are skipped).",
+    )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable findings.")
     parser.add_argument(
         "--strict", action="store_true", help="Exit non-zero on warnings as well as errors."
@@ -730,9 +909,12 @@ def main(argv=None) -> int:
     if not os.path.isdir(args.requirements):
         print(f"ERROR: requirements directory not found: {args.requirements}", file=sys.stderr)
         return 2
+    if args.qa is not None and not os.path.isdir(args.qa):
+        print(f"ERROR: qa directory not found: {args.qa}", file=sys.stderr)
+        return 2
 
-    findings, design_count, req_count, skipped, duplicates = collect_findings(
-        args.design_dir, args.requirements
+    findings, design_count, req_count, skipped, duplicates = _collect_all(
+        args.design_dir, args.requirements, args.qa
     )
     errors = sum(1 for f in findings if f.severity == ERROR)
     warns = sum(1 for f in findings if f.severity == WARN)

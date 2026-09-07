@@ -26,11 +26,16 @@ REPO_ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 def run(case, *extra):
     """Invoke the CLI against a fixture case; return the exit code."""
     root = os.path.join(FIXTURES, case)
-    return vt.main(
-        [os.path.join(root, "design"),
-         "--requirements", os.path.join(root, "requirements"),
-         *extra]
-    )
+    argv = [
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+    ]
+    # QA is optional: a fixture without a qa/ directory must keep invoking the
+    # CLI exactly as before, or every pre-existing case changes behaviour.
+    qa_dir = os.path.join(root, "qa")
+    if os.path.isdir(qa_dir):
+        argv += ["--qa", qa_dir]
+    return vt.main([*argv, *extra])
 
 
 # ---------------------------------------------------------------------------
@@ -492,7 +497,7 @@ def test_rules_registry_entries_are_complete():
         # Traceability findings carry no `field`, unlike the content linters'.
         assert rule["fields"] == []
         assert rule["applies_to"] in {
-            "design artifact", "requirement", "adr", "the index",
+            "design artifact", "requirement", "adr", "the index", "qa artifact",
         }
 
 
@@ -512,3 +517,61 @@ def test_every_declared_rule_is_exercised_by_a_fixture(capsys):
         payload = json.loads(capsys.readouterr().out)
         seen.update(f["rule"] for f in payload["findings"])
     assert {r["id"] for r in vt.RULES} <= seen
+
+
+# --- QA edge (STO-103) ------------------------------------------------------
+
+def test_qa_trace_resolving_to_a_requirement_passes():
+    root = os.path.join(FIXTURES, "qa_clean")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    assert code == 0
+
+
+def test_qa_trace_resolving_to_a_component_passes():
+    # A TS may cover a design artifact as well as a requirement; both halves
+    # of the union must resolve, not just the requirements half.
+    root = os.path.join(FIXTURES, "qa_traces_component")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    assert code == 0
+
+
+def test_dangling_qa_trace_is_an_error():
+    root = os.path.join(FIXTURES, "qa_dangling")
+    code = vt.main([
+        os.path.join(root, "design"),
+        "--requirements", os.path.join(root, "requirements"),
+        "--qa", os.path.join(root, "qa"),
+    ])
+    assert code != 0
+
+
+def test_uncovered_asr_warns_but_does_not_fail():
+    root = os.path.join(FIXTURES, "qa_uncovered")
+    findings = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=os.path.join(root, "qa"),
+    )
+    ids = [f.rule for f in findings]
+    assert "uncovered-asr" in ids
+    assert all(f.severity == vt.WARN for f in findings if f.rule == "uncovered-asr")
+
+
+def test_omitting_the_qa_directory_runs_the_old_rules_only():
+    # The QA stage is optional: a project that has not run it must still
+    # validate cleanly, and no QA rule may fire against an absent directory.
+    root = os.path.join(FIXTURES, "clean")
+    findings = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=None,
+    )
+    assert not [f for f in findings if f.rule in ("dangling-qa-trace", "uncovered-asr")]

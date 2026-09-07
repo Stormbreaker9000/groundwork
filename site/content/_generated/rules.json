@@ -208,6 +208,15 @@
         "summary": "A requirement ID sits in traces_to.tests or traces_to.code, which hold test and code references. Fixed by hand in the requirements stage; the message names the exact edit."
       },
       {
+        "applies_to": "qa artifact",
+        "fields": [],
+        "id": "dangling-qa-trace",
+        "severities": [
+          "error"
+        ],
+        "summary": "A QA artifact's traces_from names an ID that exists in neither the requirements set nor the design set."
+      },
+      {
         "applies_to": "requirement",
         "fields": [],
         "id": "uncovered-fr",
@@ -215,6 +224,15 @@
           "warn"
         ],
         "summary": "A functional requirement is cited by no component. Excludes priority: wont and status: obsolete."
+      },
+      {
+        "applies_to": "requirement",
+        "fields": [],
+        "id": "uncovered-asr",
+        "severities": [
+          "warn"
+        ],
+        "summary": "An architecturally significant requirement is covered by no test strategy item. Excludes priority: wont and status: obsolete."
       },
       {
         "applies_to": "adr",
