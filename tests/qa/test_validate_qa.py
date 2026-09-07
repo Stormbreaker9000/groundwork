@@ -18,6 +18,7 @@ INVALID_CASES = [
     "missing_risk_rationale",
     "empty_traces_from",
     "unknown_field",
+    "unknown_prefix",
     "missing_strategy_artifact",
     "strategy_missing_heading",
 ]
@@ -54,3 +55,24 @@ def test_strategy_companion_is_skipped_as_an_artifact():
 
 def test_prefix_to_type_is_the_single_id_authority():
     assert vq.PREFIX_TO_TYPE == {"TS": "test_strategy"}
+
+
+def test_unknown_prefix_reports_the_cross_file_message():
+    # Asserting the message, not the exit code: this artifact also violates the
+    # schema's id pattern, so an exit-code assertion would pass without the
+    # cross-file branch ever running. Only the message proves it ran.
+    files, _ = vq.validate(
+        os.path.join(FIXTURES, "invalid", "unknown_prefix"), SCHEMA
+    )
+    errors = [e for f in files for e in f.errors]
+    assert any("is not one of" in e for e in errors), errors
+
+
+def test_prefix_type_mismatch_reports_the_cross_file_message():
+    # Same reasoning: type is a schema const, so a mismatched type is also a
+    # schema violation. Only the message proves the cross-file branch ran.
+    files, _ = vq.validate(
+        os.path.join(FIXTURES, "invalid", "prefix_type_mismatch"), SCHEMA
+    )
+    errors = [e for f in files for e in f.errors]
+    assert any("implies type" in e for e in errors), errors
