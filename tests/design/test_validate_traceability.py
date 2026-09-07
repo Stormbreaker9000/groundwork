@@ -555,7 +555,7 @@ def test_dangling_qa_trace_is_an_error():
 
 def test_uncovered_asr_warns_but_does_not_fail():
     root = os.path.join(FIXTURES, "qa_uncovered")
-    findings = vt.collect_findings(
+    findings, _, _, _, _ = vt.collect_findings(
         os.path.join(root, "design"),
         os.path.join(root, "requirements"),
         qa_dir=os.path.join(root, "qa"),
@@ -565,11 +565,29 @@ def test_uncovered_asr_warns_but_does_not_fail():
     assert all(f.severity == vt.WARN for f in findings if f.rule == "uncovered-asr")
 
 
+def test_uncovered_asr_reads_drivers_md_not_design_citations():
+    # qa_uncovered/design/drivers.md declares NFR-001, and only NFR-001, an
+    # ASR. IF-001 additionally cites NFR-002 in its own traces_from, but
+    # NFR-002 is not in the ASR list. Neither is covered by TS-001. If this
+    # rule still used "cited by some design artifact's traces_from" as its
+    # proxy for architectural significance, NFR-002 would fire too; it must
+    # not, or the fix regressed to the proxy definition.
+    root = os.path.join(FIXTURES, "qa_uncovered")
+    findings, _, _, _, _ = vt.collect_findings(
+        os.path.join(root, "design"),
+        os.path.join(root, "requirements"),
+        qa_dir=os.path.join(root, "qa"),
+    )
+    asr_findings = {f.artifact_id: f for f in findings if f.rule == "uncovered-asr"}
+    assert "NFR-001" in asr_findings
+    assert "NFR-002" not in asr_findings
+
+
 def test_omitting_the_qa_directory_runs_the_old_rules_only():
     # The QA stage is optional: a project that has not run it must still
     # validate cleanly, and no QA rule may fire against an absent directory.
     root = os.path.join(FIXTURES, "clean")
-    findings = vt.collect_findings(
+    findings, _, _, _, _ = vt.collect_findings(
         os.path.join(root, "design"),
         os.path.join(root, "requirements"),
         qa_dir=None,

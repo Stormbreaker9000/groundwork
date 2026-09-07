@@ -55,6 +55,7 @@ for _p in (
         sys.path.insert(0, _p)
 
 import artifact_core as core  # noqa: E402
+import generate_c4 as gc4  # noqa: E402
 import validate_design as vd  # noqa: E402
 import validate_requirements as vr  # noqa: E402
 from artifact_core import parse_frontmatter  # noqa: E402
@@ -433,38 +434,65 @@ def rule_uncovered_fr(
     return findings
 
 
+def _read_asrs(design_dir: str) -> List[str]:
+    """Every ASR ID in drivers.md's '## Architecturally Significant
+    Requirements' section, or [] if the file, or the section, is absent.
+
+    There is exactly one authoritative ASR list in this pipeline: drivers.md,
+    written by the design formatter and already read by generate_c4.py
+    (``DesignSet._read_asrs``) to seed each diagram's traces_from. This
+    delegates to that same method rather than writing a second parser over
+    the same section — two parsers of "what counts as an ASR" is precisely
+    the drift this discipline exists to prevent, and ``ASR_HEADING`` /
+    ``_ASR_LINE_RE`` live there, not here.
+
+    A missing or unreadable drivers.md, or one lacking the heading, resolves
+    to [] here exactly as it does in generate_c4.py (that method also prints
+    a stderr warning distinguishing the two cases; this call inherits it).
+    That is not re-reported as a finding of its own — a missing heading is
+    validate_design.py's structural finding when drivers.md exists at all —
+    but it does mean rule_uncovered_asr goes silent over a design set
+    malformed in that specific way, which is accepted rather than duplicated
+    as a second warning channel for the same underlying defect.
+    """
+    return gc4.DesignSet._read_asrs(design_dir)
+
+
 def rule_uncovered_asr(
-    design_index: Dict[str, DesignArtifact],
     req_index: Dict[str, Requirement],
     qa_index: Dict[str, QAArtifact],
+    design_dir: str,
 ) -> List[Finding]:
     """Every architecturally significant requirement must be cited by at
     least one test strategy item.
 
-    "Architecturally significant" is not a field on disk; it is derived from
-    the same signal the design stage already acted on when it decided a
-    requirement needed a component, interface, or ADR — i.e. a requirement
-    named in some design artifact's traces_from. Unlike rule_uncovered_fr this
-    counts every design artifact type, not components only: an ASR can be
-    addressed by an interface's contract or a decision record just as validly
-    as by a component.
+    "Architecturally significant" means exactly what drivers.md's ASR list
+    says it means (see ``_read_asrs``) — not a proxy such as "cited by some
+    design artifact's traces_from". Those two sets differ in both
+    directions: a design artifact may cite a requirement for reasons other
+    than architectural significance, and an ASR may end up addressed by no
+    single artifact's traces_from. The rule is named uncovered-*asr*, so it
+    has to resolve against the actual ASR list or the name would lie.
 
     Reuses rule_uncovered_fr's exclusion filters rather than inventing a
-    second definition of "architecturally significant": a `wont` or `obsolete`
-    requirement is excluded from this sweep for the same reason it is excluded
-    from that one (spec D4).
+    second definition of "excluded from coverage sweeps": a `wont` or
+    `obsolete` requirement is excluded from this sweep for the same reason it
+    is excluded from that one (spec D4).
     """
-    significant: set = set()
-    for art in design_index.values():
-        significant.update(art.traces_from)
+    asrs = _read_asrs(design_dir)
 
     covered: set = set()
     for ts in qa_index.values():
         covered.update(ts.traces_from)
 
     findings: List[Finding] = []
-    for req in sorted(req_index.values(), key=lambda r: r.req_id):
-        if req.req_id not in significant:
+    for asr_id in sorted(set(asrs)):
+        req = req_index.get(asr_id)
+        if req is None:
+            # Not a known requirement id (dangling, or an ASR line naming a
+            # CMP-/IF- id by mistake). Resolving drivers.md's ASR list against
+            # the requirements set is not this rule's job; it only asks
+            # whether a *known* ASR requirement has test coverage.
             continue
         if req.priority in COVERAGE_EXCLUDED_PRIORITIES:
             continue
@@ -768,10 +796,10 @@ def index_caveat_findings(skipped: List[str], duplicates: List[str]) -> List[Fin
     return findings
 
 
-def _collect_all(
+def collect_findings(
     design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
 ) -> Tuple[List[Finding], int, int, List[str], List[str]]:
-    """Run every rule, building each index exactly once.
+    """Run every rule.
 
     Returns (findings, design_count, req_count, skipped, duplicate_ids).
 
@@ -800,26 +828,12 @@ def _collect_all(
         skipped = skipped + qa_skipped
         duplicates = duplicates + qa_dupes
         findings.extend(rule_dangling_qa_trace(qa_index, req_index, design_index))
-        findings.extend(rule_uncovered_asr(design_index, req_index, qa_index))
+        findings.extend(rule_uncovered_asr(req_index, qa_index, design_dir))
 
     duplicates = sorted(set(duplicates))
     findings.extend(index_caveat_findings(skipped, duplicates))
 
     return findings, len(design_index), len(req_index), skipped, duplicates
-
-
-def collect_findings(
-    design_dir: str, reqs_dir: str, qa_dir: Optional[str] = None
-) -> List[Finding]:
-    """Run every rule and return the findings alone.
-
-    A thin wrapper around ``_collect_all`` for callers that only need the
-    findings, not the index sizes ``main()`` prints in its header.
-    """
-    findings, _design_count, _req_count, _skipped, _duplicates = _collect_all(
-        design_dir, reqs_dir, qa_dir
-    )
-    return findings
 
 
 def print_report(
@@ -913,7 +927,7 @@ def main(argv=None) -> int:
         print(f"ERROR: qa directory not found: {args.qa}", file=sys.stderr)
         return 2
 
-    findings, design_count, req_count, skipped, duplicates = _collect_all(
+    findings, design_count, req_count, skipped, duplicates = collect_findings(
         args.design_dir, args.requirements, args.qa
     )
     errors = sum(1 for f in findings if f.severity == ERROR)
