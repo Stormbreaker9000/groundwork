@@ -192,12 +192,116 @@ def _stage_marker(present: bool) -> str:
     return "✓" if present else "—"
 
 
+# ---------------------------------------------------------------------------
+# Gate rendering
+# ---------------------------------------------------------------------------
+def by_type(artifacts: Optional[List[Artifact]], *types: str) -> List[Artifact]:
+    if not artifacts:
+        return []
+    return [a for a in artifacts if a.type in types]
+
+
+def coverage_map(qa: Optional[List[Artifact]]) -> Dict[str, List[Artifact]]:
+    """requirement/design id -> the TS items whose traces_from cites it."""
+    out: Dict[str, List[Artifact]] = {}
+    for item in by_type(qa, "test_strategy"):
+        for target in item.get("traces_from") or []:
+            out.setdefault(str(target), []).append(item)
+    return out
+
+
+def enforcement_tag(
+    req: Artifact, covering: List[Artifact], qa_present: bool
+) -> str:
+    """How strongly this requirement's gate is actually checked.
+
+    With a QA set on disk the answer is derived from the items covering it.
+    Without one there is nothing to derive from, so the tag reports the
+    requirement's own verification_method instead of claiming a pipeline.
+    """
+    if not qa_present:
+        return f"`[verification: {req.get('verification_method', 'unspecified')}]`"
+    if not covering:
+        return "`[uncovered]`"
+    levels = {str(item.get("enforcement")) for item in covering}
+    if "ci" in levels:
+        return "`[CI]`"
+    if "manual" in levels:
+        return "`[manual]`"
+    return "`[unenforced]`"
+
+
+def _rel_source(artifact: Artifact, root: str, stage_dir: str) -> str:
+    return f"`{stage_dir}/{os.path.relpath(artifact.path, root)}`"
+
+
+def render_functional_gates(
+    reqs: List[Artifact], root: str, coverage: Dict[str, List[Artifact]],
+    qa_present: bool,
+) -> List[str]:
+    items = by_type(reqs, "functional")
+    if not items:
+        return []
+    lines = [
+        "## Functional Acceptance Gates",
+        "",
+        "One gate per functional requirement. The linked file holds the "
+        "authoritative acceptance criteria; they are referenced here, never "
+        "duplicated.",
+        "",
+    ]
+    for req in items:
+        tag = enforcement_tag(req, coverage.get(req.id or "", []), qa_present)
+        lines += [
+            f"- [ ] **{req.id} — {req.get('title')}** "
+            f"({req.get('priority')}) {tag}",
+            "  All acceptance-criteria scenarios in the source file pass.",
+            f"  Fit criterion: {req.get('fit_criterion')}",
+            f"  Source: {_rel_source(req, root, '.sdlc/requirements')}",
+            "",
+        ]
+    return lines
+
+
+def render_nfr_gates(
+    reqs: List[Artifact], root: str, coverage: Dict[str, List[Artifact]],
+    qa_present: bool,
+) -> List[str]:
+    items = by_type(reqs, "non_functional")
+    if not items:
+        return []
+    lines = [
+        "## NFR Fitness Gates",
+        "",
+        "The quality attribute scenario's response measure is the pass/fail "
+        "oracle for each gate below.",
+        "",
+    ]
+    for req in items:
+        tag = enforcement_tag(req, coverage.get(req.id or "", []), qa_present)
+        measure = parse_qas_field(req, "Response measure")
+        stimulus = parse_qas_field(req, "Stimulus")
+        artifact_under_test = parse_qas_field(req, "Artifact")
+        environment = parse_qas_field(req, "Environment")
+        lines += [
+            f"- [ ] **{req.id} — {req.get('title')}** "
+            f"({req.get('priority')}) {tag}",
+            f"  Response measure: {measure}",
+            f"  Scenario: *{stimulus}* on *{artifact_under_test}* "
+            f"under *{environment}*.",
+            f"  Source: {_rel_source(req, root, '.sdlc/requirements')}",
+            "",
+        ]
+    return lines
+
+
 def render_document(
     reqs: Optional[List[Artifact]],
     design: Optional[List[Artifact]],
     qa: Optional[List[Artifact]],
     title: Optional[str],
     today: str,
+    roots: Dict[str, str],
 ) -> str:
     lines: List[str] = ["# Definition of Done", "", GENERATED_BANNER, ""]
     if title:
@@ -214,6 +318,15 @@ def render_document(
         "A work item is **Done** only when every gate below is satisfied.",
         "",
     ]
+    coverage = coverage_map(qa)
+    qa_present = qa is not None
+    body: List[str] = []
+    if reqs:
+        body += render_functional_gates(
+            reqs, roots["requirements"], coverage, qa_present
+        )
+        body += render_nfr_gates(reqs, roots["requirements"], coverage, qa_present)
+    lines += body
     lines += [
         "---",
         "",
@@ -252,18 +365,19 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"ERROR: {name} directory not found: {path}", file=sys.stderr)
             return 2
 
+    roots = {k: v for k, v in stages.items() if v}
+    today = args.created_at or datetime.date.today().isoformat()
+
     try:
         reqs = load_set(args.requirements, SKIP_REQUIREMENTS) if args.requirements else None
         design = (
             load_set(args.design, SKIP_DESIGN, SKIP_DESIGN_DIRS) if args.design else None
         )
         qa = load_set(args.qa, SKIP_QA) if args.qa else None
+        document = render_document(reqs, design, qa, args.title, today, roots)
     except GenerationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
-    today = args.created_at or datetime.date.today().isoformat()
-    document = render_document(reqs, design, qa, args.title, today)
 
     out_dir = os.path.dirname(os.path.abspath(args.out))
     if out_dir:

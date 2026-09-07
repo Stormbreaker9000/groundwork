@@ -150,13 +150,11 @@ def test_qas_missing_field_raises():
 # A fixture directory nobody parametrizes is a case nobody tests. This list and
 # the guard below are the same pattern tests/qa/test_validate_qa.py uses.
 #
-# Both cases xfail today: nothing calls parse_iso_characteristic or
-# parse_qas_field yet (the NFR section is rendered starting in Task 4), so the
-# CLI has no way to notice either fixture is malformed. They resolve on
-# different tasks, though — nfr_missing_response_measure is reached by
-# parse_qas_field, which Task 4 calls, so it un-xfails in Task 4. But
-# nfr_missing_iso_heading is reached only by parse_iso_characteristic, which
-# is not called until Task 7 — its marker must survive Tasks 4-6.
+# nfr_missing_response_measure now reaches parse_qas_field via
+# render_nfr_gates (Task 4), so it exits 1 like any other malformed artifact.
+# nfr_missing_iso_heading still xfails: it is reached only by
+# parse_iso_characteristic, which is not called until Task 7 — its marker
+# must survive Tasks 4-6.
 INVALID_CASES_WITH_MARKS = [
     pytest.param(
         "nfr_missing_iso_heading",
@@ -164,12 +162,7 @@ INVALID_CASES_WITH_MARKS = [
             reason="ISO parsing is first called in Task 7", strict=True
         ),
     ),
-    pytest.param(
-        "nfr_missing_response_measure",
-        marks=pytest.mark.xfail(
-            reason="NFR section lands in Task 4", strict=True
-        ),
-    ),
+    pytest.param("nfr_missing_response_measure"),
 ]
 INVALID_CASE_NAMES = [case.values[0] for case in INVALID_CASES_WITH_MARKS]
 
@@ -186,3 +179,45 @@ def test_every_invalid_fixture_is_exercised():
         if os.path.isdir(os.path.join(FIXTURES, "invalid", d))
     )
     assert on_disk == sorted(INVALID_CASE_NAMES)
+
+
+# ---------------------------------------------------------------------------
+# Functional acceptance + NFR fitness gates (spec D4)
+# ---------------------------------------------------------------------------
+def test_functional_section_has_one_gate_per_fr(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## Functional Acceptance Gates" in text
+    assert "**FR-001 — Cancel a pending order** (must)" in text
+
+
+def test_functional_gate_carries_fit_criterion_and_source(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "100% of cancellation requests against pending orders succeed" in text
+    assert "functional/FR-001-cancel-pending-order.md" in text
+
+
+def test_functional_gate_does_not_inline_gherkin(tmp_path):
+    """DoD is product-wide; acceptance criteria are item-specific and stay in
+    the FR file. Referenced, never duplicated."""
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "Given a pending order" not in text
+
+
+def test_nfr_gate_uses_the_response_measure_as_the_oracle(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "## NFR Fitness Gates" in text
+    assert "Response measure: End-to-end latency <= 200 ms at p95" in text
+
+
+def test_nfr_gate_names_the_scenario(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "Submits an order via `POST /orders`" in text
+    assert "Order API service" in text
+
+
+def test_without_qa_gates_annotate_verification_method(tmp_path):
+    """No QA set on disk means no evidence about CI, so the gate says what the
+    requirement claims rather than asserting a pipeline nobody has seen."""
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "`[verification: test]`" in text
+    assert "`[CI]`" not in text
