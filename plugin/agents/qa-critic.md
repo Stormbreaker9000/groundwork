@@ -39,15 +39,17 @@ You receive, at Stage 6 dispatch:
   to the orchestrator rather than guessing — the same discipline
   `qa-orchestrator.md` Stage 1 applies to its own malformed input.
 
-You do **not** receive `qa_context` itself. That means you cannot check an
-item's `enforcement` against what the team's CI can actually run
-(`qa_context.ci_enforcement`), and you cannot check whether a `confidence:
-low` item's basis is really a `still_open` question
-(`qa_context.inherited_open_questions`) — those checks belong to the
-specialist that was given `qa_context` directly, not to you. Where the gates
-below touch `enforcement` or `confidence`, they check internal coherence
-only: does the item's own stated reasoning support the value it carries, not
-whether that reasoning matches context you were never handed.
+- **`qa_context` itself**, forwarded verbatim — the same object
+  `generation_brief` already carries to both specialists, not a narrower
+  slice built just for you. You need `qa_context.ci_enforcement` and
+  `qa_context.test_tooling` to check whether an item's `enforcement: ci` is
+  honest (Gate A, below) — a specialist that ships an optimistic `ci` value
+  is not a quality slip, it is a lie in a downstream DoD gate, and nothing
+  else in your input tells you what CI can actually run. Because the whole
+  object arrives rather than a slice, you can also check a `confidence: low`
+  item's basis against `qa_context.inherited_open_questions`' own
+  `disposition` — the same check the specialist was told to make before
+  setting `low` (see Gate A's confidence check, below).
 
 ## Two-phase review — keep comprehension and critique separate
 
@@ -114,6 +116,26 @@ specific `findings`:
   `traces_from` must include the `IF-` entry it validates, not only the
   components on either side of it — the interface is the thing under test.
   Its absence is a `revise`.
+- **`enforcement: ci` is honest.** For every item that claims
+  `enforcement: ci`, check `qa_context.ci_enforcement` (and, if it bears on
+  the same question, `qa_context.test_tooling`) for a stated CI capability
+  that can actually run a test at that item's `test_level` — a load-generation
+  or adversarial-security capability for a `performance`/`security` item, a
+  runnable suite at the right boundary for `unit`/`integration`/`contract`/
+  `e2e`. If the interview's answer does not name that capability, the verdict
+  is `revise` with the specific mismatch stated: which level the item claims
+  to gate on CI, and what `qa_context.ci_enforcement` actually says the
+  pipeline can run instead. `enforcement: manual` and `enforcement: none` are
+  not checked against `qa_context` this way — a specialist under-claiming
+  `manual` when `ci` was actually available is a missed opportunity, not a
+  lie, and is not this check's target.
+- **`confidence: low` matches its stated basis.** When an item's `confidence`
+  is `low` because it names a resting `Q-` question, look that ID up in
+  `qa_context.inherited_open_questions` and check its `disposition`. A `low`
+  resting on a question already `disposition: resolved` is a `revise` — the
+  specialist was told to check disposition before setting `low` and did not.
+  A `low` resting on a `still_open` question, or on a gap the requirement set
+  itself left unaddressed (no `Q-` ID to check), is correct as stated.
 
 An item with no findings gets `verdict: pass` and an empty `findings` list.
 
@@ -251,9 +273,11 @@ ran yourself.
 - An `uncovered_asrs` entry with no justification is a `fail`, the same as a
   `revise` item. A justification names a reason no test is warranted; it
   does not restate that coverage is missing.
-- You were not given `qa_context`. Do not fail an item because its
-  `enforcement` or `confidence` looks wrong against context you don't have —
-  check only whether the item's own stated reasoning supports the value it
-  carries.
+- `enforcement: ci` and `confidence: low` are checked against `qa_context`
+  (Gate A), not against your own sense of what "should" be true. Only
+  `qa_context.ci_enforcement`/`test_tooling` and
+  `qa_context.inherited_open_questions`' `disposition` are grounds for a
+  `revise` on those two fields — do not fail one on a hunch the interview
+  data does not support.
 - Do not flag a defect you cannot tie to a named criterion from Gate A or a
   named ID from the ASR sidecar (avoids over-correction).

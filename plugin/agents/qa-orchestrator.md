@@ -344,7 +344,20 @@ from Stage 2 and both digests, for the same reason M2's Stage 8 hands its
 critic `asr_analysis` and `requirements_digest` alongside the merged artifact
 set: without the ASR list, the coverage half of the gate cannot run at all,
 and a report with an empty `coverage.uncovered_asrs` would read like clean
-coverage rather than like a check that never ran. It returns a
+coverage rather than like a check that never ran.
+
+**Forward `qa_context` itself too, the same verbatim object `generation_brief`
+already carries to both specialists — not a narrower slice of it.** The
+critic's per-item gate has to tell an honest `enforcement: ci` from an
+optimistic one, and that requires knowing what the interview actually said
+CI can run, exactly the answer `qa_context.ci_enforcement` and
+`qa_context.test_tooling` hold; a slice built just for this purpose is a
+second shape to keep in sync with `qa_context` every time Stage 1's contract
+changes, where the whole object is already assembled once and forwarded
+elsewhere. This also means the critic can check `confidence: low` against
+`qa_context.inherited_open_questions`' own `disposition`, the same input the
+specialists were told to check before setting it — not a second contract,
+just the same one reaching a second consumer. It returns a
 `critique_report`:
 
 ```yaml
