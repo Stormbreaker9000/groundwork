@@ -472,6 +472,67 @@ def render_deployment(
     ]
 
 
+NON_TEST_METHODS = ("inspection", "analysis", "demonstration")
+
+
+def render_pr_checklist(
+    reqs: Optional[List[Artifact]],
+    design: Optional[List[Artifact]],
+    qa: Optional[List[Artifact]],
+) -> List[str]:
+    """Only what a human must personally confirm.
+
+    What separates the pasteable checklist from the traceable artifact is
+    already in the data: a gate CI enforces needs a passing build, not a
+    checkbox. Everything with automated evidence is left to the sections below.
+
+    STO-107 slices this heading into the repository's PR template, so the
+    heading text is a contract.
+    """
+    lines = [
+        "## PR Checklist",
+        "",
+        "Everything below needs a person. CI-enforced gates are not listed — "
+        "a passing build is their evidence.",
+        "",
+    ]
+    entries: List[str] = []
+
+    for item in by_type(qa, "test_strategy"):
+        if item.get("enforcement") == "manual":
+            entries.append(
+                f"- [ ] **{item.id}** — {item.get('title')} "
+                f"(`{item.get('test_level')}`, manual)."
+            )
+
+    for req in by_type(reqs, "non_functional"):
+        if req.get("verification_method") in NON_TEST_METHODS:
+            entries.append(
+                f"- [ ] **{req.id}** — {req.get('title')}: evidence "
+                f"recorded ({req.get('verification_method')})."
+            )
+
+    for adr in by_type(design, "adr"):
+        if adr.get("decision_status") == "accepted":
+            entries.append(
+                f"- [ ] **{adr.id}** — implementation conforms to "
+                f"“{adr.get('chosen_option')}”."
+            )
+
+    must_frs = [r for r in by_type(reqs, "functional") if r.get("priority") == "must"]
+    if must_frs:
+        entries.append(
+            f"- [ ] Documentation updated for "
+            f"{', '.join(str(r.id) for r in must_frs)}."
+        )
+
+    if not entries:
+        entries.append("- [ ] Nothing requires manual confirmation.")
+
+    lines += entries + [""]
+    return lines
+
+
 def render_document(
     reqs: Optional[List[Artifact]],
     design: Optional[List[Artifact]],
@@ -498,6 +559,7 @@ def render_document(
     coverage = coverage_map(qa)
     qa_present = qa is not None
     body: List[str] = []
+    body += render_pr_checklist(reqs, design, qa)
     if reqs:
         body += render_functional_gates(
             reqs, roots["requirements"], coverage, qa_present

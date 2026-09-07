@@ -323,3 +323,75 @@ def test_non_operational_nfr_is_not_a_deployment_gate(tmp_path):
         line for line in deploy.splitlines() if "Security NFR gates" in line
     ][0]
     assert "NFR-001" not in security_line
+
+
+# ---------------------------------------------------------------------------
+# PR checklist (spec D4)
+# ---------------------------------------------------------------------------
+def _pr_section(text):
+    body = text.split("## PR Checklist", 1)[1]
+    return body.split("\n## ", 1)[0]
+
+
+def test_pr_checklist_leads_the_document(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert text.index("## PR Checklist") < text.index("## Functional Acceptance Gates")
+
+
+def test_pr_checklist_carries_manual_qa_items(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "TS-003" in _pr_section(text)
+
+
+def test_pr_checklist_omits_ci_enforced_items(tmp_path):
+    """A passing build is their evidence; a checkbox would ask for it twice."""
+    _, text = generate(FULL, tmp_path)
+    section = _pr_section(text)
+    assert "TS-001" not in section
+    assert "TS-002" not in section
+
+
+def test_pr_checklist_omits_unenforced_items(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "TS-004" not in _pr_section(text)
+
+
+def test_pr_checklist_carries_non_test_nfrs(tmp_path):
+    """NFR-002 is verification_method: inspection — a human records evidence."""
+    _, text = generate(REQS_ONLY, tmp_path)
+    section = _pr_section(text)
+    assert "NFR-002" in section
+    assert "NFR-001" not in section
+
+
+def test_pr_checklist_carries_accepted_adrs(tmp_path):
+    _, text = generate(FULL, tmp_path)
+    assert "ADR-001" in _pr_section(text)
+
+
+def test_pr_checklist_carries_a_documentation_line(tmp_path):
+    _, text = generate(REQS_ONLY, tmp_path)
+    assert "Documentation updated" in _pr_section(text)
+
+
+def test_gate_count_only_grows_as_stages_are_added(tmp_path):
+    """Spec D3: each stage's run supersedes the last and adds gates. A stage
+    that removed gates would mean a later run had less information, which
+    cannot happen."""
+    out_a = os.path.join(str(tmp_path), "a.md")
+    out_b = os.path.join(str(tmp_path), "b.md")
+    full_reqs = os.path.join(FULL, "requirements")
+
+    assert gd.main(["--requirements", full_reqs, "--out", out_a]) == 0
+    assert gd.main([
+        "--requirements", full_reqs,
+        "--design", os.path.join(FULL, "design"),
+        "--qa", os.path.join(FULL, "qa"),
+        "--out", out_b,
+    ]) == 0
+
+    def gates(path):
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().count("- [ ] ")
+
+    assert gates(out_b) > gates(out_a)
