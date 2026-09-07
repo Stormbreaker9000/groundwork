@@ -23,13 +23,14 @@ shape belong to the two structural validators; this tool only resolves IDs.
 Usage
 -----
     python3 validate_traceability.py [DESIGN_DIR] [--requirements DIR]
-                                     [--json] [--strict] [--quiet]
+                                     [--qa DIR] [--json] [--strict] [--quiet]
 
 Exit codes
 ----------
     0  no errors (warnings may be present, unless --strict)
     1  one or more errors, or any warning under --strict
-    2  usage / environment error (either directory missing)
+    2  usage / environment error (the design directory, the requirements
+       directory, or — when --qa is given — the qa directory is missing)
 """
 from __future__ import annotations
 

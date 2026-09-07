@@ -473,6 +473,17 @@ On a passing gate, hand the approved item set and the `qa_context_artifact` to
 and `validate_traceability.py` as part of its own contract and has no other
 way to locate them.
 
+**Forward `qa_context` itself too, the same verbatim object Stage 6 already
+forwards to the critic — not a narrower slice of it.** `qa-strategy.md`'s
+Tooling and Coverage Targets sections render `qa_context.test_tooling`,
+`qa_context.ci_enforcement`, and `qa_context.coverage_targets` directly —
+raw interview answers that need no synthesis, so `qa_context_artifact`
+carries no copy of them. A slice or a duplicate built just for the formatter
+would be a second shape to keep in sync with `qa_context` every time Stage
+1's contract changes, where the whole object is already assembled once and
+forwarded to the critic already; reusing that same object here costs
+nothing and avoids a second copy drifting from the first.
+
 It returns:
 
 ```yaml
