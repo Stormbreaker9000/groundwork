@@ -63,6 +63,21 @@ def test_no_stages_at_all_is_usage_error(tmp_path):
     assert code == 2
 
 
+def test_unwritable_out_path_is_an_environment_error(tmp_path, capsys):
+    """Exit 1 is reserved for a malformed artifact this tool must parse (see
+    module docstring). A write failure is an environment error and must not
+    collide with that meaning."""
+    blocked = tmp_path / "not_a_directory"
+    blocked.write_text("occupied", encoding="utf-8")
+    out = blocked / "definition-of-done.md"  # parent exists but is a file
+    code = gd.main([
+        "--requirements", os.path.join(REQS_ONLY, "requirements"),
+        "--out", str(out),
+    ])
+    assert code == 2
+    assert "could not write" in capsys.readouterr().err
+
+
 # ---------------------------------------------------------------------------
 # NFR body parsing (spec E4, D8)
 # ---------------------------------------------------------------------------
@@ -188,7 +203,12 @@ def test_functional_section_has_one_gate_per_fr(tmp_path):
 def test_functional_gate_carries_fit_criterion_and_source(tmp_path):
     _, text = generate(REQS_ONLY, tmp_path)
     assert "100% of cancellation requests against pending orders succeed" in text
-    assert "functional/FR-001-cancel-pending-order.md" in text
+    # Pins the full `.sdlc/requirements/...` prefix, not just the tail: the
+    # source line must cite the path a plugin user actually has on disk, not
+    # the fixture/example directory the CLI happened to be pointed at.
+    assert (
+        "`.sdlc/requirements/functional/FR-001-cancel-pending-order.md`" in text
+    )
 
 
 def test_functional_gate_does_not_inline_gherkin(tmp_path):
@@ -260,9 +280,28 @@ def test_coverage_lists_the_items_covering_each_requirement(tmp_path):
     assert "TS-002" in text
 
 
-def test_uncovered_requirement_is_visible_as_a_gap(tmp_path):
+def test_uncovered_requirement_is_visible_as_a_gap():
+    """Every FR/NFR in the FULL fixture happens to be covered by a TS- item
+    (CON-001 is the only uncovered artifact, and — per D4/D7 — constraints
+    are out of scope for this section, see the following test). So this
+    exercises render_coverage directly with a synthetic, deliberately
+    uncovered FR."""
+    req = gd.Artifact("FR-999.md", {"id": "FR-999", "type": "functional"}, "")
+    lines = gd.render_coverage([req], {})
+    assert any(
+        "no test-strategy item cites this requirement" in line for line in lines
+    )
+
+
+def test_coverage_section_omits_constraints_and_business_rules(tmp_path):
+    """Spec D4 §4 / D7: Test Coverage is FR/NFR only. validate_traceability.py
+    has only uncovered-fr and uncovered-asr rules, so a CON-/BR- item with no
+    citing TS- item is not a gap that rule recognises — including it here
+    would be a false alarm."""
     _, text = generate(FULL, tmp_path)
-    assert "no test-strategy item cites this requirement" in text
+    coverage = text.split("## Test Coverage", 1)[1].split("\n## ", 1)[0]
+    assert "CON-001" not in coverage
+    assert "BR-001" not in coverage
 
 
 def test_enforcement_tag_is_derived_from_covering_items(tmp_path):
@@ -288,6 +327,30 @@ def test_unenforced_register_is_not_a_checklist(tmp_path):
 def test_unenforced_section_absent_when_nothing_is_unenforced(tmp_path):
     _, text = generate(REQS_ONLY, tmp_path)
     assert "## Declared Unenforced" not in text
+
+
+def test_empty_qa_directory_header_and_sections_agree(tmp_path):
+    """An empty (but present) .sdlc/qa/ makes ``qa`` an empty list, not None.
+
+    Before this fix, ``qa_present`` (used for the ``[uncovered]`` enforcement
+    tag) checked ``is not None`` while the body sections checked truthiness —
+    so an empty QA dir produced header ``qa ✓`` and every requirement tagged
+    `[uncovered]`, but no Test Coverage section to explain the tag. Both must
+    now agree: present-but-empty behaves like present.
+    """
+    empty_qa = tmp_path / "qa"
+    empty_qa.mkdir()
+    out = tmp_path / "definition-of-done.md"
+    code = gd.main([
+        "--requirements", os.path.join(REQS_ONLY, "requirements"),
+        "--qa", str(empty_qa),
+        "--out", str(out),
+    ])
+    assert code == 0
+    text = out.read_text(encoding="utf-8")
+    assert "qa ✓" in text
+    assert "`[uncovered]`" in text
+    assert "## Test Coverage" in text
 
 
 # ---------------------------------------------------------------------------
@@ -377,24 +440,38 @@ def test_pr_checklist_carries_a_documentation_line(tmp_path):
 def test_gate_count_only_grows_as_stages_are_added(tmp_path):
     """Spec D3: each stage's run supersedes the last and adds gates. A stage
     that removed gates would mean a later run had less information, which
-    cannot happen."""
+    cannot happen.
+
+    Three points, not two: the middle rung — requirements+design, no QA — is
+    the design stage's exact production invocation
+    (plugin/skills/design/SKILL.md). Task 5's tests targeted a QA-less
+    ``full/``, then Task 6 added ``full/qa/`` and silently promoted all of
+    them to three-stage runs, leaving this rung untested.
+    """
     out_a = os.path.join(str(tmp_path), "a.md")
     out_b = os.path.join(str(tmp_path), "b.md")
+    out_c = os.path.join(str(tmp_path), "c.md")
     full_reqs = os.path.join(FULL, "requirements")
+    full_design = os.path.join(FULL, "design")
 
     assert gd.main(["--requirements", full_reqs, "--out", out_a]) == 0
     assert gd.main([
         "--requirements", full_reqs,
-        "--design", os.path.join(FULL, "design"),
-        "--qa", os.path.join(FULL, "qa"),
+        "--design", full_design,
         "--out", out_b,
+    ]) == 0
+    assert gd.main([
+        "--requirements", full_reqs,
+        "--design", full_design,
+        "--qa", os.path.join(FULL, "qa"),
+        "--out", out_c,
     ]) == 0
 
     def gates(path):
         with open(path, encoding="utf-8") as handle:
             return handle.read().count("- [ ] ")
 
-    assert gates(out_b) > gates(out_a)
+    assert gates(out_a) < gates(out_b) < gates(out_c)
 
 
 # ---------------------------------------------------------------------------

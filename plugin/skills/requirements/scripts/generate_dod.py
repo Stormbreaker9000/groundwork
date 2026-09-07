@@ -133,7 +133,7 @@ ISO_CHARACTERISTICS = frozenset({
 _ISO_SECTION_RE = re.compile(
     r"^## ISO 25010 Characteristic\s*\n(.+?)(?=^##\s|\Z)", re.M | re.S
 )
-_QAS_SEPARATOR_RE = re.compile(r"→|->|:")
+_ISO_SEPARATOR_RE = re.compile(r"→|->|:")
 
 
 def parse_iso_characteristic(artifact: Artifact) -> str:
@@ -144,7 +144,7 @@ def parse_iso_characteristic(artifact: Artifact) -> str:
             f"{artifact.id}: missing required heading '{ISO_HEADING}'"
         )
     text = " ".join(match.group(1).split())
-    head = _QAS_SEPARATOR_RE.split(text, 1)[0].strip()
+    head = _ISO_SEPARATOR_RE.split(text, 1)[0].strip()
     if head not in ISO_CHARACTERISTICS:
         raise GenerationError(
             f"{artifact.id}: '{head}' is not an ISO 25010 characteristic or "
@@ -232,6 +232,20 @@ def enforcement_tag(
 
 
 def _rel_source(artifact: Artifact, root: str, stage_dir: str) -> str:
+    """Render the source path as a plugin user will actually have it.
+
+    ``stage_dir`` is a fixed literal (``.sdlc/requirements``, ``.sdlc/design``,
+    ``.sdlc/qa``), not derived from ``root``, the CLI-supplied directory,
+    deliberately. Every real invocation comes from a SKILL.md passing
+    ``.sdlc/...`` paths, so the fixed prefix and the caller's root agree in
+    production. But test fixtures and worked examples pass other roots (e.g.
+    ``docs/requirements/examples/gdpr/requirements``), and a DoD is meant to
+    be read in the project it describes — citing that repo-relative fixture
+    or example path would be meaningless to a user reading their own DoD. Do
+    not switch this to `os.path.relpath` against an arbitrary root: that
+    would be correct for the tool's inputs and wrong for every consumer of
+    its output.
+    """
     return f"`{stage_dir}/{os.path.relpath(artifact.path, root)}`"
 
 
@@ -338,7 +352,7 @@ def render_conformance_gates(design: List[Artifact], root: str) -> List[str]:
 
 
 def render_coverage(
-    reqs: List[Artifact], coverage: Dict[str, List[Artifact]], root: str
+    reqs: List[Artifact], coverage: Dict[str, List[Artifact]]
 ) -> List[str]:
     """Which test-strategy items cite each requirement.
 
@@ -346,7 +360,13 @@ def render_coverage(
     uncovered-asr rules own the gate over this same edge; rendering it here
     twice would put the rule in two places.
     """
-    items = by_type(reqs, "functional", "non_functional", "constraint", "business_rule")
+    # Functional and non-functional only (spec D4 §4, D7): the validator this
+    # section mirrors only has uncovered-fr and uncovered-asr rules, so a
+    # constraint or business rule with no citing TS- item is not a gap that
+    # rule recognises. Widening this back to include "constraint" /
+    # "business_rule" would render a false alarm nothing in the pipeline
+    # gates on.
+    items = by_type(reqs, "functional", "non_functional")
     if not items:
         return []
     lines = [
@@ -560,18 +580,18 @@ def render_document(
     qa_present = qa is not None
     body: List[str] = []
     body += render_pr_checklist(reqs, design, qa)
-    if reqs:
+    if reqs is not None:
         body += render_functional_gates(
             reqs, roots["requirements"], coverage, qa_present
         )
         body += render_nfr_gates(reqs, roots["requirements"], coverage, qa_present)
-    if design:
+    if design is not None:
         body += render_conformance_gates(design, roots["design"])
-    if qa:
-        if reqs:
-            body += render_coverage(reqs, coverage, roots["requirements"])
+    if qa is not None:
+        if reqs is not None:
+            body += render_coverage(reqs, coverage)
         body += render_unenforced(qa, roots["qa"])
-    if reqs:
+    if reqs is not None:
         by_char = nfrs_by_characteristic(reqs)
         body += render_documentation(reqs, by_char)
         body += render_deployment(reqs, by_char)
@@ -629,10 +649,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
 
     out_dir = os.path.dirname(os.path.abspath(args.out))
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-    with open(args.out, "w", encoding="utf-8") as handle:
-        handle.write(document)
+    try:
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(document)
+    except OSError as exc:
+        print(f"error: could not write {args.out}: {exc}", file=sys.stderr)
+        return 2
     print(f"Wrote {args.out}")
     return 0
 
