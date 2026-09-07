@@ -101,6 +101,77 @@ def _read_body(path: str) -> str:
     return remainder.split("---", 1)[1] if "---" in remainder else remainder
 
 
+# ---------------------------------------------------------------------------
+# NFR body parsing
+#
+# Two sections of an NFR body are load-bearing here. Both are written by
+# nfr-specialist.md for every NFR and are present in all 24 NFRs across both
+# worked example sets; validate_requirements.py gates them so that a drift in
+# the specialist's template fails at the validator rather than here.
+# ---------------------------------------------------------------------------
+ISO_HEADING = "## ISO 25010 Characteristic"
+
+# The nine ISO/IEC 25010:2023 characteristics nfr-specialist.md walks, plus the
+# "Extension:" prefix it uses for the four the standard omits (observability,
+# deployability, compliance, cost). Only the head token is parsed: the text
+# after the separator is free prose that wraps and carries parentheticals, so
+# Extension: Observability and Extension: Compliance land in one bucket. That
+# is deliberate — see spec D8.
+ISO_CHARACTERISTICS = frozenset({
+    "Functional Suitability",
+    "Performance Efficiency",
+    "Compatibility",
+    "Interaction Capability",
+    "Reliability",
+    "Security",
+    "Maintainability",
+    "Flexibility",
+    "Safety",
+    "Extension",
+})
+
+_ISO_SECTION_RE = re.compile(
+    r"^## ISO 25010 Characteristic\s*\n(.+?)(?=^##\s|\Z)", re.M | re.S
+)
+_QAS_SEPARATOR_RE = re.compile(r"→|->|:")
+
+
+def parse_iso_characteristic(artifact: Artifact) -> str:
+    """The head token of an NFR's ``## ISO 25010 Characteristic`` section."""
+    match = _ISO_SECTION_RE.search(artifact.body)
+    if not match:
+        raise GenerationError(
+            f"{artifact.id}: missing required heading '{ISO_HEADING}'"
+        )
+    text = " ".join(match.group(1).split())
+    head = _QAS_SEPARATOR_RE.split(text, 1)[0].strip()
+    if head not in ISO_CHARACTERISTICS:
+        raise GenerationError(
+            f"{artifact.id}: '{head}' is not an ISO 25010 characteristic or "
+            f"an 'Extension'"
+        )
+    return head
+
+
+def parse_qas_field(artifact: Artifact, label: str) -> str:
+    """One six-part quality-attribute-scenario bullet, continuations joined.
+
+    A bullet ends at the next bullet or the next heading, so a value wrapped
+    across lines (which the specialist does routinely) survives intact.
+    """
+    pattern = re.compile(
+        r"^-\s+\*\*" + re.escape(label) + r":\*\*\s*(.+?)(?=^-\s+\*\*|^#{1,6}\s|\Z)",
+        re.M | re.S,
+    )
+    match = pattern.search(artifact.body)
+    if not match:
+        raise GenerationError(
+            f"{artifact.id}: quality attribute scenario has no "
+            f"'**{label}:**' bullet"
+        )
+    return " ".join(match.group(1).split())
+
+
 def load_set(root: str, skip: set, skip_dirs: set = frozenset()) -> List[Artifact]:
     """Every atomic artifact under ``root``, sorted by id.
 
