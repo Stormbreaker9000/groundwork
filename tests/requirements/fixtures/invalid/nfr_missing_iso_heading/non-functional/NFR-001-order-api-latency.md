@@ -25,9 +25,6 @@ traces_to:
 
 # NFR-001 — Order API latency
 
-## ISO 25010 Characteristic
-Performance Efficiency → Time behavior
-
 ## Quality Attribute Scenario
 - **Source:** Authenticated customer (external)
 - **Stimulus:** Submits an order via `POST /orders`

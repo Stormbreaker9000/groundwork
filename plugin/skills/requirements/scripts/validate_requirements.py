@@ -67,6 +67,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -109,6 +110,17 @@ REQUIRED_CONTEXT_HEADINGS = ["## Assumptions", "## Dependencies", "## Open Quest
 # downstream stages (M2 architecture, M3 QA) from drifting on terminology.
 GLOSSARY_ARTIFACT = "glossary.md"
 REQUIRED_GLOSSARY_HEADINGS = ["## Terms"]
+
+# Body sections of a non-functional requirement (STO-104). generate_dod.py
+# parses both — the ISO characteristic head token drives the documentation and
+# deployment-readiness sections, and the QAS response measure is the DoD's
+# pass/fail oracle for every NFR fitness gate. Gated here so a drift in
+# nfr-specialist.md's template fails at validation rather than at generation.
+REQUIRED_NFR_BODY_HEADINGS = [
+    "## ISO 25010 Characteristic",
+    "## Quality Attribute Scenario",
+]
+REQUIRED_NFR_QAS_BULLET = "Response measure"
 
 # Minimal enum/required knowledge for the stdlib fallback path only. The JSON
 # Schema remains the single source of truth when jsonschema is available.
@@ -256,6 +268,44 @@ def check_glossary_artifact(reqs_dir: str) -> List[str]:
     )
 
 
+def check_nfr_body_sections(files: List[RequirementFile]) -> None:
+    """Gate the two NFR body sections generate_dod.py parses.
+
+    Per-file rather than set-level, so the failure names the file. Presence
+    only — the prose inside each section is never gated, matching the rule the
+    project-artifact gates already follow.
+
+    This cannot delegate to ``core._check_project_artifact`` like
+    ``check_context_artifact``/``check_glossary_artifact`` do: that helper
+    takes a *filename* to look up in a directory (a single project-level
+    artifact), while this check runs per already-discovered requirement file,
+    filtered to ``type: non_functional``.
+    """
+    for f in files:
+        fm = f.frontmatter
+        if not isinstance(fm, dict) or fm.get("type") != "non_functional":
+            continue
+        try:
+            with open(f.path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+        except (OSError, UnicodeDecodeError) as exc:
+            f.errors.append(f"could not read body: {exc}")
+            continue
+        for heading in REQUIRED_NFR_BODY_HEADINGS:
+            if not re.search(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE):
+                f.errors.append(
+                    f"non-functional requirement missing required heading "
+                    f"'{heading}'"
+                )
+        if not re.search(
+            rf"^-\s+\*\*{re.escape(REQUIRED_NFR_QAS_BULLET)}:\*\*", text, re.MULTILINE
+        ):
+            f.errors.append(
+                f"quality attribute scenario missing "
+                f"'**{REQUIRED_NFR_QAS_BULLET}:**' bullet"
+            )
+
+
 # ---------------------------------------------------------------------------
 # Discovery + orchestration
 # ---------------------------------------------------------------------------
@@ -283,6 +333,7 @@ def validate(reqs_dir: str, schema_path: str) -> Tuple[List[RequirementFile], Li
             rf.errors.extend(_fallback_validate(data))
         files.append(rf)
 
+    check_nfr_body_sections(files)
     global_errors = cross_file_checks(files)
     global_errors.extend(check_context_artifact(reqs_dir))
     global_errors.extend(check_glossary_artifact(reqs_dir))

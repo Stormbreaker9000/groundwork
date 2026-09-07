@@ -228,3 +228,27 @@ def test_shipped_example_passes_structural_gate(name, capsys):
     exactly when that net needs to already exist."""
     code = run(os.path.join(EXAMPLES, name, "requirements"))
     assert code == 0, capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# NFR body sections (STO-104): the DoD generator parses these, so they are gated
+# ---------------------------------------------------------------------------
+def test_nfr_missing_iso_heading_fails(capsys):
+    code = run(os.path.join(INVALID_DIR, "nfr_missing_iso_heading"))
+    out = capsys.readouterr().out
+    assert code != 0
+    assert "ISO 25010 Characteristic" in out
+
+
+def test_nfr_missing_response_measure_fails(capsys):
+    code = run(os.path.join(INVALID_DIR, "nfr_missing_response_measure"))
+    out = capsys.readouterr().out
+    assert code != 0
+    assert "Response measure" in out
+
+
+def test_functional_requirement_needs_no_nfr_body_sections(capsys):
+    """The gate is NFR-only: an FR without a QAS is not a violation."""
+    code = run(VALID_DIR)
+    out = capsys.readouterr().out
+    assert code == 0, out

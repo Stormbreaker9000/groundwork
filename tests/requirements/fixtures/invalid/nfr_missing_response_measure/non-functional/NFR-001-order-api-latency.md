@@ -34,5 +34,3 @@ Performance Efficiency → Time behavior
 - **Environment:** Normal operations, load <= 80% capacity
 - **Artifact:** Order API service + Order DB
 - **Response:** Order persisted, 201 returned, `orders.created` event published
-- **Response measure:** End-to-end latency <= 200 ms at p95 over a rolling
-  5-minute window; error rate <= 0.1%
