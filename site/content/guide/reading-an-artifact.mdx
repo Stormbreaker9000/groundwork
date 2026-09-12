@@ -148,12 +148,13 @@ fixed order:
   negative or edge scenario where an unwanted condition exists.
 - **Fit Criterion** — the measurable oracle.
 
-The acceptance criteria are Gherkin because they are meant to become tests. The
-Definition of Done generator emits one gate per functional requirement that
-asserts "all of that FR's acceptance-criteria scenarios pass", and it links the
-requirement file rather than inlining the Gherkin — the requirement file stays
-the authoritative, executable copy. That is also why `verification_method` on a
-functional requirement is usually `test`.
+The acceptance criteria are Gherkin because they are meant to become tests.
+`generate_dod.py` emits one gate per functional requirement in
+`.sdlc/definition-of-done.md` that asserts "all of that FR's
+acceptance-criteria scenarios pass", and it links the requirement file rather
+than inlining the Gherkin — the requirement file stays the authoritative,
+executable copy. That is also why `verification_method` on a functional
+requirement is usually `test`.
 
 ## Design artifacts differ
 

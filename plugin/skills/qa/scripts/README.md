@@ -55,3 +55,12 @@ of being duplicated here.
 ```bash
 pytest tests/qa
 ```
+
+## The Definition of Done generator lives elsewhere
+
+`generate_dod.py`, which projects this stage's artifacts (along with
+requirements and design) into `.sdlc/definition-of-done.md`, is not in this
+directory. It lives at
+`../../requirements/scripts/generate_dod.py`, because it reads all three
+stages and the requirements skill is the earliest one; see that skill's
+`scripts/README.md` for its usage.

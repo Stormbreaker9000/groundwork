@@ -77,3 +77,21 @@ The `--json` payload is a list of findings, each with `rule`, `severity`,
 `artifact_id`, `field`, `excerpt`, `message`, and `suggested_rewrite_hint`.
 The record is shared with the design stage's linter via `lib/lint_core.py`,
 which is why the id field is stage-agnostic rather than `req_id`.
+
+### `generate_dod.py`
+
+Projects the requirement, design and QA artifact sets into
+`.sdlc/definition-of-done.md`. Every stage skill runs it and each run
+supersedes the last, so the file exists as soon as requirements do and gains
+gates as later stages land.
+
+    python3 generate_dod.py --requirements .sdlc/requirements \
+        [--design .sdlc/design] [--qa .sdlc/qa] \
+        --out .sdlc/definition-of-done.md [--title NAME]
+
+Exit 0 written, 1 an artifact it must parse is malformed, 2 usage error.
+
+It parses two NFR body sections — `## ISO 25010 Characteristic` and the
+quality attribute scenario's `**Response measure:**` bullet.
+`validate_requirements.py` gates both, so drift fails at validation rather
+than here.

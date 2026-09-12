@@ -263,13 +263,28 @@ the owning specialist rather than editing the written files by hand:
 python3 <skill-base>/scripts/lint_requirements_content.py .sdlc/requirements
 ```
 
-**Step 5 — Generate the Definition of Done stub:**
+**Step 5 — Generate the Definition of Done:**
 
-Run **dod-generator** to derive `.sdlc/requirements/definition-of-done.md` from the requirement set (functional acceptance gates, NFR fitness gates, constraint/business-rule compliance, test coverage, docs, deployment readiness). This is an M1 stub that M3 expands.
+```bash
+python3 <skill-base>/scripts/generate_dod.py \
+  --requirements .sdlc/requirements \
+  --out .sdlc/definition-of-done.md \
+  --title "<feature name>"
+```
+
+The Definition of Done lives at the root of `.sdlc/`, not under this stage's
+directory: it derives from every stage that has run, and the design and QA
+stages regenerate it as they add gates of their own. This run produces the
+requirements-only form — functional acceptance gates, NFR fitness gates,
+documentation and deployment readiness — and the header records that design
+and QA have not contributed.
+
+Exit 1 means an artifact it must parse is malformed; fix the requirement and
+re-run rather than hand-writing the output.
 
 **Step 6 — Commit:**
 
 ```bash
-git add .sdlc/requirements/
+git add .sdlc/requirements/ .sdlc/definition-of-done.md
 git commit -m "docs: add requirements artifact set for <feature-name>"
 ```

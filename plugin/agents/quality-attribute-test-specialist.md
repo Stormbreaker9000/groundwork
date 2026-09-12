@@ -54,9 +54,8 @@ that read both sets.
   A second copy of a threshold is a second thing to update the day the NFR's
   target changes, and the two copies drifting apart is a defect nobody
   notices until the wrong one is trusted. This is the same rule
-  `dod-generator.md` states for FR acceptance criteria ("reference each FR by
-  ID... do not duplicate them here"), applied to the response measure
-  instead.
+  `generate_dod.py` states for FR acceptance criteria ("referenced here,
+  never duplicated"), applied to the response measure instead.
 
 - **`test_level`** is usually `performance` or `security` for scenarios
   stimulated by load or an adversary, but is whatever level the scenario's

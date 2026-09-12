@@ -231,8 +231,8 @@ dropped it."
 `fit_criterion` rides alongside `scenario` for citation, not restatement: the
 specialist references the NFR by ID and states how the criterion is measured,
 and never copies the threshold itself into the test-strategy item. This is the
-same rule `dod-generator.md` already states for acceptance criteria
-("reference each FR by ID... do not duplicate them here"), stated here because
+same rule `generate_dod.py` already states for acceptance criteria
+("referenced here, never duplicated"), stated here because
 this is the field where a future editor would otherwise be tempted to inline
 the number.
 

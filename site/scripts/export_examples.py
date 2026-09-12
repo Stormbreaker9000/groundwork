@@ -74,6 +74,10 @@ GROUPS: List[Tuple[str, str, str]] = [
 
 # Project-level artifacts: prose files with no artifact ID, published together
 # on one page per stage. Order is reading order, not alphabetical.
+#
+# definition-of-done.md still sits under requirements/ in both committed
+# example sets. STO-104 moved the generated path to .sdlc/definition-of-done.md;
+# STO-309, which regenerates the examples, moves these entries.
 PROJECT_FILES: Dict[str, List[str]] = {
     "requirements": ["glossary.md", "assumptions.md", "definition-of-done.md"],
     "design": ["drivers.md", "assumptions.md"],
@@ -408,6 +412,8 @@ STAGE_TITLES = {
     "design": "Design",
 }
 
+# See the STO-104 note above PROJECT_FILES: definition-of-done.md is titled
+# here only because it still exists at the old path in both example sets.
 PROJECT_TITLES = {
     "glossary.md": "Glossary",
     "assumptions.md": "Assumptions",

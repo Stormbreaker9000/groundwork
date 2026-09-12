@@ -51,8 +51,12 @@ root.
 **What it means.** This is known, and tracked as STO-218. The validators treat
 every `.md` file under a stage directory as an atomic artifact, with the single
 exception of the named project-level companions — `assumptions.md`,
-`glossary.md`, `definition-of-done.md` and `index.yaml` in the requirements
-stage; `assumptions.md`, `drivers.md` and `index.yaml` in the design stage. A
+`glossary.md` and `index.yaml` in the requirements stage; `assumptions.md`,
+`drivers.md` and `index.yaml` in the design stage. `validate_requirements.py`
+also exempts the filename `definition-of-done.md`, a holdover from before
+`generate_dod.py` moved that file to `.sdlc/definition-of-done.md` — the entry
+stays so that a copy left behind at the old path by an older run does not
+start failing the validator, even though nothing writes there any more. A
 `README.md` is not on either list, so it is parsed as an artifact and fails.
 
 **Workaround.** Keep notes outside the stage directory.

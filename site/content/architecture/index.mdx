@@ -33,8 +33,12 @@ is fixed: **`fr-specialist`, then `nfr-specialist`, then
 `requirements-formatter`.** The constraint specialist runs third because it
 traces constraints and business rules to concrete FR and NFR IDs, which do not
 exist until the first two have returned. The critic runs once, on the merged
-set. A seventh agent, `dod-generator`, runs after the pipeline and derives
-`definition-of-done.md` from what was written.
+set. After the write, the skill runs `generate_dod.py` — a deterministic
+script, not an agent — which projects `.sdlc/definition-of-done.md` from
+whichever of the requirements, design and QA artifact sets exist on disk. All
+three stage skills run it: each rewrites the file with the gates its own stage
+adds, so the Definition of Done always reflects everything that has run so
+far.
 
 <PipelineMap stage="requirements" />
 
@@ -63,7 +67,8 @@ placed after it so that one agent both writes the set and answers for its
 structure.
 
 The advisory content linter runs after the gate, over the same files, and
-`dod-generator` writes `definition-of-done.md` last.
+`generate_dod.py` writes `.sdlc/definition-of-done.md` last, in its
+requirements-only form.
 
 ## The design stage
 
