@@ -784,9 +784,10 @@ omitted it — why no boundary applies.
 - [ ] **Step 2: Remove the bullet the section replaces**
 
 Delete the whole `- **`test_level` is a judgment about the boundary being
-crossed, not about effort.**` bullet from `## Authoring rules` (old lines
-50–69, ending with "…not how much scaffolding the test needs.") and put a
-pointer in its place:
+crossed, not about effort.**` bullet from `## Authoring rules` — it runs from
+that opening phrase to "…not how much scaffolding the test needs." Locate it
+by that text, not by line number: Task 1 edited lines above it. Put a pointer
+in its place:
 
 ```markdown
 - **`test_level` and `verification_mode` are chosen together**, by the rules
@@ -1207,14 +1208,18 @@ still describes the pre-`verification_mode` world.
 - [ ] **Step 2: Confirm the two registers are described consistently**
 
 ```bash
-grep -rn 'Declared Unenforced' plugin/ | sort
+grep -rln 'Declared Unenforced' plugin/ | sort
 ```
 
-Expected: five hits — the orchestrator's contract and closing paragraph, the
-formatter's skeleton and projection rule, the template, and the DoD generator
-(`plugin/skills/requirements/scripts/generate_dod.py:407`). Confirm by reading
-that the QA-side bullet and the DoD-side section key on the same three things:
-item ID, covers, rationale.
+Expected: exactly these five files —
+`plugin/agents/qa-formatter.md` (skeleton and projection rule),
+`plugin/agents/qa-orchestrator.md` (assembly rule and closing paragraph),
+`plugin/skills/qa/SKILL.md` (summary block and rendering paragraph),
+`plugin/skills/qa/templates/qa-strategy.md`, and
+`plugin/skills/requirements/scripts/generate_dod.py:409` (the DoD side, which
+this ticket does not touch). Count hits per file only to confirm none was
+missed; the assertion that matters is that the QA-side bullet and the DoD-side
+section key on the same three things: item ID, covers, rationale.
 
 - [ ] **Step 3: Correct the spec's reference count**
 
