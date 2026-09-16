@@ -317,6 +317,21 @@ def test_unenforced_items_get_their_own_register(tmp_path):
     assert "The cut-off is a single conditional" in text
 
 
+def test_level_less_item_prints_verification_mode_not_none(tmp_path):
+    """Ruling A: when test_level is absent, print verification_mode in its
+    place. TS-005 carries verification_mode: inspection and omits test_level
+    (a legal artifact per STO-307 D7). Before this fix, generate_dod.py
+    interpolated ``item.get('test_level')`` unconditionally and rendered the
+    literal string 'None' in the register entry.
+    """
+    _, text = generate(FULL, tmp_path)
+    register = text.split("## Declared Unenforced", 1)[1].split("\n## ", 1)[0]
+    assert "TS-005" in register
+    block = "- **TS-005" + register.split("- **TS-005", 1)[1].split("- **", 1)[0]
+    assert "`inspection`" in block
+    assert "None" not in block
+
+
 def test_unenforced_register_is_not_a_checklist(tmp_path):
     """A register records what is not gated; a checkbox would imply it is."""
     _, text = generate(FULL, tmp_path)
