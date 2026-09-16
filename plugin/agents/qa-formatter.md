@@ -30,7 +30,7 @@ than left to the orchestrator's or the spec's word alone.
   contract plus a `body_markdown` field. `body_markdown` is a transport field
   only — it is never written into the frontmatter.
 - The `qa_context_artifact` (Stage 6.5): `assumptions`, `dependencies`,
-  `open_questions`, and `accepted_risks`.
+  `open_questions`, `accepted_risks`, and `unenforced`.
 - `qa_context` itself (Stage 1), forwarded verbatim — the same object Stage 6
   already forwards to `qa-critic`, not a narrower slice built for you. You
   need `qa_context.test_tooling`, `qa_context.ci_enforcement`, and
@@ -59,7 +59,8 @@ invoked without it, stop and report back rather than proceeding.
 .sdlc/qa/
 ├── strategy/        TS-001-<kebab-title>.md
 ├── qa-strategy.md    ← gated: the five required headings, plus Accepted Risks,
-│                        Assumptions, Dependencies, and Open Questions (ungated)
+│                        Declared Unenforced, Assumptions, Dependencies, and
+│                        Open Questions (ungated)
 └── index.yaml        ← mandatory machine index
 ```
 
@@ -132,7 +133,7 @@ artifacts it summarises the moment either changes — the same reason
 drawing them by hand. Regenerate the whole document wholesale on every run;
 never patch it in place.
 
-Copy `<scripts>/../templates/qa-strategy.md`'s nine headings verbatim, in
+Copy `<scripts>/../templates/qa-strategy.md`'s ten headings verbatim, in
 this exact order — the first five are hard-gated by `validate_qa.py`
 character for character, so retype them from this list, never from memory.
 The template sits one level above the scripts directory, in `templates/`,
@@ -151,6 +152,7 @@ applies here too, since the template's location is derived from it:
 ## Tooling
 ## Coverage Targets
 ## Accepted Risks
+## Declared Unenforced
 ## Assumptions
 ## Dependencies
 ## Open Questions
@@ -202,6 +204,13 @@ produce byte-identical output:
   When the register is empty, the section body is the single line
   `None identified.`
 
+- **Declared Unenforced.** One bullet per `qa_context_artifact.unenforced`
+  entry: `- **<UE-id>** — <item>: <rationale> (covers: <covers, comma-joined>)`,
+  ordered by `item` ID ascending. When the register is empty, the section body
+  is the single line `None identified.` Never omit the heading: a strategy
+  document that silently drops the section reads identically whether nothing
+  was unenforced or nobody checked.
+
 - **Assumptions.** One bullet per `qa_context_artifact.assumptions` entry:
   `- **<A-id>** — <statement>`. When the list is empty, the section body is
   the single line `None identified.`
@@ -217,21 +226,22 @@ produce byte-identical output:
 `qa-strategy.md`, rather than carried only in `index.yaml` — they are part of
 the `qa_context_artifact` `qa-orchestrator.md` Stage 6.5 assembles, and the
 strategy document is that artifact's one projected home, the same way
-`Accepted Risks` already is.
+`Accepted Risks` already is. `unenforced` is rendered the same way, into
+`Declared Unenforced`.
 
-**`Accepted Risks`, `Assumptions`, `Dependencies`, and `Open Questions` are
-deliberately not among `validate_qa.py`'s `REQUIRED_STRATEGY_HEADINGS`.** If
-any were gated the same as the other five, an absent section and a
-present-but-empty one would look identical to the validator — both would
-satisfy "the heading exists." The whole point of each of these four registers
-is the opposite: each must be visibly, honestly empty (`None identified.`)
-when there is nothing to report, rather than quietly missing because nobody
-wrote the section. Write all four every time regardless — their presence is a
-contract with the reader, even though the validator does not enforce it
-structurally. Do not add any of the three new headings to
-`REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps `Accepted Risks`
-ungated applies unchanged to `Assumptions`, `Dependencies`, and `Open
-Questions`.
+**`Accepted Risks`, `Declared Unenforced`, `Assumptions`, `Dependencies`, and
+`Open Questions` are deliberately not among `validate_qa.py`'s
+`REQUIRED_STRATEGY_HEADINGS`.** If any were gated the same as the other five,
+an absent section and a present-but-empty one would look identical to the
+validator — both would satisfy "the heading exists." The whole point of each
+of these five registers is the opposite: each must be visibly, honestly empty
+(`None identified.`) when there is nothing to report, rather than quietly
+missing because nobody wrote the section. Write all five every time
+regardless — their presence is a contract with the reader, even though the
+validator does not enforce it structurally. Do not add any of the four new
+headings to `REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps
+`Accepted Risks` ungated applies unchanged to `Declared Unenforced`,
+`Assumptions`, `Dependencies`, and `Open Questions`.
 
 `Tooling` and `Coverage Targets` come from `qa_context` directly, forwarded to
 you as a declared input in its own right (see `## Input`) — never from

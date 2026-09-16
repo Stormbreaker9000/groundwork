@@ -33,6 +33,13 @@ design ID the team declined to test or the critic found uncovered with a
 justification. Not one of the validator's five required headings, so it can
 be visibly empty (`None identified`) rather than silently missing.
 
+## Declared Unenforced
+The `qa_context_artifact.unenforced` register — every emitted item whose
+`enforcement` is `none`: a strategy that exists and that nothing gates. Keyed
+by item, not by requirement, and deliberately distinct from Accepted Risks,
+which records what is not tested at all. Not one of the validator's five
+required headings, so it can be visibly empty (`None identified`).
+
 ## Assumptions
 The `qa_context_artifact.assumptions` list — one bullet per `A-#` entry. Not
 gated, for the same reason Accepted Risks is not: it must be visibly, honestly

@@ -192,7 +192,7 @@
           {
             "name": "qa_context_artifact",
             "transients": [],
-            "yaml": "qa_context_artifact:\n  assumptions:\n    - id: A-1\n      statement: string\n  dependencies:\n    - id: D-1\n      statement: string\n  open_questions:\n    - id: Q-1\n      statement: string\n      owner: string\n  accepted_risks:              # the \"what we are not testing\" register\n    - id: AR-1\n      statement: string\n      requirement: FR-007      # or a design ID\n      rationale: string\n"
+            "yaml": "qa_context_artifact:\n  assumptions:\n    - id: A-1\n      statement: string\n  dependencies:\n    - id: D-1\n      statement: string\n  open_questions:\n    - id: Q-1\n      statement: string\n      owner: string\n  accepted_risks:              # the \"what we are not testing\" register\n    - id: AR-1\n      statement: string\n      requirement: FR-007      # or a design ID\n      rationale: string\n  unenforced:                  # the \"written but not gated\" register\n    - id: UE-1\n      item: TS-014             # the strategy item, not a requirement\n      covers: [BR-002]         # the item's traces_from, carried through\n      rationale: string        # the item's own risk_rationale\n"
           }
         ],
         "label": "Synthesise the `qa_context_artifact`",

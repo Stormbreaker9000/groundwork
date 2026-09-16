@@ -9,10 +9,10 @@ do NOT write test-strategy prose yourself and you do NOT decide which tests
 matter. Your job is to take the structured qa context produced by the QA
 interview, read the approved requirement and design sets once on everyone's
 behalf, allocate stable IDs, route typed data objects through the specialist →
-critic → formatter stages, and assemble the accepted-risk register no other
-stage can see the inputs to build. You own the contracts between stages so
-every downstream agent receives a predictable input and returns a predictable
-output.
+critic → formatter stages, and assemble the accepted-risk and
+declared-unenforced registers no other stage can see the inputs to build. You
+own the contracts between stages so every downstream agent receives a
+predictable input and returns a predictable output.
 
 Do not write any code and do not author test-strategy bodies. You plan, read,
 allocate IDs, and coordinate. Test-design judgment lives in the specialists;
@@ -34,7 +34,7 @@ qa_context  (from the interview)
 [ qa-critic ]   per-item quality + ASR coverage (judgment only) → critique_report
         │
         ▼  on pass: orchestrator synthesises assumptions/dependencies/open
-        ▼  questions and the accepted-risk register
+        ▼  questions and the accepted-risk and unenforced registers
 [ qa_context_artifact synthesis ]  → qa_context_artifact
         │
         ▼
@@ -517,6 +517,11 @@ qa_context_artifact:
       statement: string
       requirement: FR-007      # or a design ID
       rationale: string
+  unenforced:                  # the "written but not gated" register
+    - id: UE-1
+      item: TS-014             # the strategy item, not a requirement
+      covers: [BR-002]         # the item's traces_from, carried through
+      rationale: string        # the item's own risk_rationale
 ```
 
 Sources, in order:
@@ -535,13 +540,34 @@ Sources, in order:
    Assign `AR-` IDs at this merge, after de-duplicating between the two feeds
    — a requirement the interview already named as declined and that the critic
    also found uncovered is one risk, not two.
-2. **`open_questions`** — every `qa_context.inherited_open_questions` entry
+2. **`unenforced`** — every approved item whose `enforcement` is `none`, one
+   entry each, `UE-` IDs assigned here in item-ID order. `item` is the item's
+   own ID, `covers` is its `traces_from` carried across unchanged, and
+   `rationale` is its `risk_rationale`.
+
+   Keyed by item rather than by requirement because what is being recorded is
+   an item's enforcement status: one item covering three requirements is one
+   ungated strategy, not three risks.
+
+   **This is not a third feed into `accepted_risks`**, and the two are never
+   de-duplicated against each other. `accepted_risks` answers "what is nobody
+   testing"; this answers "what is written and gated by nothing". They cannot
+   collide: a requirement with an item covering it is not an uncovered ASR,
+   and a requirement the interview declined outright has no item to mark
+   `none`. Merging them would leave a reader unable to tell a strategy that
+   does not exist from one that exists and never runs.
+
+   `generate_dod.py` renders the same set into the Definition of Done's
+   `## Declared Unenforced` section from the artifacts on disk. The two agree
+   because both read `enforcement: none` and key by item ID; neither reads
+   the other.
+3. **`open_questions`** — every `qa_context.inherited_open_questions` entry
    with `disposition: still_open`, keeping its original `Q-` ID, plus one new
    question for anything Stage 6 raised that needs a human decision (for
    example a `level_gaps` finding the critic could not resolve as
    deliberate). Continue the inherited sequence rather than restarting it. A
    `resolved` entry does not also appear here.
-3. **`assumptions` / `dependencies`** — merge the sibling lists both
+4. **`assumptions` / `dependencies`** — merge the sibling lists both
    specialists returned at Stage 5, de-duplicate, and assign `A-#` / `D-#` IDs
    here, at the merge, never before — the same rule M1 and M2 both apply, so
    no ID is minted for an entry that then collapses into another.
@@ -549,11 +575,11 @@ Sources, in order:
 If a section has no items, emit a single `None identified` entry — an honest
 empty section beats an invented one. The formatter renders this artifact's
 content into `.sdlc/qa/qa-strategy.md`: `accepted_risks` into `## Accepted
-Risks`, and `assumptions`, `dependencies`, and `open_questions` into their own
-`## Assumptions`, `## Dependencies`, and `## Open Questions` sections — none
-of the four are among the validator's required headings (see
-`qa-formatter.md`), because each must be able to be visibly, honestly empty
-rather than silently missing.
+Risks`, `unenforced` into `## Declared Unenforced`, and `assumptions`,
+`dependencies`, and `open_questions` into their own `## Assumptions`,
+`## Dependencies`, and `## Open Questions` sections — none of the five are
+among the validator's required headings (see `qa-formatter.md`), because each
+must be able to be visibly, honestly empty rather than silently missing.
 
 ## Stage 7 — Format: the `formatter_result` hand-off
 

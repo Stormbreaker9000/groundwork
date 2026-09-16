@@ -305,6 +305,9 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **Accepted Risks:**
 - <statement> (traces: <requirement/design ID>) — <rationale>, or "None"
 
+**Declared Unenforced:**
+- <TS-ID> <title> — covers <IDs>: <rationale>, or "None"
+
 **Assumptions & Dependencies:** [key A-#/D-# items, or "None identified"]
 **Open Questions:** [Q-# items still open, or "None"]
 
@@ -324,6 +327,12 @@ per distinct declined item. This is the one point in the pipeline where
 "what we decided not to test" reaches a human before any file is written —
 surfacing it here, rather than only in the written `qa-strategy.md`, means
 the user can push back on an accepted risk before it is committed.
+
+Render **Declared Unenforced** from `qa_context_artifact.unenforced` the same
+way, and for the same reason: an item nothing gates is a decision the user
+should get to overturn while overturning it is still cheap. Keep the two
+lists separate here exactly as they are separate in the artifact — one is
+what nobody is testing, the other is what nobody is enforcing.
 
 **Step 3 — Sign-off gate:**
 
