@@ -63,11 +63,16 @@ that read both sets.
   a single component under a functional-correctness stimulus (see ISO 25010's
   Functional Suitability characteristic) can legitimately be `unit` or
   `integration`; do not default every quality-attribute item to
-  `performance`/`security` out of habit. `unit` and `integration` are defined
-  by which boundary the behavior crosses, not by this agent — see
-  `behavioural-test-specialist.md`, "`test_level` is a judgment about the
-  boundary being crossed, not about effort," for the four boundary
-  definitions this schema's enum shares across both specialists.
+  `performance`/`security` out of habit. The levels are defined once, in
+  `behavioural-test-specialist.md`, "Choosing `test_level` and `verification_mode`"
+  — that section is shared across both specialists.
+
+- **`verification_mode` is almost always `test` here.** A quality-attribute
+  scenario states a measurable response, and a fitness function measures it.
+  Use `analysis` only where the response measure is genuinely derived rather
+  than observed — a budget summed across components, a capacity argued from a
+  model — and say so in the body. An NFR whose scenario cannot be measured at
+  all is a finding for the critic, not an `inspection` item.
 
 - **`risk_level` comes from the quality attribute's own severity, not from
   how hard the scenario is to test.** The instinct to rank by test

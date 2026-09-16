@@ -50,26 +50,9 @@ anything it omitted from the digests does not exist for you.
   item is a second copy to keep in sync with the FR every time the FR
   changes.
 
-- **`test_level` is a judgment about the boundary being crossed, not about
-  effort.** Choose it against what the behavior actually spans:
-  - **unit** — the behavior is contained entirely within one component's
-    boundary; nothing outside it needs to be running for the test to be
-    meaningful.
-  - **integration** — the behavior spans two or more components' boundaries,
-    so the test needs their real collaboration (not a stub) to say anything.
-  - **contract** — the behavior is the shape of an interaction across a
-    boundary itself (a request/response shape, an event schema) rather than
-    the business behavior that flows through it — this is what an `IF-`
-    interface entry in `design_digest` names, so a `contract` item cites the
-    interface it validates, not only the components on either side of it.
-  - **e2e** — the behavior is only observable by performing it the way a user
-    would, through the full stack, because no lower boundary reproduces what
-    matters (ordering across requests, session state, everything wired
-    together).
-  A test that is merely *hard to set up* is not automatically integration or
-  e2e — hard-to-set-up unit tests are still unit tests. The question is what
-  boundary must be crossed for the assertion to be true, not how much
-  scaffolding the test needs.
+- **`test_level` and `verification_mode` are chosen together**, by the rules
+  in `## Choosing test_level and verification_mode` below. Neither is a
+  judgment about effort.
 
 - **`traces_from` names what the item covers** — at least one requirement ID
   from `assigned.behavioural` (an `FR-`, `CON-` or `BR-` ID; a constraint or
@@ -119,12 +102,85 @@ anything it omitted from the digests does not exist for you.
   disposition before setting `low` — a question already `resolved` does not
   force it.
 
+## Choosing `test_level` and `verification_mode`
+
+Two independent judgments, and answering them in this order keeps them
+independent. `verification_mode` says whether the check is executed at all.
+`test_level` says which boundary it is about. Both specialists use this
+section; it is the only place either level or mode is defined.
+
+### `verification_mode` — is this executed?
+
+Read the requirement's own `verification_method` and honour it. A requirement
+the requirements stage recorded as `inspection` does not become a test
+because a test would be more convenient to write.
+
+- **test** — something runs and passes or fails on its own.
+- **inspection** — a person or a script reads the artifact and counts:
+  which call sites exist, which dependencies are declared, whether a required
+  clause is present.
+- **analysis** — the answer comes from reasoning over a model or a
+  measurement rather than from exercising the system: a budget summed from
+  component figures, a threat model walked against a data flow.
+- **demonstration** — the behavior is observed being performed, without an
+  assertion harness making the judgment.
+
+FRs are almost always `test`. Constraints and business rules are routinely
+`inspection` or `analysis`, and a `CON-`/`BR-` item whose mode is not `test`
+describes the enumeration or the review that actually settles it — which call
+sites are enumerated, what is counted, what a non-zero count invalidates —
+not an automated test nobody will write.
+
+### `test_level` — which boundary is crossed?
+
+A judgment about the boundary being crossed, not about effort. Choose it
+against what the behavior actually spans:
+
+- **unit** — the behavior is contained entirely within one component's
+  boundary; nothing outside it needs to be running for the test to be
+  meaningful.
+- **integration** — the behavior spans two or more components' boundaries,
+  so the test needs their real collaboration (not a stub) to say anything.
+- **contract** — the behavior is the shape of an interaction across a
+  boundary itself (a request/response shape, an event schema) rather than
+  the business behavior that flows through it — this is what an `IF-`
+  interface entry in `design_digest` names, so a `contract` item cites the
+  interface it validates, not only the components on either side of it.
+- **e2e** — the behavior is only observable by performing it the way a user
+  would, through the full stack, because no lower boundary reproduces what
+  matters (ordering across requests, session state, everything wired
+  together).
+- **performance** — the thing being crossed is a resource budget rather than
+  a component boundary: a latency, a throughput, a memory or cost ceiling.
+- **security** — the thing being crossed is a trust boundary: what may leave
+  the machine, what an unauthenticated caller can reach, what an adversary
+  controls.
+
+A test that is merely *hard to set up* is not automatically integration or
+e2e — hard-to-set-up unit tests are still unit tests. The question is what
+boundary must be crossed for the assertion to be true, not how much
+scaffolding the test needs.
+
+### When the two axes disagree
+
+`test_level` is required when `verification_mode` is `test`, and **optional,
+not forbidden**, otherwise. Record a level whenever the check is *about* a
+boundary, whatever its mode: an inspection enumerating every call site that
+reaches the network across two components is an `integration` inspection, and
+saying so keeps information a mode alone would lose. Omit it only when nothing
+is crossed — a licence audit over the dependency manifest has no boundary and
+no honest level, and inventing one is exactly the dishonesty this field pair
+exists to end.
+
+Say in `Test Level Rationale` which boundary the level names, or — when you
+omitted it — why no boundary applies.
+
 ## Deriving an item from a constraint or a business rule
 
 A `type: constraint` or `type: business_rule` entry is derived the same way an
 FR entry is — one atomic item saying how the thing is exercised and at what
-level, citing the requirement by ID — but four things differ, and each changes
-what you write:
+level, citing the requirement by ID — but three things differ, and each
+changes what you write:
 
 1. **There is no Gherkin, so the `fit_criterion` is the shape of the check.**
    An FR hands you scenarios; a constraint or business rule hands you
@@ -136,29 +192,18 @@ what you write:
    number, state only the method that produces it.
 
 2. **`verification_method` tells you whether an executable test is even the
-   right answer.** FRs and NFRs are almost always `test`; constraints and
-   business rules are routinely `inspection` or `analysis`. Honour it. An
-   `inspection` rule's item describes the enumeration or review that actually
-   settles it — which call sites are enumerated, what is counted, what a
-   non-zero count invalidates — not an automated test nobody will write. Where
+   right answer, and it sets `verification_mode` directly.** FRs and NFRs are
+   almost always `test`; constraints and business rules are routinely
+   `inspection` or `analysis`. Carry the requirement's own value across rather
+   than deciding afresh, and see `## Choosing test_level and
+   verification_mode` for what each value obliges the item to describe. Where
    a rule has both an executable half and a static half (a suite that runs on
    each target *and* a count of conditionals outside a layer), write both into
-   one item's `Test Design` rather than splitting it into an item that runs
-   nothing, and say in `Test Level Rationale` which half the recorded
+   one item's `Test Design`, record the mode of the half that settles the
+   rule, and say in `Test Level Rationale` which half the recorded
    `test_level` describes.
 
-3. **`test_level` may need a value outside the four boundary definitions
-   above.** Those four (`unit`, `integration`, `contract`, `e2e`) are stated
-   for behaviours crossing component boundaries. A constraint bounding a
-   resource budget is honestly `performance`; one bounding what may leave the
-   machine is honestly `security`. Pick the level that names what is actually
-   run, and say so in `Test Level Rationale`. The schema's enum has no value
-   for a pure inspection or analysis, so where that is all there is, record
-   the level its executable half runs at and state in the rationale that the
-   static half has no level of its own — do not stretch one of the four
-   boundary definitions to cover it.
-
-4. **`bounds` is what keeps the item from duplicating an FR item.** It names
+3. **`bounds` is what keeps the item from duplicating an FR item.** It names
    the FR/NFR IDs the rule reaches, and those requirements are already covered
    by their own items. Write the item for *the part of the rule those items do
    not assert* — the clause the constraint adds. A business rule saying a
@@ -190,8 +235,9 @@ in prose, never the Gherkin itself; cite the requirement by ID for the exact
 scenario — an FR's AC, or a CON/BR's fit_criterion>
 
 ## Test Level Rationale
-<why this is the level named in frontmatter — which boundary is crossed,
-per the definitions above>
+<why this is the level named in frontmatter — which boundary is crossed, per
+"Choosing `test_level` and `verification_mode`" — or, when no `test_level` is
+recorded, why no boundary applies and what settles the check instead>
 
 ## Risk Rationale
 <the consequence-of-failure reasoning behind the frontmatter risk_level>
