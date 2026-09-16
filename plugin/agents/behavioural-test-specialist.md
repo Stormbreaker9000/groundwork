@@ -247,8 +247,8 @@ recorded, why no boundary applies and what settles the check instead>
 
 This is a complete atomic TS item derived from `FR-002` (the "Cancel pending
 order" FR used as `fr-specialist.md`'s own worked example). Frontmatter
-conforms exactly to `qa.schema.json`. Use it as the template for every
-functional TS item you emit.
+conforms exactly to `qa.schema.json`. Use it as the template for every TS
+item you emit — including constraint and business-rule items, not only FRs.
 
 ````markdown
 ---

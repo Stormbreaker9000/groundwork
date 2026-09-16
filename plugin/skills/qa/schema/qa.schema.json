@@ -34,11 +34,6 @@
       "description": "Which boundary the check is about. Drives grouping in the rendered qa-strategy.md. Required when verification_mode is 'test'; optional otherwise, and omitted when the check crosses no boundary at all.",
       "enum": ["unit", "integration", "contract", "e2e", "performance", "security"]
     },
-    "verification_mode": {
-      "type": "string",
-      "description": "Whether the check is executed at all, mirroring the requirement schema's verification_method. An item whose mode is not 'test' is verified by reading, reasoning or observation rather than by running something.",
-      "enum": ["test", "inspection", "analysis", "demonstration"]
-    },
     "risk_level": {
       "type": "string",
       "description": "Derived from the quality-attribute scenarios and requirements this item covers. Orders the rendered prioritisation section.",
@@ -53,6 +48,11 @@
       "type": "string",
       "description": "Whether CI actually checks this. STO-104 reads it to tell a real DoD gate from one a human must remember.",
       "enum": ["ci", "manual", "none"]
+    },
+    "verification_mode": {
+      "type": "string",
+      "description": "Whether the check is executed at all, mirroring the requirement schema's verification_method. An item whose mode is not 'test' is verified by reading, reasoning or observation rather than by running something.",
+      "enum": ["test", "inspection", "analysis", "demonstration"]
     },
     "traces_from": {
       "type": "array",

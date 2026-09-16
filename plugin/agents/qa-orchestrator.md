@@ -120,10 +120,12 @@ requirement_digest:
     title: string
     tier: string
     priority: string
+    verification_method: test | inspection | analysis | demonstration
     acceptance_criteria: string    # BODY, not frontmatter — the Gherkin under "## Acceptance Criteria"
   - id: NFR-004
     type: non_functional
     title: string
+    verification_method: test | inspection | analysis | demonstration
     quality_attribute: string      # BODY, not frontmatter — the ISO 25010 characteristic under "## ISO 25010 Characteristic"
     fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
     scenario:                      # BODY, not frontmatter — the six-part QAS under "## Quality Attribute Scenario"
@@ -307,10 +309,12 @@ generation_brief:
       title: string
       tier: string
       priority: string
+      verification_method: test | inspection | analysis | demonstration
       acceptance_criteria: string    # BODY — "## Acceptance Criteria"
     - id: NFR-004
       type: non_functional
       title: string
+      verification_method: test | inspection | analysis | demonstration
       quality_attribute: string      # BODY — "## ISO 25010 Characteristic"
       fit_criterion: string          # the threshold — carried so the specialist can cite it, never restate it
       scenario:                      # BODY — the six-part QAS under "## Quality Attribute Scenario"
@@ -520,6 +524,7 @@ qa_context_artifact:
   unenforced:                  # the "written but not gated" register
     - id: UE-1
       item: TS-014             # the strategy item, not a requirement
+      title: string            # the item's own title, carried through
       covers: [BR-002]         # the item's traces_from, carried through
       rationale: string        # the item's own risk_rationale
 ```
@@ -542,8 +547,9 @@ Sources, in order:
    also found uncovered is one risk, not two.
 2. **`unenforced`** — every approved item whose `enforcement` is `none`, one
    entry each, `UE-` IDs assigned here in item-ID order. `item` is the item's
-   own ID, `covers` is its `traces_from` carried across unchanged, and
-   `rationale` is its `risk_rationale`.
+   own ID, `title` is the item's own title carried through unchanged, `covers`
+   is its `traces_from` carried across unchanged, and `rationale` is its
+   `risk_rationale`.
 
    Keyed by item rather than by requirement because what is being recorded is
    an item's enforcement status: one item covering three requirements is one

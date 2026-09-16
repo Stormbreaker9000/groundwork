@@ -147,16 +147,24 @@ specific `findings`:
 - **`enforcement: ci` is honest.** For every item that claims
   `enforcement: ci`, check `qa_context.ci_enforcement` (and, if it bears on
   the same question, `qa_context.test_tooling`) for a stated CI capability
-  that can actually run a test at that item's `test_level` — a load-generation
-  or adversarial-security capability for a `performance`/`security` item, a
-  runnable suite at the right boundary for `unit`/`integration`/`contract`/
-  `e2e`. If the interview's answer does not name that capability, the verdict
-  is `revise` with the specific mismatch stated: which level the item claims
-  to gate on CI, and what `qa_context.ci_enforcement` actually says the
-  pipeline can run instead. `enforcement: manual` and `enforcement: none` are
-  not checked against `qa_context` this way — a specialist under-claiming
-  `manual` when `ci` was actually available is a missed opportunity, not a
-  lie, and is not this check's target.
+  that can actually run this item automatically. For an item that carries a
+  `test_level`, that means a capability at the right boundary — a
+  load-generation or adversarial-security capability for a
+  `performance`/`security` item, a runnable suite at the right boundary for
+  `unit`/`integration`/`contract`/`e2e`. For an item that omits `test_level`,
+  read `verification_mode` instead: a level-less `inspection` or `analysis`
+  item can honestly claim `ci` only when the interview names a scripted
+  check that performs it — a licence-manifest script or a static-analysis
+  job is `ci`-honest; a person reading the same artifact is not. A
+  level-less `demonstration` item cannot honestly claim `ci` at all, since a
+  demonstration is inherently a human act. If the interview's answer does
+  not name that capability, the verdict is `revise` with the specific
+  mismatch stated: what the item claims CI does for it (by level, or by mode
+  when the level is absent), and what `qa_context.ci_enforcement` actually
+  says the pipeline can run instead. `enforcement: manual` and
+  `enforcement: none` are not checked against `qa_context` this way — a
+  specialist under-claiming `manual` when `ci` was actually available is a
+  missed opportunity, not a lie, and is not this check's target.
 - **`confidence: low` matches its stated basis.** When an item's `confidence`
   is `low` because it names a resting `Q-` question, look that ID up in
   `qa_context.inherited_open_questions` and check its `disposition`. A `low`

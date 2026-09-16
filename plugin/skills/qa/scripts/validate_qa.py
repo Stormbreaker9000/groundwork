@@ -70,7 +70,7 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
 
     The primary path is the real schema; this is the same degraded mode the
     other two validators carry, and it covers required-field presence and the
-    three enums rather than pretending to be complete.
+    seven enums rather than pretending to be complete.
     """
     errors: List[str] = []
     required = (

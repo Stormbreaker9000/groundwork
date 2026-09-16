@@ -125,7 +125,9 @@ that read both sets.
   itself stays in the NFR's fit_criterion)
 
 ## Test Level Rationale
-<why this level, given the artifact and stimulus>
+<why this level, given the artifact and stimulus — or, when no `test_level`
+is recorded, why no boundary applies and what settles the check instead (see
+`analysis` above)>
 
 ## Risk Rationale
 <the quality-attribute-severity reasoning behind the frontmatter risk_level>

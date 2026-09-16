@@ -298,9 +298,10 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 - unit — <count> items
 - integration — <count> items
 - ...
+- no test level — <count> items (items that omit `test_level`; see below)
 
 **Items:**
-- TS-001 <title> — <test_level> / <risk_level>: <one-line rationale>
+- TS-001 <title> — <test_level, or verification_mode when test_level is absent> / <risk_level>: <one-line rationale>
 
 **Accepted Risks:**
 - <statement> (traces: <requirement/design ID>) — <rationale>, or "None"
@@ -319,6 +320,12 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 
 **Next Step:** Implementation
 ```
+
+Render **Test Levels** as one count per `test_level` present in the set, in
+the schema's enum order, plus the trailing `no test level` count above for
+items that omit it. Render each **Items** line's level slot as `<test_level>`,
+or the item's `verification_mode` when `test_level` is absent — the mode is
+always present, so the slot stays informative instead of rendering `None`.
 
 Render **Accepted Risks** from `qa_context_artifact.accepted_risks` — every
 entry the orchestrator assembled at Stage 6.5, from the critic's justified
