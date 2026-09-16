@@ -7,6 +7,7 @@ test_level: unit
 risk_level: medium
 risk_rationale: "Exercises the enforcement enum rule in isolation."
 enforcement: maybe
+verification_mode: test
 traces_from: [FR-001]
 traces_to:
   tests: []

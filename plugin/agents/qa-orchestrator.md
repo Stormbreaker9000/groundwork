@@ -397,10 +397,11 @@ draft_test_strategies:
       type: test_strategy
       title: string
       description: string
-      test_level: unit | integration | contract | e2e | performance | security
+      test_level: unit | integration | contract | e2e | performance | security   # required when verification_mode is test
       risk_level: high | medium | low
       risk_rationale: string
       enforcement: ci | manual | none
+      verification_mode: test | inspection | analysis | demonstration
       traces_from: [ FR-001, CMP-013 ]
       traces_to: { tests: [], code: [] }
       status: draft

@@ -7,6 +7,7 @@ test_level: unit
 risk_level: medium
 risk_rationale: "Cancellation is reversible and user-visible on failure, so a defect is loud rather than silent."
 enforcement: ci
+verification_mode: test
 traces_from: [FR-001]
 traces_to:
   tests: []

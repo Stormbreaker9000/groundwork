@@ -7,6 +7,7 @@ test_level: smoke
 risk_level: medium
 risk_rationale: "Exercises the test_level enum rule in isolation."
 enforcement: ci
+verification_mode: test
 traces_from: [FR-001]
 traces_to:
   tests: []

@@ -6,6 +6,7 @@ description: risk_rationale is absent, even though risk_level is present.
 test_level: unit
 risk_level: low
 enforcement: ci
+verification_mode: test
 traces_from: [FR-001]
 traces_to:
   tests: []

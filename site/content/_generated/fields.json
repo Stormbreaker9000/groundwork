@@ -263,7 +263,7 @@
       "type": "string"
     },
     {
-      "description": "The level this strategy item operates at. Drives grouping in the rendered qa-strategy.md.",
+      "description": "Which boundary the check is about. Drives grouping in the rendered qa-strategy.md. Required when verification_mode is 'test'; optional otherwise, and omitted when the check crosses no boundary at all.",
       "enum": [
         "unit",
         "integration",
@@ -273,6 +273,18 @@
         "security"
       ],
       "name": "test_level",
+      "required_for": [],
+      "type": "string"
+    },
+    {
+      "description": "Whether the check is executed at all, mirroring the requirement schema's verification_method. An item whose mode is not 'test' is verified by reading, reasoning or observation rather than by running something.",
+      "enum": [
+        "test",
+        "inspection",
+        "analysis",
+        "demonstration"
+      ],
+      "name": "verification_mode",
       "required_for": [
         "*"
       ],

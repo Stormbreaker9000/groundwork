@@ -7,6 +7,7 @@ test_level: performance
 risk_level: high
 risk_rationale: A latency regression is invisible until checkout conversion drops.
 enforcement: ci
+verification_mode: test
 traces_from: [NFR-001]
 traces_to:
   tests: []

@@ -168,7 +168,7 @@
           {
             "name": "draft_test_strategies",
             "transients": [],
-            "yaml": "draft_test_strategies:\n  items:\n    - id: TS-001\n      type: test_strategy\n      title: string\n      description: string\n      test_level: unit | integration | contract | e2e | performance | security\n      risk_level: high | medium | low\n      risk_rationale: string\n      enforcement: ci | manual | none\n      traces_from: [ FR-001, CMP-013 ]\n      traces_to: { tests: [], code: [] }\n      status: draft\n      confidence: high | medium | low\n      created_at: \"YYYY-MM-DD\"\n      body_markdown: |\n        # ...rendered body...\n  assumptions: [ ...optional sibling statements... ]\n  dependencies: [ ...optional sibling statements... ]\n"
+            "yaml": "draft_test_strategies:\n  items:\n    - id: TS-001\n      type: test_strategy\n      title: string\n      description: string\n      test_level: unit | integration | contract | e2e | performance | security   # required when verification_mode is test\n      risk_level: high | medium | low\n      risk_rationale: string\n      enforcement: ci | manual | none\n      verification_mode: test | inspection | analysis | demonstration\n      traces_from: [ FR-001, CMP-013 ]\n      traces_to: { tests: [], code: [] }\n      status: draft\n      confidence: high | medium | low\n      created_at: \"YYYY-MM-DD\"\n      body_markdown: |\n        # ...rendered body...\n  assumptions: [ ...optional sibling statements... ]\n  dependencies: [ ...optional sibling statements... ]\n"
           }
         ],
         "label": "Collect drafts: the `draft_test_strategies` hand-off",

@@ -5,9 +5,19 @@
   "description": "Schema for a single atomic test-strategy file's YAML frontmatter. One artifact per Markdown file under .sdlc/qa/strategy/<ID>-<kebab-title>.md. Flat rather than branched: the QA stage emits one type, so additionalProperties:false is sufficient and the base-plus-branch composition design.schema.json needs would be ceremony here.",
   "type": "object",
   "required": [
-    "id", "type", "title", "description", "test_level", "risk_level",
-    "risk_rationale", "enforcement", "traces_from", "traces_to",
-    "status", "confidence", "created_at"
+    "id", "type", "title", "description", "risk_level",
+    "risk_rationale", "enforcement", "verification_mode", "traces_from",
+    "traces_to", "status", "confidence", "created_at"
+  ],
+  "allOf": [
+    {
+      "description": "test_level answers which boundary is crossed, so it is required only for a check that is actually executed (STO-307 D7). A check verified by inspection or analysis may still carry one when it is about a boundary, and omits it when nothing is crossed.",
+      "if": {
+        "properties": { "verification_mode": { "const": "test" } },
+        "required": ["verification_mode"]
+      },
+      "then": { "required": ["test_level"] }
+    }
   ],
   "additionalProperties": false,
   "properties": {
@@ -21,8 +31,13 @@
     "description": { "type": "string", "minLength": 1 },
     "test_level": {
       "type": "string",
-      "description": "The level this strategy item operates at. Drives grouping in the rendered qa-strategy.md.",
+      "description": "Which boundary the check is about. Drives grouping in the rendered qa-strategy.md. Required when verification_mode is 'test'; optional otherwise, and omitted when the check crosses no boundary at all.",
       "enum": ["unit", "integration", "contract", "e2e", "performance", "security"]
+    },
+    "verification_mode": {
+      "type": "string",
+      "description": "Whether the check is executed at all, mirroring the requirement schema's verification_method. An item whose mode is not 'test' is verified by reading, reasoning or observation rather than by running something.",
+      "enum": ["test", "inspection", "analysis", "demonstration"]
     },
     "risk_level": {
       "type": "string",

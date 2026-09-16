@@ -7,6 +7,7 @@ test_level: integration
 risk_level: low
 risk_rationale: The cut-off is a single conditional and rarely changes.
 enforcement: none
+verification_mode: inspection
 traces_from: [BR-001]
 traces_to:
   tests: []

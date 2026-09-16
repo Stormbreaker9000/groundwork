@@ -91,10 +91,11 @@ id: TS-001
 type: test_strategy
 title: <title>
 description: <one-line statement of what this item tests>
-test_level: unit | integration | contract | e2e | performance | security
+test_level: unit | integration | contract | e2e | performance | security   # required when verification_mode is test
 risk_level: high | medium | low
 risk_rationale: <the consequence-of-failure or attribute-severity reasoning>
 enforcement: ci | manual | none
+verification_mode: test | inspection | analysis | demonstration
 traces_from: [<requirement and design IDs this item covers>]
 traces_to:
   tests: []

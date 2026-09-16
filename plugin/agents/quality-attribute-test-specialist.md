@@ -149,6 +149,7 @@ test_level: performance
 risk_level: medium
 risk_rationale: "Performance Efficiency scenarios are typically observable (dashboards, alerts) and recoverable (scale out, roll back a regression) rather than silent or unbounded, so this ranks below an unmet security or data-integrity scenario at equal probability. It is not low: sustained p95 regression on the order path measurably increases cart abandonment, a business-visible failure once the threshold is crossed."
 enforcement: manual
+verification_mode: test
 traces_from: [NFR-001, CMP-004]
 traces_to:
   tests: []

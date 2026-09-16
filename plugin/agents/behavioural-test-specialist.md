@@ -214,6 +214,7 @@ test_level: e2e
 risk_level: high
 risk_rationale: "A cancellation that silently fails to register leaves the customer believing the order was cancelled while fulfillment proceeds and the charge stands; the failure is not visible to the customer or the operator until a support ticket is opened, and the outcome (goods shipped, money spent) is not cleanly reversible."
 enforcement: ci
+verification_mode: test
 traces_from: [FR-002, CMP-004]
 traces_to:
   tests: []
