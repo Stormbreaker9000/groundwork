@@ -65,7 +65,7 @@ that read both sets.
   `integration`; do not default every quality-attribute item to
   `performance`/`security` out of habit. `unit` and `integration` are defined
   by which boundary the behavior crosses, not by this agent — see
-  `functional-test-specialist.md`, "`test_level` is a judgment about the
+  `behavioural-test-specialist.md`, "`test_level` is a judgment about the
   boundary being crossed, not about effort," for the four boundary
   definitions this schema's enum shares across both specialists.
 
@@ -201,7 +201,7 @@ Return a `draft_test_strategies` object (the shape defined in
 frontmatter (`type: test_strategy`, `status: draft`) and the rendered
 `body_markdown`. Leave `traces_to.tests` and `traces_to.code` empty — no test
 or source files exist yet at this stage. The orchestrator merges your list
-with `functional-test-specialist`'s and forwards everything to the critic.
+with `behavioural-test-specialist`'s and forwards everything to the critic.
 
 You MAY also return optional sibling `assumptions` and `dependencies` lists
 (plain statements you relied on but could not confirm — e.g. an assumed load

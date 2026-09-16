@@ -267,7 +267,7 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
    Include the absolute `scripts/` path from "Locating the scripts" above as
    `scripts_dir` in this dispatch — the orchestrator threads it, unchanged,
    all the way to the formatter.
-2. **functional-test-specialist** and **quality-attribute-test-specialist** —
+2. **behavioural-test-specialist** and **quality-attribute-test-specialist** —
    dispatched together; neither needs the other's output, so run them in
    parallel or in either order.
 3. **qa-critic** — runs once, on the merged set from both specialists:

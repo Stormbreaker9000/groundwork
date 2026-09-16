@@ -91,13 +91,13 @@ specific `findings`:
   level it lands on.
 
   **`performance` and `security` are not the quality-attribute specialist's
-  exclusively.** A constraint-derived item from `functional-test-specialist`
+  exclusively.** A constraint-derived item from `behavioural-test-specialist`
   may legitimately carry either — a constraint bounding a resource budget is
   `performance`, one bounding what may leave the machine is `security` — and
   the schema's enum has no value at all for a pure inspection or analysis, so
   a `CON-`/`BR-` item whose `verification_method` is `inspection` or
   `analysis` records the level its *executable* half runs at and says so in
-  its rationale (`functional-test-specialist.md`, "Deriving an item from a
+  its rationale (`behavioural-test-specialist.md`, "Deriving an item from a
   constraint or a business rule", point 3). Do not `revise` such an item for
   carrying a level outside the four boundary definitions, and do not `revise`
   it for the static half having no level of its own — check that the
@@ -164,7 +164,7 @@ Confusing the two cost Task 2 a fix round on that rule; do not repeat it here.
 
 The sidecar list is **not** restricted to `FR-` and `NFR-` IDs: `drivers.md`
 routinely marks constraints and business rules architecturally significant
-too, and every one of them is assigned to `functional-test-specialist` and is
+too, and every one of them is assigned to `behavioural-test-specialist` and is
 therefore coverable like any other requirement. A `CON-` or `BR-` ID arriving
 in this list is an ordinary coverage obligation, not a special case to
 justify away — if several appear at once in `uncovered_asrs`, suspect a brief

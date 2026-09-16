@@ -27,7 +27,7 @@ qa_context  (from the interview)
 [ qa-orchestrator ]   read requirement + design sets → digests + ASR list
                       → allocate the shared TS- ID space → generation_brief
         │
-        ├──► [ functional-test-specialist ]        → draft_test_strategies
+        ├──► [ behavioural-test-specialist ]        → draft_test_strategies
         └──► [ quality-attribute-test-specialist ]  → draft_test_strategies
         │
         ▼  (orchestrator merges both draft_test_strategies lists)
@@ -43,7 +43,7 @@ qa_context  (from the interview)
                    (the structural gate) → formatter_result
 ```
 
-`functional-test-specialist`, `quality-attribute-test-specialist`, `qa-critic`,
+`behavioural-test-specialist`, `quality-attribute-test-specialist`, `qa-critic`,
 and `qa-formatter` are the agents you dispatch to.
 
 Dispatch of the two specialists is **not** ordered the way M1's three
@@ -267,14 +267,14 @@ gets the literal IDs it is to use, in order:
 
 ```yaml
 id_block:
-  functional: [TS-001, TS-002, TS-003, TS-004]
+  behavioural: [TS-001, TS-002, TS-003, TS-004]
   quality_attribute: [TS-005]
 ```
 
 Size each range from the digests and `assigned` lists you are about to build
 in Stage 4: allocate at least one ID per assigned requirement, since a
 strategy item exists to cover something. **Count the constraints and business
-rules in `assigned.functional` when you size that range** — they are assigned
+rules in `assigned.behavioural` when you size that range** — they are assigned
 requirements like any other, and sizing the functional range to the FR count
 alone is the arithmetic that forces a re-dispatch on the first run. This is a
 floor, not an exact count —
@@ -339,20 +339,20 @@ generation_brief:
       provider: CMP-013
       operations: [string, ...]
   id_block:
-    functional: [TS-001, TS-002, TS-003, TS-004]  # allocated to the functional specialist
+    behavioural: [TS-001, TS-002, TS-003, TS-004]  # allocated to the behavioural specialist
     quality_attribute: [TS-005]
   created_at: "YYYY-MM-DD"         # today's date, passed so all files agree
   assigned:
-    functional: [FR-001, FR-002, CON-002, BR-001]
+    behavioural: [FR-001, FR-002, CON-002, BR-001]
     quality_attribute: [NFR-004]
 ```
 
 `assigned` is each specialist's work list, drawn from `requirement_digest` by
-ID — `functional-test-specialist` covers the `assigned.functional` entries,
+ID — `behavioural-test-specialist` covers the `assigned.behavioural` entries,
 `quality-attribute-test-specialist` the `assigned.quality_attribute` entries.
 
-**Every constraint and business rule goes in `assigned.functional`**, with the
-FRs, drawing from the same `id_block.functional` range. There is no third key
+**Every constraint and business rule goes in `assigned.behavioural`**, with the
+FRs, drawing from the same `id_block.behavioural` range. There is no third key
 and no third specialist: a constraint or a business rule is a behavioural or
 compliance check over boundaries the functional specialist already reasons
 about, not a quality-attribute scenario, and it carries no six-part scenario
@@ -362,7 +362,7 @@ specialist whose `id_block` range the item's ID came from") true without
 qualification. The specialist tells an FR entry from a constraint or
 business-rule entry by reading the entry's own `type` field — which is why
 Stage 2 puts `type` on every entry — and derives the item accordingly; see
-`functional-test-specialist.md`, "Deriving an item from a constraint or a
+`behavioural-test-specialist.md`, "Deriving an item from a constraint or a
 business rule."
 
 `design_digest` is shared, read-only background for both: a functional item
@@ -627,7 +627,7 @@ disposition together rather than a bare warning that looks unaddressed.
   `uncovered-asr` rule was fixed once already to not make.
 - That ASR list is **not** restricted to FRs and NFRs. It routinely names
   `CON-` and `BR-` IDs, so `requirement_digest` carries every requirement type
-  and `assigned.functional` carries the constraints and business rules
+  and `assigned.behavioural` carries the constraints and business rules
   alongside the FRs. A digest filtered to two of the four types puts IDs in
   Gate B's coverage check that no specialist is permitted to name — a deadlock
   no re-dispatch can clear, because no specialist owns them.

@@ -173,7 +173,7 @@ produce byte-identical output:
   into one `###` subsection per such ID, sorted by ID, each listing the items
   that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID. An
   item citing no `CMP-`/`IF-` ID (a unit item scoped by FR alone, per
-  `functional-test-specialist.md`) contributes to no subsection here — it is
+  `behavioural-test-specialist.md`) contributes to no subsection here — it is
   not a gap, it means no component-level boundary applies. If no item cites
   any component or interface ID at all, the section body is the single line
   `None identified.`
