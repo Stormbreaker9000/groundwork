@@ -93,15 +93,30 @@ specific `findings`:
   **`performance` and `security` are not the quality-attribute specialist's
   exclusively.** A constraint-derived item from `behavioural-test-specialist`
   may legitimately carry either — a constraint bounding a resource budget is
-  `performance`, one bounding what may leave the machine is `security` — and
-  the schema's enum has no value at all for a pure inspection or analysis, so
-  a `CON-`/`BR-` item whose `verification_method` is `inspection` or
-  `analysis` records the level its *executable* half runs at and says so in
-  its rationale (`behavioural-test-specialist.md`, "Deriving an item from a
-  constraint or a business rule", point 3). Do not `revise` such an item for
-  carrying a level outside the four boundary definitions, and do not `revise`
-  it for the static half having no level of its own — check that the
-  rationale names which half the level describes, and gate on that.
+  `performance`, one bounding what may leave the machine is `security`.
+
+  **Check `verification_mode` and `test_level` for coherence.** They are
+  independent axes (see `behavioural-test-specialist.md`, "Choosing
+  `test_level` and `verification_mode`"), and each half is checkable:
+
+  - An item whose mode is `inspection` or `analysis` but whose `Test Design`
+    describes an automated suite, a harness or a CI job is a `revise`: one of
+    the two is wrong, and the body says which.
+  - An item whose mode is `test` but whose `Test Design` describes a review,
+    a walkthrough or a manual count is a `revise` for the same reason,
+    inverted.
+  - An item that omits `test_level` must say in `Test Level Rationale` why no
+    boundary applies. A missing level with no stated reason is a `revise`; a
+    missing level on a licence or manifest audit that says so is correct and
+    is not a finding.
+  - An item that carries a `test_level` alongside a non-`test` mode is **not**
+    a finding. An inspection enumerating call sites across two components is
+    an `integration` inspection, and recording that is the point of keeping
+    the axes apart.
+
+  Do not `revise` an item for carrying a mode that its requirement's own
+  `verification_method` also carries — that is the field being honoured, not
+  a judgment being dodged.
 - **`risk_rationale` explains, not asserts.** A functional item's rationale
   must give the actual consequence-of-failure reasoning (loud vs. silent,
   recoverable vs. not) behind its `risk_level`; a quality-attribute item's
@@ -202,6 +217,12 @@ the omission under `coverage.level_gaps` with the specific level and why it
 looks like a gap rather than a deliberate choice. A level mix that is
 consistently and explicitly argued for (even if narrow) is not a gap; a level
 mix that is merely uniform with no item addressing why is worth a finding.
+
+A level that is absent because every candidate item is verified by
+inspection or analysis is not a gap, and neither is an item that legitimately
+carries no `test_level` at all — check `verification_mode` before recording
+either as an omission. `level_gaps` counts levels the set *should* exercise
+and does not, never levels that nothing in the set could honestly reach.
 
 ## Gate C — Where the structural gate lives
 
