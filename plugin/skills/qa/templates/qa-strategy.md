@@ -8,7 +8,9 @@ fills each section below.
 ## Test Levels and Rationale
 One subsection per `test_level` present in the emitted set, in the schema's
 enum order (`unit`, `integration`, `contract`, `e2e`, `performance`,
-`security`), each listing the items at that level by ID and title.
+`security`), each listing the items at that level by ID and title, plus a
+trailing `### No test level` subsection for any item that omits `test_level`,
+naming each one's `verification_mode`.
 
 ## Scope by Component
 One subsection per component or interface ID named in some item's
@@ -35,10 +37,11 @@ be visibly empty (`None identified`) rather than silently missing.
 
 ## Declared Unenforced
 The `qa_context_artifact.unenforced` register — every emitted item whose
-`enforcement` is `none`: a strategy that exists and that nothing gates. Keyed
-by item, not by requirement, and deliberately distinct from Accepted Risks,
-which records what is not tested at all. Not one of the validator's five
-required headings, so it can be visibly empty (`None identified`).
+`enforcement` is `none`: a strategy that exists and that nothing gates. Each
+entry carries the item's own `title` alongside its `covers` and `rationale`.
+Keyed by item, not by requirement, and deliberately distinct from Accepted
+Risks, which records what is not tested at all. Not one of the validator's
+five required headings, so it can be visibly empty (`None identified`).
 
 ## Assumptions
 The `qa_context_artifact.assumptions` list — one bullet per `A-#` entry. Not

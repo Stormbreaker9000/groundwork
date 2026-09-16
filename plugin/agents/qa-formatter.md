@@ -167,19 +167,24 @@ produce byte-identical output:
   `integration`, `contract`, `e2e`, `performance`, `security`) — omit a level
   entirely when no item uses it, never emit an empty subsection for it. Under
   each subsection, one bullet per item at that level, `- **<ID>** — <title>:
-  <risk_rationale>`, sorted by ID. If the whole set is empty, the section body
-  is the single line `None identified.`
+  <risk_rationale>`, sorted by ID. After the six level subsections, emit one
+  trailing `### No test level` subsection whenever the emitted set contains an
+  item that omits `test_level` — omitted under the same rule when none does.
+  Under it, one bullet per level-less item, sorted by ID: `- **<ID>** —
+  <title> (<verification_mode>): <risk_rationale>`. If the whole set is empty,
+  the section body is the single line `None identified.`
 
 - **Scope by Component.** Collect every requirement/design ID that appears in
   some item's `traces_from` **and is a `CMP-` or `IF-` ID** — the component
   and interface IDs, not the FR/NFR IDs also present in the same list. Group
   into one `###` subsection per such ID, sorted by ID, each listing the items
-  that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID. An
-  item citing no `CMP-`/`IF-` ID (a unit item scoped by FR alone, per
-  `behavioural-test-specialist.md`) contributes to no subsection here — it is
-  not a gap, it means no component-level boundary applies. If no item cites
-  any component or interface ID at all, the section body is the single line
-  `None identified.`
+  that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID —
+  for an item that omits `test_level`, print its `verification_mode` in that
+  slot instead. An item citing no `CMP-`/`IF-` ID (a unit item scoped by FR
+  alone, per `behavioural-test-specialist.md`) contributes to no subsection
+  here — it is not a gap, it means no component-level boundary applies. If no
+  item cites any component or interface ID at all, the section body is the
+  single line `None identified.`
 
 - **Risk-Based Prioritisation.** Every item, ordered `high` before `medium`
   before `low`, ties broken by ID ascending. One bullet per item:
@@ -205,11 +210,11 @@ produce byte-identical output:
   `None identified.`
 
 - **Declared Unenforced.** One bullet per `qa_context_artifact.unenforced`
-  entry: `- **<UE-id>** — <item>: <rationale> (covers: <covers, comma-joined>)`,
-  ordered by `item` ID ascending. When the register is empty, the section body
-  is the single line `None identified.` Never omit the heading: a strategy
-  document that silently drops the section reads identically whether nothing
-  was unenforced or nobody checked.
+  entry: `- **<UE-id>** — <item> <title>: <rationale> (covers: <covers,
+  comma-joined>)`, ordered by `item` ID ascending. When the register is
+  empty, the section body is the single line `None identified.` Never omit
+  the heading: a strategy document that silently drops the section reads
+  identically whether nothing was unenforced or nobody checked.
 
 - **Assumptions.** One bullet per `qa_context_artifact.assumptions` entry:
   `- **<A-id>** — <statement>`. When the list is empty, the section body is
@@ -246,8 +251,10 @@ headings to `REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps
 `Tooling` and `Coverage Targets` come from `qa_context` directly, forwarded to
 you as a declared input in its own right (see `## Input`) — never from
 inference over the item set, and never from `qa_context_artifact`, which
-carries the accepted-risk register but no copy of these three interview
-answers. `Test Levels`, `Scope by Component`, and `Risk-Based Prioritisation`
+carries the accepted-risk and declared-unenforced registers, plus
+assumptions, dependencies, and open questions, but no copy of these three
+interview answers. `Test Levels`, `Scope by Component`, and `Risk-Based
+Prioritisation`
 come only from the emitted items — never from the interview.
 
 ## `index.yaml`
