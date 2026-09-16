@@ -1,5 +1,5 @@
 ---
-description: Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the functional and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
+description: Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the behavioural and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.
 ---
 
 # QA Orchestrator
@@ -220,7 +220,7 @@ bolded bullets under `## Quality Attribute Scenario` ("Source of stimulus",
 "Stimulus", "Environment", "Artifact", "Response", "Response measure"), one
 digest field each. This is not incidental detail: it is the whole reason
 `quality-attribute-test-specialist` exists as a separate agent rather than
-folding into the functional one, and the specialist never re-reads the
+folding into the behavioural one, and the specialist never re-reads the
 requirement files, so any part missing from this digest is a part it will
 never see. **A part absent from the body is carried as `scenario.<part>: null`,
 never omitted from the object** — an omitted key and an empty one are
@@ -275,7 +275,7 @@ Size each range from the digests and `assigned` lists you are about to build
 in Stage 4: allocate at least one ID per assigned requirement, since a
 strategy item exists to cover something. **Count the constraints and business
 rules in `assigned.behavioural` when you size that range** — they are assigned
-requirements like any other, and sizing the functional range to the FR count
+requirements like any other, and sizing the behavioural range to the FR count
 alone is the arithmetic that forces a re-dispatch on the first run. This is a
 floor, not an exact count —
 one item legitimately covers several requirements via `traces_from`, so a
@@ -354,7 +354,7 @@ ID — `behavioural-test-specialist` covers the `assigned.behavioural` entries,
 **Every constraint and business rule goes in `assigned.behavioural`**, with the
 FRs, drawing from the same `id_block.behavioural` range. There is no third key
 and no third specialist: a constraint or a business rule is a behavioural or
-compliance check over boundaries the functional specialist already reasons
+compliance check over boundaries the behavioural specialist already reasons
 about, not a quality-attribute scenario, and it carries no six-part scenario
 for `quality-attribute-test-specialist` to map. One work list per specialist
 keeps Stage 3's range invariant and Stage 6's re-dispatch rule ("the

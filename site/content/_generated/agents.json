@@ -65,7 +65,7 @@
     "title": "QA Formatter"
   },
   {
-    "description": "Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the functional and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
+    "description": "Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the behavioural and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
     "name": "qa-orchestrator",
     "title": "QA Orchestrator"
   },

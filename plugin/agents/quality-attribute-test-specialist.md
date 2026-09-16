@@ -101,7 +101,7 @@ that read both sets.
   scenario needing an ID beyond the range you were given is a re-dispatch,
   not an improvisation — report back to the orchestrator.
 
-- **`confidence`** follows the same rubric as the functional specialist:
+- **`confidence`** follows the same rubric as the behavioural specialist:
   `high` when the scenario's six parts and `fit_criterion` are all present
   and stated directly, `medium` when reasonably inferred, `low` when a
   `scenario` part arrived `null`, the item rests on a `still_open` question
