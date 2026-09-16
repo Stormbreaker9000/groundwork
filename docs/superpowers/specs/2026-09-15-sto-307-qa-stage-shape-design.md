@@ -160,11 +160,13 @@ compliance, as against the quality-attribute scenarios its sibling handles. The
 pair reads symmetrically — `behavioural-test-specialist` and
 `quality-attribute-test-specialist`, each named for the kind of claim it tests.
 
-Thirteen live references update: `qa-orchestrator.md` (4), `qa-critic.md` (3),
-`quality-attribute-test-specialist.md` (2), `qa-formatter.md`, the QA
-`SKILL.md`, and `site/content/architecture/index.mdx`. The five hits under
-`docs/superpowers/` are STO-103's own spec and plan — historical records of
-what was built then, and left alone.
+Twelve hand-edited references update: `qa-orchestrator.md` (4),
+`qa-critic.md` (3), `quality-attribute-test-specialist.md` (2),
+`qa-formatter.md`, the QA `SKILL.md`, and
+`site/content/architecture/index.mdx`. A thirteenth, in
+`site/content/_generated/agents.json`, is regenerated rather than edited. The
+five hits under `docs/superpowers/` are STO-103's own spec and plan —
+historical records of what was built then, and left alone.
 
 ### D4 — The contract keys rename with it
 
