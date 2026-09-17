@@ -167,9 +167,19 @@ produce byte-identical output:
   `integration`, `contract`, `e2e`, `performance`, `security`) — omit a level
   entirely when no item uses it, never emit an empty subsection for it. Under
   each subsection, one bullet per item at that level, `- **<ID>** — <title>:
-  <risk_rationale>`, sorted by ID. After the six level subsections, emit one
-  trailing `### No test level` subsection whenever the emitted set contains an
-  item that omits `test_level` — omitted under the same rule when none does.
+  <risk_rationale>`, sorted by ID — except that an item whose
+  `verification_mode` is not `test` carries it after the title,
+  `- **<ID>** — <title> (<verification_mode>): <risk_rationale>`. A level
+  says which boundary the check concerns and is silent on whether the check
+  runs, so without the mode a reader of this section cannot tell an
+  `integration`-level inspection from an executed integration test — the
+  distinction the second axis exists to keep (spec D6). `test` is left
+  unmarked: it is the overwhelming majority, and a level already implies a
+  boundary something executes across.
+
+  After the six level subsections, emit one trailing `### No test level`
+  subsection whenever the emitted set contains an item that omits
+  `test_level` — omitted under the same rule when none does.
   Under it, one bullet per level-less item, sorted by ID: `- **<ID>** —
   <title> (<verification_mode>): <risk_rationale>`. If the whole set is empty,
   the section body is the single line `None identified.`
@@ -180,11 +190,15 @@ produce byte-identical output:
   into one `###` subsection per such ID, sorted by ID, each listing the items
   that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID —
   for an item that omits `test_level`, print its `verification_mode` in that
-  slot instead. An item citing no `CMP-`/`IF-` ID (a unit item scoped by FR
-  alone, per `behavioural-test-specialist.md`) contributes to no subsection
-  here — it is not a gap, it means no component-level boundary applies. If no
-  item cites any component or interface ID at all, the section body is the
-  single line `None identified.`
+  slot instead, and for an item that carries a level alongside a non-`test`
+  mode, print both, `(<test_level>, <verification_mode>)`, level first. The
+  slot answers "what kind of check is this component covered by", which a
+  level alone under-answers for the same reason it does above. An item citing
+  no `CMP-`/`IF-` ID (a unit item scoped by FR alone, per
+  `behavioural-test-specialist.md`) contributes to no subsection here — it is
+  not a gap, it means no component-level boundary applies. If no item cites
+  any component or interface ID at all, the section body is the single line
+  `None identified.`
 
 - **Risk-Based Prioritisation.** Every item, ordered `high` before `medium`
   before `low`, ties broken by ID ascending. One bullet per item:

@@ -301,7 +301,7 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 - no test level — <count> items (items that omit `test_level`; see below)
 
 **Items:**
-- TS-001 <title> — <test_level, or verification_mode when test_level is absent> / <risk_level>: <one-line rationale>
+- TS-001 <title> — <test_level, or verification_mode when test_level is absent; both when a level carries a non-`test` mode> / <risk_level>: <one-line rationale>
 
 **Accepted Risks:**
 - <statement> (traces: <requirement/design ID>) — <rationale>, or "None"
@@ -326,6 +326,11 @@ the schema's enum order, plus the trailing `no test level` count above for
 items that omit it. Render each **Items** line's level slot as `<test_level>`,
 or the item's `verification_mode` when `test_level` is absent — the mode is
 always present, so the slot stays informative instead of rendering `None`.
+When an item carries a level *and* a `verification_mode` other than `test`,
+print both, level first: this is the summary the user pushes back on before
+any file is written, and a bare `integration` would read as an executed
+suite. It is the same rule `qa-formatter.md` applies to the projected
+document's own level slots.
 
 Render **Accepted Risks** from `qa_context_artifact.accepted_risks` — every
 entry the orchestrator assembled at Stage 6.5, from the critic's justified

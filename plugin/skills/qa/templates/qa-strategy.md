@@ -10,11 +10,15 @@ One subsection per `test_level` present in the emitted set, in the schema's
 enum order (`unit`, `integration`, `contract`, `e2e`, `performance`,
 `security`), each listing the items at that level by ID and title, plus a
 trailing `### No test level` subsection for any item that omits `test_level`,
-naming each one's `verification_mode`.
+naming each one's `verification_mode`. An item at a level whose
+`verification_mode` is not `test` names the mode too — a level says which
+boundary the check concerns, not whether it runs.
 
 ## Scope by Component
 One subsection per component or interface ID named in some item's
-`traces_from`, listing the items whose `traces_from` cites it.
+`traces_from`, listing the items whose `traces_from` cites it, each with its
+`test_level`, its `verification_mode` when it has no level, or both when it
+has a level and a non-`test` mode.
 
 ## Risk-Based Prioritisation
 Every item, ordered `high` before `medium` before `low`, each with its
