@@ -106,13 +106,40 @@ def _field_entry(name: str, prop: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _branch_condition(branch: Dict[str, Any]) -> Any:
+    """Name the one value an ``allOf`` branch's ``if`` tests for, or ``None``.
+
+    Every branch in all three schemas tests a single property against a
+    single ``const``. A ``type`` discriminator yields the bare value, which
+    is what ``FieldTable`` prints in its Required column; any other
+    discriminator is qualified with the field it reads, since the value alone
+    would be mistaken for an artifact type.
+    """
+    condition = branch.get("if", {})
+    properties = condition.get("properties", {})
+    if len(properties) != 1:
+        return None
+    field, constraint = next(iter(properties.items()))
+    const = constraint.get("const")
+    if const is None:
+        return None
+    return const if field == "type" else "{}: {}".format(field, const)
+
+
 def _schema_fields(schema: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Flatten one artifact schema into a renderable field list.
 
-    Both schemas share a shape: a base ``properties``/``required`` block, then
-    an ``allOf`` of ``if type == <const>`` / ``then`` branches. A branch may
-    add properties (design), or only mark an existing base property required
-    for one type (requirements' ``ears_pattern``) — both are handled.
+    All three schemas share a shape: a base ``properties``/``required``
+    block, then an ``allOf`` of ``if <field> == <const>`` / ``then`` branches.
+    A branch may add properties (design), or only mark an existing base
+    property required for one value (requirements' ``ears_pattern``, QA's
+    ``test_level``) — both are handled.
+
+    The discriminator is usually ``type``, and then the bare value is what
+    ``required_for`` records. QA's one branch keys on ``verification_mode``
+    instead, so its entry is qualified (``verification_mode: test``) to say
+    which field the condition reads — a branch whose condition were recorded
+    as a bare ``test`` would read as an artifact type that does not exist.
 
     Nested ``allOf`` inside a ``then`` is not descended into. Today that only
     affects two ADR/diagram sub-constraints, neither of which introduces a
@@ -131,13 +158,8 @@ def _schema_fields(schema: Dict[str, Any]) -> List[Dict[str, Any]]:
             by_name[name]["required_for"] = ["*"]
 
     for branch in schema.get("allOf", []):
-        const = (
-            branch.get("if", {})
-            .get("properties", {})
-            .get("type", {})
-            .get("const")
-        )
-        if const is None:
+        condition = _branch_condition(branch)
+        if condition is None:
             continue
         then = branch.get("then", {})
         for name, prop in then.get("properties", {}).items():
@@ -151,8 +173,8 @@ def _schema_fields(schema: Dict[str, Any]) -> List[Dict[str, Any]]:
                 continue
             if entry["required_for"] == ["*"]:
                 continue
-            if const not in entry["required_for"]:
-                entry["required_for"].append(const)
+            if condition not in entry["required_for"]:
+                entry["required_for"].append(condition)
 
     return fields
 

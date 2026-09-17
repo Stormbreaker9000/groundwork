@@ -273,7 +273,9 @@
         "security"
       ],
       "name": "test_level",
-      "required_for": [],
+      "required_for": [
+        "verification_mode: test"
+      ],
       "type": "string"
     },
     {
