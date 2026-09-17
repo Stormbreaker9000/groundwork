@@ -281,11 +281,13 @@ def test_coverage_lists_the_items_covering_each_requirement(tmp_path):
 
 
 def test_uncovered_requirement_is_visible_as_a_gap():
-    """Every FR/NFR in the FULL fixture happens to be covered by a TS- item
-    (CON-001 is the only uncovered artifact, and — per D4/D7 — constraints
-    are out of scope for this section, see the following test). So this
-    exercises render_coverage directly with a synthetic, deliberately
-    uncovered FR."""
+    """Nothing in the FULL fixture is uncovered — every one of its five
+    requirement artifacts, constraints and business rules included, is cited
+    by some TS- item — so the fixture offers no natural uncovered case to
+    assert against. This exercises render_coverage directly with a synthetic,
+    deliberately uncovered FR. (CON-/BR- artifacts are excluded from this
+    section by type rather than by coverage, per D4/D7 — see the following
+    test.)"""
     req = gd.Artifact("FR-999.md", {"id": "FR-999", "type": "functional"}, "")
     lines = gd.render_coverage([req], {})
     assert any(
