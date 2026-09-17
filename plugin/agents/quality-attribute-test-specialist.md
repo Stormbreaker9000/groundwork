@@ -95,7 +95,19 @@ that read both sets.
   `ci` for a scenario the pipeline cannot actually run produces a DoD gate
   that silently never fires — a worse outcome than an honest `manual`.
   Reserve `none` for a scenario the team has explicitly declined to gate on
-  at all (see `qa_context.declined_coverage`).
+  at all — neither a pipeline gate nor a human one — which is a statement
+  about the risk appetite in `qa_context.coverage_targets`, read alongside a
+  `qa_context.ci_enforcement` answer that names nothing able to run it.
+
+  **`qa_context.declined_coverage` is not the source for `none`.** That
+  answer records what the team declined to *test*, and a scenario nobody
+  tests gets no item from you at all — it reaches the reader through
+  `accepted_risks` instead, which is the register for it. `enforcement: none`
+  says the opposite: a strategy exists, with a test design, a rationale, and
+  a level or a mode, and nothing gates it. Writing an item for something
+  `declined_coverage` already names would put one decision in both registers,
+  which is exactly the collision `qa-orchestrator.md`'s Stage 6.5 says cannot
+  happen.
 
 - **`traces_from` names what the item covers** — the NFR ID from
   `assigned.quality_attribute`, plus any component ID from `design_digest`

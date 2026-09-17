@@ -92,7 +92,11 @@ anything it omitted from the digests does not exist for you.
   an aspiration. Most functional items are `ci`; record `manual` only when
   the FR's own nature keeps it out of CI (a workflow requiring a human
   approval step, for instance) and `none` only when the team has explicitly
-  decided not to gate on it.
+  decided not to gate on it. `none` is not for something
+  `qa_context.declined_coverage` names: what the team declined to test gets
+  no item from you at all, and reaches the reader through `accepted_risks`
+  instead — `quality-attribute-test-specialist.md`'s `enforcement` rubric
+  states this in full, and it binds both paths.
 
 - **`confidence`** follows the same rubric M1's specialists use: `high` when
   the FR and its acceptance criteria state the behavior directly, `medium`
