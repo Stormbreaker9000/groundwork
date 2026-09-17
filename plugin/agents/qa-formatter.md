@@ -278,7 +278,8 @@ artifacts:
   - id: TS-001
     type: test_strategy
     title: Order cancellation unit boundary
-    test_level: unit
+    verification_mode: test
+    test_level: unit          # omit the key entirely when the item has no level
     risk_level: medium
     status: draft
     confidence: high
@@ -290,7 +291,19 @@ review_queue:
 ```
 
 `artifacts` lists every item you wrote, one entry each, in the fields shown
-above. Derive `review_queue` from the same emitted set: every item whose
+above. `verification_mode` is on every entry, since it is on every item;
+`test_level` follows it and is the one per-item key that may be absent —
+omit it for an item whose frontmatter omits it rather than writing an empty
+`test_level:`, which would read as a level the schema does not allow. The
+two are ordered mode-then-level here, the order
+`behavioural-test-specialist.md`'s "Choosing `test_level` and
+`verification_mode`" section asks both specialists to decide them in, so a
+reader of the index meets them the same way round. `SKILL.md`'s sign-off
+summary reads exactly this pair: it prints `test_level` in each item's level
+slot, or `verification_mode` when the level is absent, and it cannot do that
+from an index that carries only one of them.
+
+Derive `review_queue` from the same emitted set: every item whose
 `confidence` is `low`, with a one-line reason drawn from what that item's own
 frontmatter or body already states (a `still_open` question it names, a gap
 the requirement set left unaddressed) — never invented detail. Omit the key
