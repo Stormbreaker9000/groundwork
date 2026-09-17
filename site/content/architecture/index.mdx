@@ -116,7 +116,7 @@ One writer, one structural gate, over a set that includes the diagrams.
 neither prior stage carries — and then drives `qa-orchestrator`, which reads
 the approved requirement and design sets once on everyone's behalf. Five
 agents are dispatched, in this fixed order: **`qa-orchestrator`, then
-`functional-test-specialist` and `quality-attribute-test-specialist` together,
+`behavioural-test-specialist` and `quality-attribute-test-specialist` together,
 then `qa-critic`, then `qa-formatter`.** The two specialists are dispatched in
 parallel rather than in sequence — unlike the design stage's component/interface
 pair, neither needs the other's output — and the critic runs once, on their
@@ -138,7 +138,7 @@ critic's gate here is judgment only too.
 
 **At the formatter, everything appears together.** It writes the atomic `TS-`
 files into `.sdlc/qa/strategy/`, projects `qa-strategy.md` from the approved
-set and the synthesised `qa_context_artifact`, and optionally writes
+set and the synthesised `qa_context_artifact`, and writes the mandatory
 `index.yaml` — all in the same pass. Only then does it re-run `validate_qa.py`
 against what it just wrote, followed by `validate_traceability.py` across the
 requirement↔design↔QA edges that neither structural validator covers on its

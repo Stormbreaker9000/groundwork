@@ -7,6 +7,7 @@ test_level: security
 risk_level: high
 risk_rationale: A mutable audit trail is undetectable from inside the system.
 enforcement: manual
+verification_mode: inspection
 traces_from: [NFR-002]
 traces_to:
   tests: []

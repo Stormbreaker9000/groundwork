@@ -91,17 +91,32 @@ specific `findings`:
   level it lands on.
 
   **`performance` and `security` are not the quality-attribute specialist's
-  exclusively.** A constraint-derived item from `functional-test-specialist`
+  exclusively.** A constraint-derived item from `behavioural-test-specialist`
   may legitimately carry either — a constraint bounding a resource budget is
-  `performance`, one bounding what may leave the machine is `security` — and
-  the schema's enum has no value at all for a pure inspection or analysis, so
-  a `CON-`/`BR-` item whose `verification_method` is `inspection` or
-  `analysis` records the level its *executable* half runs at and says so in
-  its rationale (`functional-test-specialist.md`, "Deriving an item from a
-  constraint or a business rule", point 3). Do not `revise` such an item for
-  carrying a level outside the four boundary definitions, and do not `revise`
-  it for the static half having no level of its own — check that the
-  rationale names which half the level describes, and gate on that.
+  `performance`, one bounding what may leave the machine is `security`.
+
+  **Check `verification_mode` and `test_level` for coherence.** They are
+  independent axes (see `behavioural-test-specialist.md`, "Choosing
+  `test_level` and `verification_mode`"), and each half is checkable:
+
+  - An item whose mode is `inspection` or `analysis` but whose `Test Design`
+    describes an automated suite, a harness or a CI job is a `revise`: one of
+    the two is wrong, and the body says which.
+  - An item whose mode is `test` but whose `Test Design` describes a review,
+    a walkthrough or a manual count is a `revise` for the same reason,
+    inverted.
+  - An item that omits `test_level` must say in `Test Level Rationale` why no
+    boundary applies. A missing level with no stated reason is a `revise`; a
+    missing level on a licence or manifest audit that says so is correct and
+    is not a finding.
+  - An item that carries a `test_level` alongside a non-`test` mode is **not**
+    a finding. An inspection enumerating call sites across two components is
+    an `integration` inspection, and recording that is the point of keeping
+    the axes apart.
+
+  Do not `revise` an item for carrying a mode that its requirement's own
+  `verification_method` also carries — that is the field being honoured, not
+  a judgment being dodged.
 - **`risk_rationale` explains, not asserts.** A functional item's rationale
   must give the actual consequence-of-failure reasoning (loud vs. silent,
   recoverable vs. not) behind its `risk_level`; a quality-attribute item's
@@ -132,16 +147,35 @@ specific `findings`:
 - **`enforcement: ci` is honest.** For every item that claims
   `enforcement: ci`, check `qa_context.ci_enforcement` (and, if it bears on
   the same question, `qa_context.test_tooling`) for a stated CI capability
-  that can actually run a test at that item's `test_level` — a load-generation
-  or adversarial-security capability for a `performance`/`security` item, a
-  runnable suite at the right boundary for `unit`/`integration`/`contract`/
-  `e2e`. If the interview's answer does not name that capability, the verdict
-  is `revise` with the specific mismatch stated: which level the item claims
-  to gate on CI, and what `qa_context.ci_enforcement` actually says the
-  pipeline can run instead. `enforcement: manual` and `enforcement: none` are
-  not checked against `qa_context` this way — a specialist under-claiming
-  `manual` when `ci` was actually available is a missed opportunity, not a
-  lie, and is not this check's target.
+  that can actually run this item automatically. **Read `verification_mode`
+  for every item, whether or not it carries a `test_level`** — a level says
+  which boundary the check concerns, which is silent on whether a pipeline
+  can perform the check at all. The mode decides whether an automated
+  performer can exist; the level, where one would have to reach:
+  - `test` — the interview must name a runnable suite at the item's boundary:
+    a load-generation or adversarial-security capability for a
+    `performance`/`security` item, a runnable suite at the right boundary for
+    `unit`/`integration`/`contract`/`e2e`.
+  - `inspection` or `analysis` — the interview must name a scripted check
+    that performs it. A licence-manifest script or a static-analysis job is
+    `ci`-honest; a person reading the same artifact is not. This holds for an
+    item that also carries a `test_level`: an `integration`-level inspection
+    still needs the script, and the integration suite the interview names is
+    not it.
+  - `demonstration` — cannot honestly claim `ci` at all, since a
+    demonstration is inherently a human act. A `test_level` does not rescue
+    the claim; an `e2e` demonstration is a person driving the end-to-end
+    path, and `manual` is what that is.
+
+  If the interview's answer does not name that capability, the verdict is
+  `revise` with the specific mismatch stated: what the item claims CI does
+  for it (its mode, and its boundary when it carries a level), and what
+  `qa_context.ci_enforcement` actually says the pipeline can run instead.
+
+  `enforcement: manual` and `enforcement: none` are not checked against
+  `qa_context` this way — a specialist under-claiming `manual` when `ci` was
+  actually available is a missed opportunity, not a lie, and is not this
+  check's target.
 - **`confidence: low` matches its stated basis.** When an item's `confidence`
   is `low` because it names a resting `Q-` question, look that ID up in
   `qa_context.inherited_open_questions` and check its `disposition`. A `low`
@@ -164,7 +198,7 @@ Confusing the two cost Task 2 a fix round on that rule; do not repeat it here.
 
 The sidecar list is **not** restricted to `FR-` and `NFR-` IDs: `drivers.md`
 routinely marks constraints and business rules architecturally significant
-too, and every one of them is assigned to `functional-test-specialist` and is
+too, and every one of them is assigned to `behavioural-test-specialist` and is
 therefore coverable like any other requirement. A `CON-` or `BR-` ID arriving
 in this list is an ordinary coverage obligation, not a special case to
 justify away — if several appear at once in `uncovered_asrs`, suspect a brief
@@ -202,6 +236,12 @@ the omission under `coverage.level_gaps` with the specific level and why it
 looks like a gap rather than a deliberate choice. A level mix that is
 consistently and explicitly argued for (even if narrow) is not a gap; a level
 mix that is merely uniform with no item addressing why is worth a finding.
+
+A level that is absent because every candidate item is verified by
+inspection or analysis is not a gap, and neither is an item that legitimately
+carries no `test_level` at all — check `verification_mode` before recording
+either as an omission. `level_gaps` counts levels the set *should* exercise
+and does not, never levels that nothing in the set could honestly reach.
 
 ## Gate C — Where the structural gate lives
 

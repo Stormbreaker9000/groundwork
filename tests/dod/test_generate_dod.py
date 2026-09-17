@@ -281,11 +281,13 @@ def test_coverage_lists_the_items_covering_each_requirement(tmp_path):
 
 
 def test_uncovered_requirement_is_visible_as_a_gap():
-    """Every FR/NFR in the FULL fixture happens to be covered by a TS- item
-    (CON-001 is the only uncovered artifact, and — per D4/D7 — constraints
-    are out of scope for this section, see the following test). So this
-    exercises render_coverage directly with a synthetic, deliberately
-    uncovered FR."""
+    """Nothing in the FULL fixture is uncovered — every one of its five
+    requirement artifacts, constraints and business rules included, is cited
+    by some TS- item — so the fixture offers no natural uncovered case to
+    assert against. This exercises render_coverage directly with a synthetic,
+    deliberately uncovered FR. (CON-/BR- artifacts are excluded from this
+    section by type rather than by coverage, per D4/D7 — see the following
+    test.)"""
     req = gd.Artifact("FR-999.md", {"id": "FR-999", "type": "functional"}, "")
     lines = gd.render_coverage([req], {})
     assert any(
@@ -315,6 +317,21 @@ def test_unenforced_items_get_their_own_register(tmp_path):
     assert "## Declared Unenforced" in text
     assert "TS-004" in text
     assert "The cut-off is a single conditional" in text
+
+
+def test_level_less_item_prints_verification_mode_not_none(tmp_path):
+    """Ruling A: when test_level is absent, print verification_mode in its
+    place. TS-005 carries verification_mode: inspection and omits test_level
+    (a legal artifact per STO-307 D7). Before this fix, generate_dod.py
+    interpolated ``item.get('test_level')`` unconditionally and rendered the
+    literal string 'None' in the register entry.
+    """
+    _, text = generate(FULL, tmp_path)
+    register = text.split("## Declared Unenforced", 1)[1].split("\n## ", 1)[0]
+    assert "TS-005" in register
+    block = "- **TS-005" + register.split("- **TS-005", 1)[1].split("- **", 1)[0]
+    assert "`inspection`" in block
+    assert "None" not in block
 
 
 def test_unenforced_register_is_not_a_checklist(tmp_path):

@@ -70,20 +70,29 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
 
     The primary path is the real schema; this is the same degraded mode the
     other two validators carry, and it covers required-field presence and the
-    three enums rather than pretending to be complete.
+    seven enums rather than pretending to be complete.
     """
     errors: List[str] = []
     required = (
-        "id", "type", "title", "description", "test_level", "risk_level",
-        "risk_rationale", "enforcement", "traces_from", "traces_to",
-        "status", "confidence", "created_at",
+        "id", "type", "title", "description", "risk_level",
+        "risk_rationale", "enforcement", "verification_mode", "traces_from",
+        "traces_to", "status", "confidence", "created_at",
     )
     for field in required:
         if field not in data:
             errors.append(f"missing required field '{field}'")
 
+    # test_level is conditional, not unconditional: it answers which boundary
+    # the check is about, and a check that is never executed may cross none.
+    if data.get("verification_mode") == "test" and "test_level" not in data:
+        errors.append(
+            "missing required field 'test_level' "
+            "(required when verification_mode is 'test')"
+        )
+
     enums = {
         "test_level": {"unit", "integration", "contract", "e2e", "performance", "security"},
+        "verification_mode": {"test", "inspection", "analysis", "demonstration"},
         "risk_level": {"high", "medium", "low"},
         "enforcement": {"ci", "manual", "none"},
         "status": {"draft", "approved", "obsolete"},
@@ -99,7 +108,7 @@ def _fallback_validate(data: Dict[str, Any]) -> List[str]:
     if isinstance(traces_from, list) and not traces_from:
         errors.append("traces_from is empty; a strategy item must cover something")
 
-    known = set(required) | {"scope", "parent_scope"}
+    known = set(required) | {"test_level", "scope", "parent_scope"}
     for field in sorted(set(data) - known):
         errors.append(f"unexpected field '{field}'")
     return errors

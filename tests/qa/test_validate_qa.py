@@ -14,6 +14,8 @@ INVALID_CASES = [
     "prefix_type_mismatch",
     "duplicate_id",
     "bad_test_level",
+    "bad_verification_mode",
+    "missing_test_level_for_test_mode",
     "bad_enforcement",
     "missing_risk_rationale",
     "empty_traces_from",
@@ -76,3 +78,60 @@ def test_prefix_type_mismatch_reports_the_cross_file_message():
     )
     errors = [e for f in files for e in f.errors]
     assert any("implies type" in e for e in errors), errors
+
+
+# ---------------------------------------------------------------------------
+# The stdlib fallback path (no jsonschema): verification_mode and the
+# conditional test_level requirement (STO-307 D6, D7).
+# ---------------------------------------------------------------------------
+def _base_item():
+    return {
+        "id": "TS-001", "type": "test_strategy", "title": "x",
+        "description": "x", "test_level": "unit", "risk_level": "medium",
+        "risk_rationale": "x", "enforcement": "ci",
+        "verification_mode": "test", "traces_from": ["FR-001"],
+        "traces_to": {"tests": [], "code": []}, "status": "draft",
+        "confidence": "high", "created_at": "2026-09-15",
+    }
+
+
+def test_fallback_accepts_a_valid_item():
+    assert vq._fallback_validate(_base_item()) == []
+
+
+def test_fallback_requires_verification_mode():
+    item = _base_item()
+    del item["verification_mode"]
+    errors = vq._fallback_validate(item)
+    assert any("verification_mode" in e for e in errors), errors
+
+
+def test_fallback_flags_unknown_verification_mode():
+    item = _base_item()
+    item["verification_mode"] = "vibes"
+    errors = vq._fallback_validate(item)
+    assert any("verification_mode" in e for e in errors), errors
+
+
+def test_fallback_requires_test_level_when_mode_is_test():
+    item = _base_item()
+    del item["test_level"]
+    errors = vq._fallback_validate(item)
+    assert any("test_level" in e for e in errors), errors
+
+
+def test_fallback_allows_absent_test_level_for_a_non_test_mode():
+    # A licence audit crosses no boundary and honestly has no level.
+    item = _base_item()
+    item["verification_mode"] = "inspection"
+    del item["test_level"]
+    assert vq._fallback_validate(item) == []
+
+
+def test_fallback_allows_test_level_alongside_a_non_test_mode():
+    # Optional, not forbidden (D7): an inspection that enumerates call sites
+    # across two components is still about an integration boundary.
+    item = _base_item()
+    item["verification_mode"] = "inspection"
+    item["test_level"] = "integration"
+    assert vq._fallback_validate(item) == []

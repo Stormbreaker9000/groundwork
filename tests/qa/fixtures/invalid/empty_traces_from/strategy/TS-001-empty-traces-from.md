@@ -7,6 +7,7 @@ test_level: unit
 risk_level: medium
 risk_rationale: "Exercises the traces_from minItems rule in isolation."
 enforcement: ci
+verification_mode: test
 traces_from: []
 traces_to:
   tests: []

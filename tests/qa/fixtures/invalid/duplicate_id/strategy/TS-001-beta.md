@@ -7,6 +7,7 @@ test_level: integration
 risk_level: low
 risk_rationale: "Exercises the duplicate id rule in isolation."
 enforcement: manual
+verification_mode: test
 traces_from: [FR-002]
 traces_to:
   tests: []

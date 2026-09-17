@@ -7,6 +7,7 @@ test_level: unit
 risk_level: medium
 risk_rationale: Cancellation is reversible and fails loudly.
 enforcement: ci
+verification_mode: test
 traces_from: [FR-001]
 traces_to:
   tests: []

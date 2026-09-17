@@ -267,7 +267,7 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
    Include the absolute `scripts/` path from "Locating the scripts" above as
    `scripts_dir` in this dispatch — the orchestrator threads it, unchanged,
    all the way to the formatter.
-2. **functional-test-specialist** and **quality-attribute-test-specialist** —
+2. **behavioural-test-specialist** and **quality-attribute-test-specialist** —
    dispatched together; neither needs the other's output, so run them in
    parallel or in either order.
 3. **qa-critic** — runs once, on the merged set from both specialists:
@@ -298,12 +298,16 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 - unit — <count> items
 - integration — <count> items
 - ...
+- no test level — <count> items (items that omit `test_level`; see below)
 
 **Items:**
-- TS-001 <title> — <test_level> / <risk_level>: <one-line rationale>
+- TS-001 <title> — <test_level, or verification_mode when test_level is absent; both when a level carries a non-`test` mode> / <risk_level>: <one-line rationale>
 
 **Accepted Risks:**
 - <statement> (traces: <requirement/design ID>) — <rationale>, or "None"
+
+**Declared Unenforced:**
+- <TS-ID> <title> — covers <IDs>: <rationale>, or "None"
 
 **Assumptions & Dependencies:** [key A-#/D-# items, or "None identified"]
 **Open Questions:** [Q-# items still open, or "None"]
@@ -317,6 +321,17 @@ Drive the pipeline through the agents under `agents/`, in this fixed order:
 **Next Step:** Implementation
 ```
 
+Render **Test Levels** as one count per `test_level` present in the set, in
+the schema's enum order, plus the trailing `no test level` count above for
+items that omit it. Render each **Items** line's level slot as `<test_level>`,
+or the item's `verification_mode` when `test_level` is absent — the mode is
+always present, so the slot stays informative instead of rendering `None`.
+When an item carries a level *and* a `verification_mode` other than `test`,
+print both, level first: this is the summary the user pushes back on before
+any file is written, and a bare `integration` would read as an executed
+suite. It is the same rule `qa-formatter.md` applies to the projected
+document's own level slots.
+
 Render **Accepted Risks** from `qa_context_artifact.accepted_risks` — every
 entry the orchestrator assembled at Stage 6.5, from the critic's justified
 `uncovered_asrs` plus `qa_context.declined_coverage` parsed into one entry
@@ -324,6 +339,12 @@ per distinct declined item. This is the one point in the pipeline where
 "what we decided not to test" reaches a human before any file is written —
 surfacing it here, rather than only in the written `qa-strategy.md`, means
 the user can push back on an accepted risk before it is committed.
+
+Render **Declared Unenforced** from `qa_context_artifact.unenforced` the same
+way, and for the same reason: an item nothing gates is a decision the user
+should get to overturn while overturning it is still cheap. Keep the two
+lists separate here exactly as they are separate in the artifact — one is
+what nobody is testing, the other is what nobody is enforcing.
 
 **Step 3 — Sign-off gate:**
 

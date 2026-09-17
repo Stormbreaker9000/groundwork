@@ -5,6 +5,11 @@
     "title": "ADR Generator"
   },
   {
+    "description": "Behavioural test-strategy specialist. Converts the assigned functional requirements, constraints and business rules from the orchestrator's generation_brief, plus the design set's component boundaries, into atomic test-strategy items that say how each requirement is exercised, by what means, and at what level. Returns a draft_test_strategies object.",
+    "name": "behavioural-test-specialist",
+    "title": "Behavioural Test Specialist"
+  },
+  {
     "description": "C4 diagram generation specialist. Supplies the two judgments the component and interface frontmatter cannot carry \u2014 which components group into which deployable container, and who the system's external actors are. Never authors Mermaid, never allocates DIA- IDs, and writes no file: generate_c4.py projects the returned draft_diagram_model into the three C4 views deterministically. Dispatched at Stage 9.6, after the design critic's gate: pass and the ADR generator, before the formatter.",
     "name": "c4-generator",
     "title": "C4 Diagram Generator"
@@ -40,11 +45,6 @@
     "title": "Functional Requirements Specialist"
   },
   {
-    "description": "Functional test-strategy specialist. Converts the assigned functional requirements, constraints and business rules from the orchestrator's generation_brief, plus the design set's component boundaries, into atomic test-strategy items that say how each requirement is exercised and at what level. Returns a draft_test_strategies object.",
-    "name": "functional-test-specialist",
-    "title": "Functional Test Specialist"
-  },
-  {
     "description": "Interface design specialist. Converts each component's declared capabilities into atomic interface specs (IF-) at architecture altitude \u2014 provider, operations, interaction style, and error modes \u2014 and reports which components consume each contract so the orchestrator can back-fill depends_on. Returns a draft_interfaces object.",
     "name": "interface-specialist",
     "title": "Interface Design Specialist"
@@ -65,7 +65,7 @@
     "title": "QA Formatter"
   },
   {
-    "description": "Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the functional and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
+    "description": "Routes the qa context object through the test-strategy generation pipeline. Reads the approved requirement and design sets once on everyone's behalf, allocates the shared TS- ID space across the behavioural and quality-attribute specialists, dispatches both, then routes through the critic and formatter. Owns the explicit hand-off data shapes passed between every stage.",
     "name": "qa-orchestrator",
     "title": "QA Orchestrator"
   },

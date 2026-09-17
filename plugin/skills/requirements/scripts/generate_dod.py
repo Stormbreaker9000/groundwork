@@ -351,6 +351,17 @@ def render_conformance_gates(design: List[Artifact], root: str) -> List[str]:
     return lines
 
 
+def _level_slot(item: Artifact) -> str:
+    """``test_level`` when present, else ``verification_mode`` (Ruling A).
+
+    ``test_level`` is only required when a QA item is actually executed
+    (STO-307 D7); a level-less item is a legal artifact. ``verification_mode``
+    is required on every item regardless, so printing it in the level's place
+    keeps the slot informative instead of rendering the string ``None``.
+    """
+    return item.get("test_level") or item.get("verification_mode")
+
+
 def render_coverage(
     reqs: List[Artifact], coverage: Dict[str, List[Artifact]]
 ) -> List[str]:
@@ -380,7 +391,7 @@ def render_coverage(
         covering = coverage.get(req.id or "", [])
         if covering:
             described = ", ".join(
-                f"{item.id} ({item.get('test_level')}, {item.get('enforcement')})"
+                f"{item.id} ({_level_slot(item)}, {item.get('enforcement')})"
                 for item in sorted(covering, key=lambda a: a.id or "")
             )
             lines.append(f"- [ ] **{req.id}** — covered by {described}")
@@ -416,7 +427,7 @@ def render_unenforced(qa: List[Artifact], root: str) -> List[str]:
         covers = ", ".join(str(t) for t in item.get("traces_from") or [])
         lines += [
             f"- **{item.id} — {item.get('title')}** "
-            f"(`{item.get('test_level')}`, risk: {item.get('risk_level')})",
+            f"(`{_level_slot(item)}`, risk: {item.get('risk_level')})",
             f"  Rationale: {item.get('risk_rationale')}",
             f"  Covers: {covers}. Source: {_rel_source(item, root, '.sdlc/qa')}",
             "",
@@ -522,7 +533,7 @@ def render_pr_checklist(
         if item.get("enforcement") == "manual":
             entries.append(
                 f"- [ ] **{item.id}** — {item.get('title')} "
-                f"(`{item.get('test_level')}`, manual)."
+                f"(`{_level_slot(item)}`, manual)."
             )
 
     for req in by_type(reqs, "non_functional"):

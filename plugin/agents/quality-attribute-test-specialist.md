@@ -63,11 +63,16 @@ that read both sets.
   a single component under a functional-correctness stimulus (see ISO 25010's
   Functional Suitability characteristic) can legitimately be `unit` or
   `integration`; do not default every quality-attribute item to
-  `performance`/`security` out of habit. `unit` and `integration` are defined
-  by which boundary the behavior crosses, not by this agent — see
-  `functional-test-specialist.md`, "`test_level` is a judgment about the
-  boundary being crossed, not about effort," for the four boundary
-  definitions this schema's enum shares across both specialists.
+  `performance`/`security` out of habit. The levels are defined once, in
+  `behavioural-test-specialist.md`, "Choosing `test_level` and `verification_mode`"
+  — that section is shared across both specialists.
+
+- **`verification_mode` is almost always `test` here.** A quality-attribute
+  scenario states a measurable response, and a fitness function measures it.
+  Use `analysis` only where the response measure is genuinely derived rather
+  than observed — a budget summed across components, a capacity argued from a
+  model — and say so in the body. An NFR whose scenario cannot be measured at
+  all is a finding for the critic, not an `inspection` item.
 
 - **`risk_level` comes from the quality attribute's own severity, not from
   how hard the scenario is to test.** The instinct to rank by test
@@ -90,7 +95,19 @@ that read both sets.
   `ci` for a scenario the pipeline cannot actually run produces a DoD gate
   that silently never fires — a worse outcome than an honest `manual`.
   Reserve `none` for a scenario the team has explicitly declined to gate on
-  at all (see `qa_context.declined_coverage`).
+  at all — neither a pipeline gate nor a human one — which is a statement
+  about the risk appetite in `qa_context.coverage_targets`, read alongside a
+  `qa_context.ci_enforcement` answer that names nothing able to run it.
+
+  **`qa_context.declined_coverage` is not the source for `none`.** That
+  answer records what the team declined to *test*, and a scenario nobody
+  tests gets no item from you at all — it reaches the reader through
+  `accepted_risks` instead, which is the register for it. `enforcement: none`
+  says the opposite: a strategy exists, with a test design, a rationale, and
+  a level or a mode, and nothing gates it. Writing an item for something
+  `declined_coverage` already names would put one decision in both registers,
+  which is exactly the collision `qa-orchestrator.md`'s Stage 6.5 says cannot
+  happen.
 
 - **`traces_from` names what the item covers** — the NFR ID from
   `assigned.quality_attribute`, plus any component ID from `design_digest`
@@ -101,7 +118,7 @@ that read both sets.
   scenario needing an ID beyond the range you were given is a re-dispatch,
   not an improvisation — report back to the orchestrator.
 
-- **`confidence`** follows the same rubric as the functional specialist:
+- **`confidence`** follows the same rubric as the behavioural specialist:
   `high` when the scenario's six parts and `fit_criterion` are all present
   and stated directly, `medium` when reasonably inferred, `low` when a
   `scenario` part arrived `null`, the item rests on a `still_open` question
@@ -120,7 +137,9 @@ that read both sets.
   itself stays in the NFR's fit_criterion)
 
 ## Test Level Rationale
-<why this level, given the artifact and stimulus>
+<why this level, given the artifact and stimulus — or, when no `test_level`
+is recorded, why no boundary applies and what settles the check instead (see
+`analysis` above)>
 
 ## Risk Rationale
 <the quality-attribute-severity reasoning behind the frontmatter risk_level>
@@ -149,6 +168,7 @@ test_level: performance
 risk_level: medium
 risk_rationale: "Performance Efficiency scenarios are typically observable (dashboards, alerts) and recoverable (scale out, roll back a regression) rather than silent or unbounded, so this ranks below an unmet security or data-integrity scenario at equal probability. It is not low: sustained p95 regression on the order path measurably increases cart abandonment, a business-visible failure once the threshold is crossed."
 enforcement: manual
+verification_mode: test
 traces_from: [NFR-001, CMP-004]
 traces_to:
   tests: []
@@ -201,7 +221,7 @@ Return a `draft_test_strategies` object (the shape defined in
 frontmatter (`type: test_strategy`, `status: draft`) and the rendered
 `body_markdown`. Leave `traces_to.tests` and `traces_to.code` empty — no test
 or source files exist yet at this stage. The orchestrator merges your list
-with `functional-test-specialist`'s and forwards everything to the critic.
+with `behavioural-test-specialist`'s and forwards everything to the critic.
 
 You MAY also return optional sibling `assumptions` and `dependencies` lists
 (plain statements you relied on but could not confirm — e.g. an assumed load

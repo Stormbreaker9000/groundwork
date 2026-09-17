@@ -30,7 +30,7 @@ than left to the orchestrator's or the spec's word alone.
   contract plus a `body_markdown` field. `body_markdown` is a transport field
   only — it is never written into the frontmatter.
 - The `qa_context_artifact` (Stage 6.5): `assumptions`, `dependencies`,
-  `open_questions`, and `accepted_risks`.
+  `open_questions`, `accepted_risks`, and `unenforced`.
 - `qa_context` itself (Stage 1), forwarded verbatim — the same object Stage 6
   already forwards to `qa-critic`, not a narrower slice built for you. You
   need `qa_context.test_tooling`, `qa_context.ci_enforcement`, and
@@ -59,7 +59,8 @@ invoked without it, stop and report back rather than proceeding.
 .sdlc/qa/
 ├── strategy/        TS-001-<kebab-title>.md
 ├── qa-strategy.md    ← gated: the five required headings, plus Accepted Risks,
-│                        Assumptions, Dependencies, and Open Questions (ungated)
+│                        Declared Unenforced, Assumptions, Dependencies, and
+│                        Open Questions (ungated)
 └── index.yaml        ← mandatory machine index
 ```
 
@@ -91,10 +92,11 @@ id: TS-001
 type: test_strategy
 title: <title>
 description: <one-line statement of what this item tests>
-test_level: unit | integration | contract | e2e | performance | security
+test_level: unit | integration | contract | e2e | performance | security   # required when verification_mode is test
 risk_level: high | medium | low
 risk_rationale: <the consequence-of-failure or attribute-severity reasoning>
 enforcement: ci | manual | none
+verification_mode: test | inspection | analysis | demonstration
 traces_from: [<requirement and design IDs this item covers>]
 traces_to:
   tests: []
@@ -131,7 +133,7 @@ artifacts it summarises the moment either changes — the same reason
 drawing them by hand. Regenerate the whole document wholesale on every run;
 never patch it in place.
 
-Copy `<scripts>/../templates/qa-strategy.md`'s nine headings verbatim, in
+Copy `<scripts>/../templates/qa-strategy.md`'s ten headings verbatim, in
 this exact order — the first five are hard-gated by `validate_qa.py`
 character for character, so retype them from this list, never from memory.
 The template sits one level above the scripts directory, in `templates/`,
@@ -150,6 +152,7 @@ applies here too, since the template's location is derived from it:
 ## Tooling
 ## Coverage Targets
 ## Accepted Risks
+## Declared Unenforced
 ## Assumptions
 ## Dependencies
 ## Open Questions
@@ -164,16 +167,35 @@ produce byte-identical output:
   `integration`, `contract`, `e2e`, `performance`, `security`) — omit a level
   entirely when no item uses it, never emit an empty subsection for it. Under
   each subsection, one bullet per item at that level, `- **<ID>** — <title>:
-  <risk_rationale>`, sorted by ID. If the whole set is empty, the section body
-  is the single line `None identified.`
+  <risk_rationale>`, sorted by ID — except that an item whose
+  `verification_mode` is not `test` carries it after the title,
+  `- **<ID>** — <title> (<verification_mode>): <risk_rationale>`. A level
+  says which boundary the check concerns and is silent on whether the check
+  runs, so without the mode a reader of this section cannot tell an
+  `integration`-level inspection from an executed integration test — the
+  distinction the second axis exists to keep (spec D6). `test` is left
+  unmarked: it is the overwhelming majority, and a level already implies a
+  boundary something executes across.
+
+  After the six level subsections, emit one trailing `### No test level`
+  subsection whenever the emitted set contains an item that omits
+  `test_level` — omitted under the same rule when none does.
+  Under it, one bullet per level-less item, sorted by ID: `- **<ID>** —
+  <title> (<verification_mode>): <risk_rationale>`. If the whole set is empty,
+  the section body is the single line `None identified.`
 
 - **Scope by Component.** Collect every requirement/design ID that appears in
   some item's `traces_from` **and is a `CMP-` or `IF-` ID** — the component
   and interface IDs, not the FR/NFR IDs also present in the same list. Group
   into one `###` subsection per such ID, sorted by ID, each listing the items
-  that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID. An
-  item citing no `CMP-`/`IF-` ID (a unit item scoped by FR alone, per
-  `functional-test-specialist.md`) contributes to no subsection here — it is
+  that cite it: `- **<ID>** — <title> (<test_level>)`, sorted by item ID —
+  for an item that omits `test_level`, print its `verification_mode` in that
+  slot instead, and for an item that carries a level alongside a non-`test`
+  mode, print both, `(<test_level>, <verification_mode>)`, level first. The
+  slot answers "what kind of check is this component covered by", which a
+  level alone under-answers for the same reason it does above. An item citing
+  no `CMP-`/`IF-` ID (a unit item scoped by FR alone, per
+  `behavioural-test-specialist.md`) contributes to no subsection here — it is
   not a gap, it means no component-level boundary applies. If no item cites
   any component or interface ID at all, the section body is the single line
   `None identified.`
@@ -201,6 +223,13 @@ produce byte-identical output:
   When the register is empty, the section body is the single line
   `None identified.`
 
+- **Declared Unenforced.** One bullet per `qa_context_artifact.unenforced`
+  entry: `- **<UE-id>** — <item> <title>: <rationale> (covers: <covers,
+  comma-joined>)`, ordered by `item` ID ascending. When the register is
+  empty, the section body is the single line `None identified.` Never omit
+  the heading: a strategy document that silently drops the section reads
+  identically whether nothing was unenforced or nobody checked.
+
 - **Assumptions.** One bullet per `qa_context_artifact.assumptions` entry:
   `- **<A-id>** — <statement>`. When the list is empty, the section body is
   the single line `None identified.`
@@ -216,27 +245,30 @@ produce byte-identical output:
 `qa-strategy.md`, rather than carried only in `index.yaml` — they are part of
 the `qa_context_artifact` `qa-orchestrator.md` Stage 6.5 assembles, and the
 strategy document is that artifact's one projected home, the same way
-`Accepted Risks` already is.
+`Accepted Risks` already is. `unenforced` is rendered the same way, into
+`Declared Unenforced`.
 
-**`Accepted Risks`, `Assumptions`, `Dependencies`, and `Open Questions` are
-deliberately not among `validate_qa.py`'s `REQUIRED_STRATEGY_HEADINGS`.** If
-any were gated the same as the other five, an absent section and a
-present-but-empty one would look identical to the validator — both would
-satisfy "the heading exists." The whole point of each of these four registers
-is the opposite: each must be visibly, honestly empty (`None identified.`)
-when there is nothing to report, rather than quietly missing because nobody
-wrote the section. Write all four every time regardless — their presence is a
-contract with the reader, even though the validator does not enforce it
-structurally. Do not add any of the three new headings to
-`REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps `Accepted Risks`
-ungated applies unchanged to `Assumptions`, `Dependencies`, and `Open
-Questions`.
+**`Accepted Risks`, `Declared Unenforced`, `Assumptions`, `Dependencies`, and
+`Open Questions` are deliberately not among `validate_qa.py`'s
+`REQUIRED_STRATEGY_HEADINGS`.** If any were gated the same as the other five,
+an absent section and a present-but-empty one would look identical to the
+validator — both would satisfy "the heading exists." The whole point of each
+of these five registers is the opposite: each must be visibly, honestly empty
+(`None identified.`) when there is nothing to report, rather than quietly
+missing because nobody wrote the section. Write all five every time
+regardless — their presence is a contract with the reader, even though the
+validator does not enforce it structurally. Do not add any of the four new
+headings to `REQUIRED_STRATEGY_HEADINGS` — the same reasoning that keeps
+`Accepted Risks` ungated applies unchanged to `Declared Unenforced`,
+`Assumptions`, `Dependencies`, and `Open Questions`.
 
 `Tooling` and `Coverage Targets` come from `qa_context` directly, forwarded to
 you as a declared input in its own right (see `## Input`) — never from
 inference over the item set, and never from `qa_context_artifact`, which
-carries the accepted-risk register but no copy of these three interview
-answers. `Test Levels`, `Scope by Component`, and `Risk-Based Prioritisation`
+carries the accepted-risk and declared-unenforced registers, plus
+assumptions, dependencies, and open questions, but no copy of these three
+interview answers. `Test Levels`, `Scope by Component`, and `Risk-Based
+Prioritisation`
 come only from the emitted items — never from the interview.
 
 ## `index.yaml`
@@ -260,7 +292,8 @@ artifacts:
   - id: TS-001
     type: test_strategy
     title: Order cancellation unit boundary
-    test_level: unit
+    verification_mode: test
+    test_level: unit          # omit the key entirely when the item has no level
     risk_level: medium
     status: draft
     confidence: high
@@ -272,7 +305,19 @@ review_queue:
 ```
 
 `artifacts` lists every item you wrote, one entry each, in the fields shown
-above. Derive `review_queue` from the same emitted set: every item whose
+above. `verification_mode` is on every entry, since it is on every item;
+`test_level` follows it and is the one per-item key that may be absent —
+omit it for an item whose frontmatter omits it rather than writing an empty
+`test_level:`, which would read as a level the schema does not allow. The
+two are ordered mode-then-level here, the order
+`behavioural-test-specialist.md`'s "Choosing `test_level` and
+`verification_mode`" section asks both specialists to decide them in, so a
+reader of the index meets them the same way round. `SKILL.md`'s sign-off
+summary reads exactly this pair: it prints `test_level` in each item's level
+slot, or `verification_mode` when the level is absent, and it cannot do that
+from an index that carries only one of them.
+
+Derive `review_queue` from the same emitted set: every item whose
 `confidence` is `low`, with a one-line reason drawn from what that item's own
 frontmatter or body already states (a `still_open` question it names, a gap
 the requirement set left unaddressed) — never invented detail. Omit the key
