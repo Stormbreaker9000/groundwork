@@ -190,7 +190,16 @@ def test_project_artifact_pages_carry_the_prose_files():
     page = ee.render_project_artifacts("tamagotchi", "requirements")
     assert "## Glossary" in page
     assert "## Assumptions" in page
-    assert "## Definition of done" in page
+    # The Definition of Done left this page in STO-309: it belongs to the
+    # set, not to a stage, so it publishes on the set's own index.
+    assert "## Definition of done" not in page
+
+
+def test_definition_of_done_is_published_at_the_set_root():
+    pages = ee.build_pages()
+    assert "tamagotchi/definition-of-done.md" in pages
+    assert "gdpr/definition-of-done.md" in pages
+    assert "tamagotchi/requirements/definition-of-done.md" not in pages
 
 
 def test_gdpr_has_no_design_pages():
@@ -283,7 +292,9 @@ def test_stage_index_lists_every_page_with_its_count():
         " — 15 non-functional requirements." in page
     )
     # The project-artifacts page is advertised by the files actually present.
-    assert "glossary, assumptions and definition of done" in page
+    # definition-of-done.md left this list in STO-309 — it now publishes at
+    # the set root instead.
+    assert "glossary and assumptions" in page
 
 
 def test_stage_index_project_gloss_follows_the_stage():

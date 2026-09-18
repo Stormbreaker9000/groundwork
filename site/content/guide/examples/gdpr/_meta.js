@@ -1,4 +1,5 @@
 export default {
   'index': 'Overview',
-  'requirements': 'Requirements'
+  'requirements': 'Requirements',
+  'definition-of-done': 'Definition of done'
 }
