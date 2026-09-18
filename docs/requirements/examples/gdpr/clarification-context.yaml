@@ -2,7 +2,7 @@
 # "Elicitation context" block, from what the published GDPR requirement set
 # already records — not a re-interview. Every value below is traceable to
 # requirements/assumptions.md, requirements/glossary.md,
-# requirements/definition-of-done.md, and the requirement bodies under
+# definition-of-done.md, and the requirement bodies under
 # requirements/{functional,non-functional,constraints,business-rules}/.
 #
 # Input to agents/requirements-orchestrator.md Stage 1 (clarification_context,

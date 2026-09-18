@@ -490,12 +490,14 @@ Two findings are worth naming individually:
 
 ### 3.5 Companion parity
 
-Both M1 sets now carry an identical set of companion files —
-`assumptions.md`, `glossary.md`, `index.yaml`, `definition-of-done.md`
-and the four type directories. Before this ticket the GDPR set had no
-`index.yaml` and the tamagotchi set had no `definition-of-done.md`; each
-was missing the file the other had. `diff` of the two directory listings
-is now empty.
+Both M1 sets now carry an identical set of companion files under
+`requirements/` — `assumptions.md`, `glossary.md`, `index.yaml` — and the
+four type directories. Each set's `definition-of-done.md` sits at the set
+root rather than inside `requirements/`, since it derives from every stage
+that has run, not just the requirements set. Before this ticket the GDPR
+set had no `index.yaml` and the tamagotchi set had no
+`definition-of-done.md` at all; each was missing the file the other had.
+`diff` of the two `requirements/` directory listings is now empty.
 
 ---
 
@@ -702,16 +704,18 @@ future pass does not rediscover them from scratch.
   output, and the no-hand-editing rule forbids reflowing it by hand, so
   it stands. The fix belongs in the formatter's prompt, not in the
   artifacts.
-- **The Definition of Done carries two generation artifacts.**
-  `FR-011`'s gate text drops one clause that is present in `FR-011`'s own
-  `fit_criterion`, and §3 of both sets' files carries a "**Flagged as
-  currently unmet**" note about `traces_to.tests` being empty on every
-  `must` item. The second is correct — no tests exist for these examples
-  — but it is a template artifact that will read as an alarm to anyone
-  who has not read this paragraph. Both want a `generate_dod.py` re-run in
-  a later pass, writing to the root-level `.sdlc/definition-of-done.md`
-  (the `dod-generator` agent this note originally named no longer ships —
-  STO-104 replaced it with that script).
+- **The Definition of Done carried two generation artifacts.**
+  `FR-011`'s gate text dropped one clause that was present in `FR-011`'s
+  own `fit_criterion`, and both sets' files carried a note flagging
+  `traces_to.tests` as empty on every `must` item — correct, since no
+  tests exist for these examples, but stale template output that read as
+  an alarm to anyone who had not read this paragraph. Both files have
+  since been regenerated at the set root (`definition-of-done.md`, not
+  under `requirements/`) by `generate_dod.py` — the `dod-generator` agent
+  this note originally named no longer ships; STO-104 replaced it with
+  that script. `traces_to.tests` is still empty on every `must` item; a
+  QA set would add test *strategy*, not test code, and none exists yet
+  either, so that is not a regression.
 
 ---
 

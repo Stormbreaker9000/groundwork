@@ -19,15 +19,18 @@ comparing this set against an older copy of it.
 - **[`requirements/`](./requirements/)** — the validatable atomic requirement
   set: one Markdown+YAML file per requirement under `functional/`,
   `non-functional/`, `constraints/`, `business-rules/`, plus the project-level
-  `assumptions.md`, `glossary.md`, `definition-of-done.md`, and a machine
-  `index.yaml` (which carries the low-confidence `review_queue`). 26
-  requirements.
+  `assumptions.md`, `glossary.md`, and a machine `index.yaml` (which carries
+  the low-confidence `review_queue`). 26 requirements.
 - **[`design/`](./design/)** — the architecture set generated from those
   requirements: 19 component specs under `components/`, 31 interface specs
   under `interfaces/`, 7 ADRs under `adr/` and 4 C4 views under `diagrams/`,
   plus `assumptions.md`, `drivers.md`, and an `index.yaml` that lists all four
   artifact types. That is the pipeline's complete declared output — nothing in
   this directory was added by hand.
+- **[`definition-of-done.md`](./definition-of-done.md)** — the acceptance
+  gates projected from every stage above by `generate_dod.py`. It sits at
+  the set root rather than under a stage because no single stage owns it;
+  each stage that runs supersedes the last one's output.
 - **[`critique-report.yaml`](./critique-report.yaml)** — the design critic's
   real return value against this set: the round-3 report that returned
   `gate: pass`. It sits **here at the example root, not inside `design/`**,
@@ -110,8 +113,9 @@ none either.
 - Externalized `assumptions.md` (Assumptions / Dependencies / Open Questions),
   plus a *Recommendations recorded, not authored* section for proposals the set
   declined to turn into requirements.
-- A generated `definition-of-done.md` deriving an acceptance gate per
-  functional requirement and a fitness gate per NFR.
+- A generated `definition-of-done.md`, projected from the set as a whole,
+  deriving an acceptance gate per functional requirement and a fitness gate
+  per NFR.
 - Per-requirement `confidence` with a low-confidence `review_queue` for human
   triage — 8 of the 26, each naming the open question it rests on. `NFR-002`,
   `NFR-009` and `CON-001` are there for the same reason: the set states CPU,
