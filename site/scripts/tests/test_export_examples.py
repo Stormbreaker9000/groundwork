@@ -361,3 +361,52 @@ def test_meta_rows_declare_no_contract_level_interaction():
     # unevaluatedProperties: false. A row for it could only ever render on a
     # schema-invalid artifact, publishing an illegal field as routine.
     assert "interaction" not in {key for key, _label in ee.META_ROWS}
+
+
+# ---------------------------------------------------------------------------
+# Set-level project files (STO-309)
+# ---------------------------------------------------------------------------
+
+
+def _set(tmp_path, name="widget"):
+    """A minimal example set: a directory holding a ``requirements/``."""
+    set_dir = tmp_path / name
+    (set_dir / "requirements").mkdir(parents=True)
+    return set_dir
+
+
+def test_present_set_files_finds_the_definition_of_done(tmp_path, monkeypatch):
+    set_dir = _set(tmp_path)
+    (set_dir / "definition-of-done.md").write_text("# Definition of Done\n")
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == [
+        "definition-of-done.md"
+    ]
+
+
+def test_present_set_files_is_empty_when_no_set_level_prose_exists(
+    tmp_path, monkeypatch
+):
+    """The branch the drift gate cannot reach.
+
+    Both committed sets have a Definition of Done at their root, so only a
+    third set — or a project that ran no stage — would hit this.
+    """
+    _set(tmp_path)
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == []
+
+
+def test_present_set_files_ignores_a_stage_level_copy(tmp_path, monkeypatch):
+    """A ``definition-of-done.md`` under ``requirements/`` is not set-level.
+
+    This is exactly the state STO-104 left behind and this ticket removes:
+    the file at the superseded path must not be mistaken for the new one.
+    """
+    set_dir = _set(tmp_path)
+    (set_dir / "requirements" / "definition-of-done.md").write_text("# Stale\n")
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == []

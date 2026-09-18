@@ -82,12 +82,12 @@ therefore yields the requirements-only form for gdpr and the
 requirements+design form for tamagotchi, and exercises none of the
 QA-dependent sections.
 
-### E7 — Site scripts have no test coverage
+### E7 — The site scripts' tests live outside tests/
 
-The suite collects 457 tests across `tests/{requirements,design,qa,dod}/`
-and `tests/test_plugin_package.py`. None import or exercise anything
-under `site/`. Those scripts are gated solely by their own `--check`
-drift comparison in CI.
+The suite collects 457 tests; 69 of them live in `site/scripts/tests/`,
+covering both exporters against the real committed sets, and the rest under
+`tests/`. A set-level file's absence is not among them, because both
+committed sets carry a Definition of Done.
 
 ## Decisions
 
@@ -164,17 +164,16 @@ have surrendered again.
 produced, and tamagotchi's shifts when PR 2's `--qa` run supersedes it.
 The committed output is stable once written, so this introduces no drift.
 
-### D7 — `tests/site/` opens, scoped to what the drift gate cannot reach
+### D7 — The new tests join the exporter's existing suite
 
 Both committed sets will carry a DoD at the set root, so the drift gate
 exercises only the present branch of D1's discovery. The absent branch —
 a set with no set-level prose at all — would ship untested, and it is
 the branch a third example set would hit first.
 
-One focused module covers it. This is the repository's first
-`tests/site/` test and is deliberately narrow: it tests the new
-discovery function, not the exporter at large, whose drift comparison
-remains the gate it has always been.
+Three tests append to `site/scripts/tests/test_export_examples.py`; they
+test the new discovery function deliberately narrowly, not the exporter at
+large, whose drift comparison remains the gate it has always been.
 
 ### D8 — `clarification-context.yaml`'s header is updated; its body is not
 
@@ -210,7 +209,7 @@ what the pipeline produces would be inventing the result:
 | `docs/requirements/examples/tamagotchi/README.md` | Lines 22, 113 — path and generator |
 | `docs/requirements/examples/REGENERATION.md` | Lines 494-496, 712 — path; the 712 note resolves |
 | `docs/requirements/examples/gdpr/clarification-context.yaml` | Line 5 header only (D8) |
-| `tests/site/test_export_examples.py` | New (D7) |
+| `site/scripts/tests/test_export_examples.py` | 3 tests appended |
 | `site/content/guide/examples/**` | Regenerated (`export_examples.py`'s output tree; `_generated/` belongs to `export_reference.py`) |
 
 **PR 2**
@@ -226,11 +225,11 @@ what the pipeline produces would be inventing the result:
 
 ## Testing
 
-- `python3 -m pytest -q` from the repository root — 457 tests currently
-  pass and none may regress.
+- `python3 -m pytest -q` from the repository root — 460 tests pass (457
+  baseline + 3 new set-level discovery tests); none may regress.
 - `python3 site/scripts/export_reference.py --check` exits 0.
 - `python3 site/scripts/export_examples.py --check` exits 0.
-- `tests/site/test_export_examples.py` covers D7's absent branch.
+- `site/scripts/tests/test_export_examples.py` includes 3 tests covering D7's absent branch.
 - PR 2 additionally: `validate_qa.py` and `validate_traceability.py` pass
   against the swapped-in set, as the `qa-formatter` re-runs them.
 
@@ -259,6 +258,3 @@ one `[manual]` annotation.
   output and must not be read as a regression introduced here.
 - **tamagotchi's DoD is regenerated twice**, once per PR, and the second
   supersedes the first (D2, D6).
-- **`tests/site/` is a new directory** other site scripts will invite
-  themselves into later (D7). That is a precedent this ticket sets
-  knowingly.

@@ -83,6 +83,14 @@ PROJECT_FILES: Dict[str, List[str]] = {
     "design": ["drivers.md", "assumptions.md"],
 }
 
+# Set-level project artifacts: prose the set owns rather than any one of its
+# stages. generate_dod.py writes the Definition of Done to the root of the
+# .sdlc/ tree because it is "the one artifact no single stage owns" — all
+# three stage skills run the tool, and each run supersedes the last. The
+# exporter mirrors that: these publish on the set's own index, not under a
+# stage.
+SET_FILES: List[str] = ["definition-of-done.md"]
+
 # Excluded on purpose. The critique report and dev log are pipeline internals;
 # CONSOLIDATED.md is the hand-assembled artifact STO-264 exists to replace,
 # and republishing it here would give a known-stale document a second and more
@@ -433,6 +441,21 @@ def present_project_files(set_name: str, stage: str) -> List[str]:
     return [
         name
         for name in PROJECT_FILES[stage]
+        if os.path.isfile(os.path.join(root, name))
+    ]
+
+
+def present_set_files(set_name: str) -> List[str]:
+    """The set-level prose files that exist, in reading order.
+
+    Reads from disk for the same reason ``present_project_files`` does:
+    which of them exist varies by set, and a list written down twice drifts
+    from the set it describes.
+    """
+    root = os.path.join(EXAMPLES_DIR, set_name)
+    return [
+        name
+        for name in SET_FILES
         if os.path.isfile(os.path.join(root, name))
     ]
 
