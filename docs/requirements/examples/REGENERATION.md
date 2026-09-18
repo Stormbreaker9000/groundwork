@@ -692,8 +692,9 @@ Check exit status before treating empty output as a negative result.
 
 ### 4.6 Two smaller generation-quality observations
 
-Neither is a defect and neither was acted on; both are recorded so a
-future pass does not rediscover them from scratch.
+Neither is a defect: one still stands unaddressed and the other has
+since been resolved, and both are recorded here so a future pass does not
+rediscover them from scratch.
 
 - **Body-prose line wrapping degraded.** The regenerated M1 formatter
   output wraps body prose noticeably worse than the set it replaced. No

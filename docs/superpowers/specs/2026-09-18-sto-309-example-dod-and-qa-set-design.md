@@ -69,10 +69,12 @@ clean baseline and any drift introduced here is attributable.
 ### E5 — Three further files reference the old path
 
 `tamagotchi/README.md:22,113`, `REGENERATION.md:494-496,712` and
-`gdpr/clarification-context.yaml:5,71` all name the DoD at its
-requirements-level path. `REGENERATION.md:712` already anticipates this
-ticket, noting both files "want a `generate_dod.py` re-run in a later
-pass, writing to the root-level `.sdlc/definition-of-done.md`".
+`gdpr/clarification-context.yaml:5` all name the DoD at its
+requirements-level path — `clarification-context.yaml:71` names it only by
+bare filename, not by path, and is not one of these. `REGENERATION.md:712`
+already anticipates this ticket, noting both files "want a
+`generate_dod.py` re-run in a later pass, writing to the root-level
+`.sdlc/definition-of-done.md`".
 
 ### E6 — Neither set has a `qa/` directory
 
@@ -178,10 +180,12 @@ large, whose drift comparison remains the gate it has always been.
 ### D8 — `clarification-context.yaml`'s header is updated; its body is not
 
 Line 5 is a header comment describing where the set's files live, and it
-is updated with the layout. The reference at line 71 sits inside the
-recorded `clarification_context` — a replayed interview transcript.
-Editing what an interview recorded would falsify the record to keep a
-path current, and the record is the artifact's whole value.
+is updated with the layout. Line 71 sits inside the recorded
+`clarification_context` — a replayed interview transcript — and is out of
+scope on principle, whatever it happens to say: editing what an interview
+recorded would falsify the record, and the record is the artifact's whole
+value. (It names the DoD only by bare filename there, with no path to go
+stale — but the block would be off-limits even if it did.)
 
 ### D9 — Deferred to the run, deliberately
 
