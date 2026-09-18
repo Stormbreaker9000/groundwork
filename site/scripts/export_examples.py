@@ -533,7 +533,7 @@ class StageSummary:
 
 
 def _project_gloss(summary: StageSummary) -> str:
-    """``the glossary, assumptions and definition of done`` — as published."""
+    """``the glossary and assumptions`` — as published."""
     names = [PROJECT_TITLES[name].lower() for name in summary.project_files]
     return _joined(names)
 
@@ -682,11 +682,14 @@ def build_pages() -> Dict[str, str]:
                 summaries.append(summary)
 
         set_files = present_set_files(set_name)
-        for name in set_files:
-            slug = os.path.splitext(name)[0]
-            pages[f"{set_name}/{slug}.md"] = render_set_file(set_name, name)
 
         if summaries:
+            for name in set_files:
+                slug = os.path.splitext(name)[0]
+                pages[f"{set_name}/{slug}.md"] = render_set_file(
+                    set_name, name
+                )
+
             pages[f"{set_name}/index.md"] = render_set_index(
                 set_name, summaries, set_files
             )

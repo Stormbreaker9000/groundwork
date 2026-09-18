@@ -199,7 +199,10 @@ def test_definition_of_done_is_published_at_the_set_root():
     pages = ee.build_pages()
     assert "tamagotchi/definition-of-done.md" in pages
     assert "gdpr/definition-of-done.md" in pages
-    assert "tamagotchi/requirements/definition-of-done.md" not in pages
+    # The requirements project-artifacts page no longer carries a Definition
+    # of Done section under the old, stage-scoped layout — pinned by
+    # test_project_artifact_pages_carry_the_prose_files above, not repeated
+    # here.
 
 
 def test_gdpr_has_no_design_pages():

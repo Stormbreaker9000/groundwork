@@ -97,8 +97,12 @@ committed sets carry a Definition of Done.
 
 `export_examples.py` gains a representation for prose that belongs to the
 set rather than to a stage: discovered beside the stage directories,
-rendered onto the set's own `index.md`, and titled from the same
-`PROJECT_TITLES` map. The `definition-of-done.md` entry leaves
+titled from the same `PROJECT_TITLES` map, and published as its own page
+at `/guide/examples/<set>/definition-of-done/`, with a link to it added to
+the set's own `index.md`. Rendering it inline onto `index.md` was rejected
+in favor of the link: the Definition of Done runs to hundreds of lines, and
+inlining a document that size would swamp the set overview page it shares
+with the stage summaries. The `definition-of-done.md` entry leaves
 `PROJECT_FILES["requirements"]` and becomes the first set-level entry.
 
 The alternative — parking the DoD under `requirements/` in the published
@@ -229,8 +233,8 @@ what the pipeline produces would be inventing the result:
 
 ## Testing
 
-- `python3 -m pytest -q` from the repository root — 460 tests pass (457
-  baseline + 3 new set-level discovery tests); none may regress.
+- `python3 -m pytest -q` from the repository root — 463 tests pass (457
+  baseline + 6 new tests); none may regress.
 - `python3 site/scripts/export_reference.py --check` exits 0.
 - `python3 site/scripts/export_examples.py --check` exits 0.
 - `site/scripts/tests/test_export_examples.py` includes 3 tests covering D7's absent branch.
