@@ -410,3 +410,33 @@ def test_present_set_files_ignores_a_stage_level_copy(tmp_path, monkeypatch):
     monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
 
     assert ee.present_set_files("widget") == []
+
+
+def test_render_set_file_keeps_the_documents_own_headings(
+    tmp_path, monkeypatch
+):
+    """Set-level files are pages of their own, so nothing is demoted.
+
+    A stage's project artifacts share one bucket page and are demoted under
+    per-file H2s. A set-level file is published alone, so its own H1 is the
+    page's H1.
+    """
+    set_dir = _set(tmp_path)
+    (set_dir / "definition-of-done.md").write_text(
+        "# Definition of Done\n\n## Acceptance gates\n\n- [ ] FR-001 `[CI]`\n"
+    )
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    page = ee.render_set_file("widget", "definition-of-done.md")
+
+    assert "# Definition of Done" in page
+    assert "## Acceptance gates" in page
+    assert "GENERATED FILE — do not edit." in page
+    assert "docs/requirements/examples/widget/definition-of-done.md" in page
+
+
+def test_set_file_url_drops_the_extension():
+    assert (
+        ee.set_file_url("widget", "definition-of-done.md")
+        == "/guide/examples/widget/definition-of-done/"
+    )

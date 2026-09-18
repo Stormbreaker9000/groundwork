@@ -274,6 +274,11 @@ def stage_url(set_name: str, stage: str) -> str:
     return f"/guide/examples/{set_name}/{stage}/"
 
 
+def set_file_url(set_name: str, name: str) -> str:
+    """Site-relative URL of one set-level page."""
+    return f"/guide/examples/{set_name}/{os.path.splitext(name)[0]}/"
+
+
 def build_index(set_name: str) -> Dict[str, str]:
     """Map every artifact ID in a set to its anchored URL."""
     index: Dict[str, str] = {}
@@ -496,6 +501,23 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
     return "\n".join(header) + "\n" + "\n".join(sections).rstrip("\n") + "\n"
 
 
+def render_set_file(set_name: str, name: str) -> str:
+    """Render one set-level prose file as a page of its own.
+
+    Stage-level project artifacts share a single bucket page; these do not.
+    There is one of them, it is a document in its own right, and a sidebar
+    entry reading "Definition of done" tells a reader what "Project
+    artifacts" would not. Headings are left alone for the same reason — the
+    file's own H1 is the page's H1, so there is nothing to demote.
+    """
+    path = os.path.join(EXAMPLES_DIR, set_name, name)
+    with open(path, "r", encoding="utf-8") as handle:
+        text = handle.read()
+    body = split_frontmatter(text).strip()
+    header = _header(f"docs/requirements/examples/{set_name}/{name}")
+    return "\n".join(header) + "\n" + body + "\n"
+
+
 @dataclass
 class StageSummary:
     """What one stage of one set published, for its index pages to describe.
@@ -563,7 +585,9 @@ def render_stage_index(set_name: str, summary: StageSummary) -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
-def render_set_index(set_name: str, summaries: List[StageSummary]) -> str:
+def render_set_index(
+    set_name: str, summaries: List[StageSummary], set_files: List[str]
+) -> str:
     """Render the landing page for one worked example set.
 
     Exists for the same breadcrumb reason as the stage index above, and
@@ -593,6 +617,12 @@ def render_set_index(set_name: str, summaries: List[StageSummary]) -> str:
             f"({stage_url(set_name, summary.stage)})** — "
             f"{count_phrase(summary.total, 'atomic artifacts')}: "
             f"{breakdown}."
+        )
+    for name in set_files:
+        lines.append(
+            f"- **[{PROJECT_TITLES[name]}]({set_file_url(set_name, name)})**"
+            " — projected from every stage above, and owned by none of "
+            "them."
         )
     lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
@@ -655,15 +685,26 @@ def build_pages() -> Dict[str, str]:
                 )
                 summaries.append(summary)
 
+        set_files = present_set_files(set_name)
+        for name in set_files:
+            slug = os.path.splitext(name)[0]
+            pages[f"{set_name}/{slug}.md"] = render_set_file(set_name, name)
+
         if summaries:
             pages[f"{set_name}/index.md"] = render_set_index(
-                set_name, summaries
+                set_name, summaries, set_files
             )
             pages[f"{set_name}/_meta.js"] = _meta_js(
                 [("index", "Overview")]
                 + [(s.stage, STAGE_TITLES[s.stage]) for s in summaries]
+                + [
+                    (os.path.splitext(name)[0], PROJECT_TITLES[name])
+                    for name in set_files
+                ]
             )
-            set_entries.append((set_name, SET_TITLES.get(set_name, set_name)))
+            set_entries.append(
+                (set_name, SET_TITLES.get(set_name, set_name))
+            )
 
     pages["_meta.js"] = _meta_js(set_entries)
     return pages
