@@ -54,53 +54,33 @@ Pure addition. Nothing calls the new function yet, so both drift gates stay
 green and no published page changes.
 
 **Files:**
-- Create: `tests/site/conftest.py`
-- Create: `tests/site/test_export_examples.py`
+- Modify: `site/scripts/tests/test_export_examples.py` (append 3 tests to the existing 34-test module)
 - Modify: `site/scripts/export_examples.py` (add after `PROJECT_FILES`, ~line 88; add function after `present_project_files`, ~line 438)
 
 **Interfaces:**
 - Consumes: `export_examples.EXAMPLES_DIR` (module-level absolute path; monkeypatched in tests)
 - Produces: `SET_FILES: List[str]` and `present_set_files(set_name: str) -> List[str]`, used by Task 2
 
-- [ ] **Step 1: Create the test directory's conftest**
+- [ ] **Step 1: Read the existing suite's conventions**
 
-No `__init__.py` — no directory under `tests/` has one, and each has its own `conftest.py`. `tests/site/conftest.py`:
-
-```python
-"""Pytest configuration: make the site exporters importable.
-
-The site scripts live outside both the plugin and the test tree, so the
-directory holding them has to be named rather than inherited. Importing
-``export_examples`` puts ``plugin/lib/`` on the path itself, so
-``artifact_core`` still resolves from here.
-"""
-import os
-import sys
-
-REPO_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-SCRIPTS_DIR = os.path.join(REPO_ROOT, "site", "scripts")
-if SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, SCRIPTS_DIR)
-```
+`site/scripts/tests/test_export_examples.py` already holds 34 tests for
+this exporter, and `site/scripts/tests/conftest.py` already puts
+`site/scripts/` on `sys.path`. No new directory and no new conftest — the
+tests append to that module and follow its conventions, chief of which is
+`import export_examples as ee`.
 
 - [ ] **Step 2: Write the failing tests**
 
-`tests/site/test_export_examples.py`:
+Append to `site/scripts/tests/test_export_examples.py`:
 
 ```python
 """Tests for the worked-example exporter's set-level file handling.
 
 The exporter at large is gated by its own ``--check`` drift comparison in
-CI, which is why this is the repository's first ``tests/site/`` module and
-why it is narrow. It covers what that gate cannot: both committed example
-sets carry a Definition of Done, so the drift comparison only ever
-exercises the branch where a set-level file is present.
+CI, so these cover what that gate cannot: both committed example sets
+carry a Definition of Done, so the drift comparison only ever exercises
+the branch where a set-level file is present.
 """
-import export_examples
-
-
 def _set(tmp_path, name="widget"):
     """A minimal example set: a directory holding a ``requirements/``."""
     set_dir = tmp_path / name
@@ -111,9 +91,9 @@ def _set(tmp_path, name="widget"):
 def test_present_set_files_finds_the_definition_of_done(tmp_path, monkeypatch):
     set_dir = _set(tmp_path)
     (set_dir / "definition-of-done.md").write_text("# Definition of Done\n")
-    monkeypatch.setattr(export_examples, "EXAMPLES_DIR", str(tmp_path))
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
 
-    assert export_examples.present_set_files("widget") == [
+    assert ee.present_set_files("widget") == [
         "definition-of-done.md"
     ]
 
@@ -127,9 +107,9 @@ def test_present_set_files_is_empty_when_no_set_level_prose_exists(
     third set — or a project that ran no stage — would hit this.
     """
     _set(tmp_path)
-    monkeypatch.setattr(export_examples, "EXAMPLES_DIR", str(tmp_path))
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
 
-    assert export_examples.present_set_files("widget") == []
+    assert ee.present_set_files("widget") == []
 
 
 def test_present_set_files_ignores_a_stage_level_copy(tmp_path, monkeypatch):
@@ -140,14 +120,14 @@ def test_present_set_files_ignores_a_stage_level_copy(tmp_path, monkeypatch):
     """
     set_dir = _set(tmp_path)
     (set_dir / "requirements" / "definition-of-done.md").write_text("# Stale\n")
-    monkeypatch.setattr(export_examples, "EXAMPLES_DIR", str(tmp_path))
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
 
-    assert export_examples.present_set_files("widget") == []
+    assert ee.present_set_files("widget") == []
 ```
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
-Run: `python3 -m pytest tests/site/ -v`
+Run: `python3 -m pytest site/scripts/tests/test_export_examples.py -v`
 Expected: FAIL — `AttributeError: module 'export_examples' has no attribute 'present_set_files'`
 
 - [ ] **Step 4: Add `SET_FILES` after `PROJECT_FILES`**
@@ -185,8 +165,8 @@ def present_set_files(set_name: str) -> List[str]:
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `python3 -m pytest tests/site/ -v`
-Expected: PASS, 3 tests.
+Run: `python3 -m pytest site/scripts/tests/test_export_examples.py -v`
+Expected: PASS — the 3 new tests, and the 34 already in the module.
 
 - [ ] **Step 7: Verify nothing else moved**
 
@@ -201,7 +181,7 @@ function yet, so no page changes).
 - [ ] **Step 8: Commit**
 
 ```bash
-git add tests/site/ site/scripts/export_examples.py
+git add site/scripts/tests/test_export_examples.py site/scripts/export_examples.py
 git commit -m "$(cat <<'MSG'
 feat(sto-309): set-level project files are a thing the exporter knows about
 
@@ -210,8 +190,9 @@ belonging to one when STO-104 moved it to the root of the .sdlc/ tree.
 present_set_files reads the set root the way present_project_files reads a
 stage directory. Nothing calls it yet.
 
-Opens tests/site/, covering the branch the drift gate cannot: both
-committed sets carry the file, so only its absence needs a test.
+The tests join the exporter's existing suite and cover the branch the
+drift gate cannot: both committed sets carry the file, so only its
+absence needs a test.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
@@ -227,7 +208,7 @@ until Task 3 — so the drift gates stay green.
 
 **Files:**
 - Modify: `site/scripts/export_examples.py` (add `set_file_url` after `stage_url` ~line 267; add `render_set_file` after `render_project_artifacts` ~line 474; change `render_set_index` ~line 543; change `build_pages` ~line 634-645)
-- Test: `tests/site/test_export_examples.py`
+- Test: `site/scripts/tests/test_export_examples.py`
 
 **Interfaces:**
 - Consumes: `present_set_files(set_name)` and `SET_FILES` from Task 1; `_header(source)`, `split_frontmatter(text)`, `PROJECT_TITLES`, `_meta_js(entries)` (all pre-existing)
@@ -235,7 +216,7 @@ until Task 3 — so the drift gates stay green.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `tests/site/test_export_examples.py`:
+Append to `site/scripts/tests/test_export_examples.py`:
 
 ```python
 def test_render_set_file_keeps_the_documents_own_headings(
@@ -251,9 +232,9 @@ def test_render_set_file_keeps_the_documents_own_headings(
     (set_dir / "definition-of-done.md").write_text(
         "# Definition of Done\n\n## Acceptance gates\n\n- [ ] FR-001 `[CI]`\n"
     )
-    monkeypatch.setattr(export_examples, "EXAMPLES_DIR", str(tmp_path))
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
 
-    page = export_examples.render_set_file("widget", "definition-of-done.md")
+    page = ee.render_set_file("widget", "definition-of-done.md")
 
     assert "# Definition of Done" in page
     assert "## Acceptance gates" in page
@@ -263,14 +244,14 @@ def test_render_set_file_keeps_the_documents_own_headings(
 
 def test_set_file_url_drops_the_extension():
     assert (
-        export_examples.set_file_url("widget", "definition-of-done.md")
+        ee.set_file_url("widget", "definition-of-done.md")
         == "/guide/examples/widget/definition-of-done/"
     )
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `python3 -m pytest tests/site/ -v`
+Run: `python3 -m pytest site/scripts/tests/test_export_examples.py -v`
 Expected: FAIL — no attribute `render_set_file`.
 
 - [ ] **Step 3: Add `set_file_url` after `stage_url`**
@@ -353,17 +334,17 @@ Replace the `if summaries:` block at the end of the per-set loop with:
 - [ ] **Step 7: Run the tests to verify they pass**
 
 ```bash
-python3 -m pytest tests/site/ -v
+python3 -m pytest site/scripts/tests/test_export_examples.py -v
 python3 -m pytest -q
 python3 site/scripts/export_examples.py --check
 ```
-Expected: 5 tests pass in `tests/site/`; `462 passed` overall; `--check`
+Expected: the 2 new tests pass; `462 passed` overall; `--check`
 exits 0 — no set root holds prose yet, so no page changed.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add tests/site/ site/scripts/export_examples.py
+git add site/scripts/tests/test_export_examples.py site/scripts/export_examples.py
 git commit -m "$(cat <<'MSG'
 feat(sto-309): publish set-level files on the set's own index
 
@@ -457,7 +438,35 @@ lines beginning `# See the STO-104 note above PROJECT_FILES:`). **Leave the
 itself** — `render_set_index` and the `_meta.js` builder both title the new
 page from it.
 
-- [ ] **Step 6: Regenerate the site pages**
+- [ ] **Step 6: Update the pre-existing test that asserts the old layout**
+
+`site/scripts/tests/test_export_examples.py` has a test asserting the
+Definition of Done appears on the requirements stage's project-artifacts
+page. Step 5 just removed it from there by design, so that test now fails —
+correctly. Amend it to assert the new layout, and add one that pins where
+the file went:
+
+```python
+def test_project_artifact_pages_carry_the_prose_files():
+    page = ee.render_project_artifacts("tamagotchi", "requirements")
+    assert "## Glossary" in page
+    assert "## Assumptions" in page
+    # The Definition of Done left this page in STO-309: it belongs to the
+    # set, not to a stage, so it publishes on the set's own index.
+    assert "## Definition of done" not in page
+
+
+def test_definition_of_done_is_published_at_the_set_root():
+    pages = ee.build_pages()
+    assert "tamagotchi/definition-of-done.md" in pages
+    assert "gdpr/definition-of-done.md" in pages
+    assert "tamagotchi/requirements/definition-of-done.md" not in pages
+```
+
+One test amended and one added, so the suite goes to **463**, not 462. Use
+463 in the next step and treat any other number as a real failure.
+
+- [ ] **Step 7: Regenerate the site pages**
 
 ```bash
 python3 site/scripts/export_examples.py
@@ -467,19 +476,20 @@ Expected: `gdpr/definition-of-done.md` and `tamagotchi/definition-of-done.md`
 added; both `index.md` and both `_meta.js` modified; both
 `requirements/project-artifacts.md` modified (they lose a section).
 
-- [ ] **Step 7: Verify every gate**
+- [ ] **Step 8: Verify every gate**
 
 ```bash
 python3 -m pytest -q
 python3 site/scripts/export_examples.py --check
 python3 site/scripts/export_reference.py --check
 ```
-Expected: `462 passed`; both `--check` exit 0.
+Expected: `463 passed`; both `--check` exit 0.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add -A docs/requirements/examples/ site/scripts/export_examples.py \
+          site/scripts/tests/test_export_examples.py \
           site/content/guide/examples/
 git commit -m "$(cat <<'MSG'
 feat(sto-309): regenerate both example DoDs at the set root
@@ -561,7 +571,7 @@ python3 site/scripts/export_examples.py --check
 python3 site/scripts/export_reference.py --check
 ```
 Expected: the only surviving hit is `gdpr/clarification-context.yaml:71`,
-which is deliberate. `462 passed`; both `--check` exit 0. The READMEs and
+which is deliberate. `463 passed`; both `--check` exit 0. The READMEs and
 REGENERATION.md are in `EXCLUDED`, so no page is regenerated by this task.
 
 - [ ] **Step 5: Commit and open the PR**
@@ -657,7 +667,7 @@ Nothing enters the repository in this task. Hand the scratch path to Task 6.
 **Files:**
 - Create: `docs/requirements/examples/tamagotchi/qa/` (from Task 5's scratch)
 - Modify: `site/scripts/export_examples.py` — `GROUPS` (~line 64), `STAGE_TITLES` (~line 410), the stage loop (~line 594)
-- Test: `tests/site/test_export_examples.py`
+- Test: `site/scripts/tests/test_export_examples.py`
 
 **Interfaces:**
 - Consumes: Task 5's reviewed scratch set; `render_set_index(set_name, summaries, set_files)` from Task 2 — three positional parameters
@@ -674,13 +684,13 @@ def test_qa_is_a_published_stage():
     set that has one of the three but not the others fails silently by
     emitting no page.
     """
-    assert "qa" in export_examples.STAGE_TITLES
-    assert any(stage == "qa" for stage, _d, _t in export_examples.GROUPS)
+    assert "qa" in ee.STAGE_TITLES
+    assert any(stage == "qa" for stage, _d, _t in ee.GROUPS)
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `python3 -m pytest tests/site/ -v -k qa`
+Run: `python3 -m pytest site/scripts/tests/test_export_examples.py -v -k qa`
 Expected: FAIL — `assert 'qa' in {...}`.
 
 - [ ] **Step 3: Add the three `qa` entries**
@@ -705,8 +715,8 @@ Change the stage loop at ~line 594:
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `python3 -m pytest tests/site/ -v`
-Expected: PASS, 6 tests.
+Run: `python3 -m pytest site/scripts/tests/test_export_examples.py -v`
+Expected: PASS — the new qa test included.
 
 - [ ] **Step 5: Swap the reviewed set in**
 
@@ -740,14 +750,14 @@ python3 -m pytest -q
 python3 site/scripts/export_examples.py --check
 python3 site/scripts/export_reference.py --check
 ```
-Expected: `463 passed`; both `--check` exit 0; new pages under
+Expected: `464 passed`; both `--check` exit 0; new pages under
 `site/content/guide/examples/tamagotchi/qa/`.
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add -A docs/requirements/examples/tamagotchi/qa/ \
-          site/scripts/export_examples.py tests/site/ \
+          site/scripts/export_examples.py site/scripts/tests/ \
           site/content/guide/examples/
 git commit -m "$(cat <<'MSG'
 feat(sto-309): commit the tamagotchi QA set and publish the qa stage
@@ -823,7 +833,7 @@ python3 -m pytest -q
 python3 site/scripts/export_examples.py --check
 python3 site/scripts/export_reference.py --check
 ```
-Expected: `463 passed`; both `--check` exit 0.
+Expected: `464 passed`; both `--check` exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -888,7 +898,7 @@ python3 -m pytest -q
 python3 site/scripts/export_examples.py --check
 python3 site/scripts/export_reference.py --check
 ```
-Expected: `463 passed`; both `--check` exit 0.
+Expected: `464 passed`; both `--check` exit 0.
 
 - [ ] **Step 4: Commit and push**
 
