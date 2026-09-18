@@ -12,3 +12,4 @@ Nothing here was written or corrected by hand. The pages are generated from the 
 
 - **[Requirements](/guide/examples/tamagotchi/requirements/)** — 26 atomic artifacts: 12 functional requirements, 9 non-functional requirements, 3 constraints and 2 business rules.
 - **[Design](/guide/examples/tamagotchi/design/)** — 61 atomic artifacts: 19 components, 31 interfaces, 7 architecture decision records and 4 C4 diagrams.
+- **[Definition of done](/guide/examples/tamagotchi/definition-of-done/)** — projected from every stage above, and owned by none of them.

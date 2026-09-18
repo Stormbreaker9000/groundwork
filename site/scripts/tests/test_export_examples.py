@@ -190,7 +190,19 @@ def test_project_artifact_pages_carry_the_prose_files():
     page = ee.render_project_artifacts("tamagotchi", "requirements")
     assert "## Glossary" in page
     assert "## Assumptions" in page
-    assert "## Definition of done" in page
+    # The Definition of Done left this page in STO-309: it belongs to the
+    # set, not to a stage, so it publishes on the set's own index.
+    assert "## Definition of done" not in page
+
+
+def test_definition_of_done_is_published_at_the_set_root():
+    pages = ee.build_pages()
+    assert "tamagotchi/definition-of-done.md" in pages
+    assert "gdpr/definition-of-done.md" in pages
+    # The requirements project-artifacts page no longer carries a Definition
+    # of Done section under the old, stage-scoped layout — pinned by
+    # test_project_artifact_pages_carry_the_prose_files above, not repeated
+    # here.
 
 
 def test_gdpr_has_no_design_pages():
@@ -283,7 +295,9 @@ def test_stage_index_lists_every_page_with_its_count():
         " — 15 non-functional requirements." in page
     )
     # The project-artifacts page is advertised by the files actually present.
-    assert "glossary, assumptions and definition of done" in page
+    # definition-of-done.md left this list in STO-309 — it now publishes at
+    # the set root instead.
+    assert "glossary and assumptions" in page
 
 
 def test_stage_index_project_gloss_follows_the_stage():
@@ -361,3 +375,82 @@ def test_meta_rows_declare_no_contract_level_interaction():
     # unevaluatedProperties: false. A row for it could only ever render on a
     # schema-invalid artifact, publishing an illegal field as routine.
     assert "interaction" not in {key for key, _label in ee.META_ROWS}
+
+
+# ---------------------------------------------------------------------------
+# Set-level project files (STO-309)
+# ---------------------------------------------------------------------------
+
+
+def _set(tmp_path, name="widget"):
+    """A minimal example set: a directory holding a ``requirements/``."""
+    set_dir = tmp_path / name
+    (set_dir / "requirements").mkdir(parents=True)
+    return set_dir
+
+
+def test_present_set_files_finds_the_definition_of_done(tmp_path, monkeypatch):
+    set_dir = _set(tmp_path)
+    (set_dir / "definition-of-done.md").write_text("# Definition of Done\n")
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == [
+        "definition-of-done.md"
+    ]
+
+
+def test_present_set_files_is_empty_when_no_set_level_prose_exists(
+    tmp_path, monkeypatch
+):
+    """The branch the drift gate cannot reach.
+
+    Both committed sets have a Definition of Done at their root, so only a
+    third set — or a project that ran no stage — would hit this.
+    """
+    _set(tmp_path)
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == []
+
+
+def test_present_set_files_ignores_a_stage_level_copy(tmp_path, monkeypatch):
+    """A ``definition-of-done.md`` under ``requirements/`` is not set-level.
+
+    This is exactly the state STO-104 left behind and this ticket removes:
+    the file at the superseded path must not be mistaken for the new one.
+    """
+    set_dir = _set(tmp_path)
+    (set_dir / "requirements" / "definition-of-done.md").write_text("# Stale\n")
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    assert ee.present_set_files("widget") == []
+
+
+def test_render_set_file_keeps_the_documents_own_headings(
+    tmp_path, monkeypatch
+):
+    """Set-level files are pages of their own, so nothing is demoted.
+
+    A stage's project artifacts share one bucket page and are demoted under
+    per-file H2s. A set-level file is published alone, so its own H1 is the
+    page's H1.
+    """
+    set_dir = _set(tmp_path)
+    (set_dir / "definition-of-done.md").write_text(
+        "# Definition of Done\n\n## Acceptance gates\n\n- [ ] FR-001 `[CI]`\n"
+    )
+    monkeypatch.setattr(ee, "EXAMPLES_DIR", str(tmp_path))
+
+    page = ee.render_set_file("widget", "definition-of-done.md")
+
+    assert "# Definition of Done" in page
+    assert "## Acceptance gates" in page
+    assert "GENERATED FILE — do not edit." in page
+    assert "docs/requirements/examples/widget/definition-of-done.md" in page
+
+
+def test_set_file_url_drops_the_extension():
+    assert (
+        ee.set_file_url("widget", "definition-of-done.md")
+        == "/guide/examples/widget/definition-of-done/"
+    )
