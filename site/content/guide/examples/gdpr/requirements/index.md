@@ -12,6 +12,6 @@ The requirements stage of the `gdpr` worked example: 21 atomic artifacts publish
 - **[Non-functional requirements](/guide/examples/gdpr/requirements/non-functional/)** — 15 non-functional requirements.
 - **[Constraints](/guide/examples/gdpr/requirements/constraints/)** — 1 constraint.
 - **[Business rules](/guide/examples/gdpr/requirements/business-rules/)** — 2 business rules.
-- **[Project artifacts](/guide/examples/gdpr/requirements/project-artifacts/)** — the stage-level files that carry no artifact ID: glossary, assumptions and definition of done.
+- **[Project artifacts](/guide/examples/gdpr/requirements/project-artifacts/)** — the stage-level files that carry no artifact ID: glossary and assumptions.
 
 Every artifact keeps a stable anchor, so a link to a single one resolves — the trace edges in these pages link to each other.

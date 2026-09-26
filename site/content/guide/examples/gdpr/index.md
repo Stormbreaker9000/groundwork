@@ -11,3 +11,4 @@ The GDPR data-subject rights obligations — export an account's personal data, 
 Nothing here was written or corrected by hand. The pages are generated from the committed set under `docs/requirements/examples/gdpr/`, so what you read is the artifact rather than a description of one.
 
 - **[Requirements](/guide/examples/gdpr/requirements/)** — 21 atomic artifacts: 3 functional requirements, 15 non-functional requirements, 1 constraint and 2 business rules.
+- **[Definition of done](/guide/examples/gdpr/definition-of-done/)** — projected from every stage above, and owned by none of them.

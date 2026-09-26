@@ -72,16 +72,22 @@ GROUPS: List[Tuple[str, str, str]] = [
     ("design", "diagrams", "C4 diagrams"),
 ]
 
-# Project-level artifacts: prose files with no artifact ID, published together
-# on one page per stage. Order is reading order, not alphabetical.
-#
-# definition-of-done.md still sits under requirements/ in both committed
-# example sets. STO-104 moved the generated path to .sdlc/definition-of-done.md;
-# STO-309, which regenerates the examples, moves these entries.
+# Project-level artifacts: prose files with no artifact ID, published
+# together on one page per stage. Order is reading order, not alphabetical.
+# The Definition of Done is not among them — it belongs to the set, not to a
+# stage, and SET_FILES carries it.
 PROJECT_FILES: Dict[str, List[str]] = {
-    "requirements": ["glossary.md", "assumptions.md", "definition-of-done.md"],
+    "requirements": ["glossary.md", "assumptions.md"],
     "design": ["drivers.md", "assumptions.md"],
 }
+
+# Set-level project artifacts: prose the set owns rather than any one of its
+# stages. generate_dod.py writes the Definition of Done to the root of the
+# .sdlc/ tree because it is "the one artifact no single stage owns" — all
+# three stage skills run the tool, and each run supersedes the last. The
+# exporter mirrors that: these publish on the set's own index, not under a
+# stage.
+SET_FILES: List[str] = ["definition-of-done.md"]
 
 # Excluded on purpose. The critique report and dev log are pipeline internals;
 # CONSOLIDATED.md is the hand-assembled artifact STO-264 exists to replace,
@@ -266,6 +272,11 @@ def stage_url(set_name: str, stage: str) -> str:
     return f"/guide/examples/{set_name}/{stage}/"
 
 
+def set_file_url(set_name: str, name: str) -> str:
+    """Site-relative URL of one set-level page."""
+    return f"/guide/examples/{set_name}/{os.path.splitext(name)[0]}/"
+
+
 def build_index(set_name: str) -> Dict[str, str]:
     """Map every artifact ID in a set to its anchored URL."""
     index: Dict[str, str] = {}
@@ -412,8 +423,6 @@ STAGE_TITLES = {
     "design": "Design",
 }
 
-# See the STO-104 note above PROJECT_FILES: definition-of-done.md is titled
-# here only because it still exists at the old path in both example sets.
 PROJECT_TITLES = {
     "glossary.md": "Glossary",
     "assumptions.md": "Assumptions",
@@ -433,6 +442,21 @@ def present_project_files(set_name: str, stage: str) -> List[str]:
     return [
         name
         for name in PROJECT_FILES[stage]
+        if os.path.isfile(os.path.join(root, name))
+    ]
+
+
+def present_set_files(set_name: str) -> List[str]:
+    """The set-level prose files that exist, in reading order.
+
+    Reads from disk for the same reason ``present_project_files`` does:
+    which of them exist varies by set, and a list written down twice drifts
+    from the set it describes.
+    """
+    root = os.path.join(EXAMPLES_DIR, set_name)
+    return [
+        name
+        for name in SET_FILES
         if os.path.isfile(os.path.join(root, name))
     ]
 
@@ -473,6 +497,23 @@ def render_project_artifacts(set_name: str, stage: str) -> str:
     return "\n".join(header) + "\n" + "\n".join(sections).rstrip("\n") + "\n"
 
 
+def render_set_file(set_name: str, name: str) -> str:
+    """Render one set-level prose file as a page of its own.
+
+    Stage-level project artifacts share a single bucket page; these do not.
+    There is one of them, it is a document in its own right, and a sidebar
+    entry reading "Definition of done" tells a reader what "Project
+    artifacts" would not. Headings are left alone for the same reason — the
+    file's own H1 is the page's H1, so there is nothing to demote.
+    """
+    path = os.path.join(EXAMPLES_DIR, set_name, name)
+    with open(path, "r", encoding="utf-8") as handle:
+        text = handle.read()
+    body = split_frontmatter(text).strip()
+    header = _header(f"docs/requirements/examples/{set_name}/{name}")
+    return "\n".join(header) + "\n" + body + "\n"
+
+
 @dataclass
 class StageSummary:
     """What one stage of one set published, for its index pages to describe.
@@ -492,7 +533,7 @@ class StageSummary:
 
 
 def _project_gloss(summary: StageSummary) -> str:
-    """``the glossary, assumptions and definition of done`` — as published."""
+    """``the glossary and assumptions`` — as published."""
     names = [PROJECT_TITLES[name].lower() for name in summary.project_files]
     return _joined(names)
 
@@ -540,7 +581,9 @@ def render_stage_index(set_name: str, summary: StageSummary) -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
-def render_set_index(set_name: str, summaries: List[StageSummary]) -> str:
+def render_set_index(
+    set_name: str, summaries: List[StageSummary], set_files: List[str]
+) -> str:
     """Render the landing page for one worked example set.
 
     Exists for the same breadcrumb reason as the stage index above, and
@@ -570,6 +613,12 @@ def render_set_index(set_name: str, summaries: List[StageSummary]) -> str:
             f"({stage_url(set_name, summary.stage)})** — "
             f"{count_phrase(summary.total, 'atomic artifacts')}: "
             f"{breakdown}."
+        )
+    for name in set_files:
+        lines.append(
+            f"- **[{PROJECT_TITLES[name]}]({set_file_url(set_name, name)})**"
+            " — projected from every stage above, and owned by none of "
+            "them."
         )
     lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
@@ -632,15 +681,29 @@ def build_pages() -> Dict[str, str]:
                 )
                 summaries.append(summary)
 
+        set_files = present_set_files(set_name)
+
         if summaries:
+            for name in set_files:
+                slug = os.path.splitext(name)[0]
+                pages[f"{set_name}/{slug}.md"] = render_set_file(
+                    set_name, name
+                )
+
             pages[f"{set_name}/index.md"] = render_set_index(
-                set_name, summaries
+                set_name, summaries, set_files
             )
             pages[f"{set_name}/_meta.js"] = _meta_js(
                 [("index", "Overview")]
                 + [(s.stage, STAGE_TITLES[s.stage]) for s in summaries]
+                + [
+                    (os.path.splitext(name)[0], PROJECT_TITLES[name])
+                    for name in set_files
+                ]
             )
-            set_entries.append((set_name, SET_TITLES.get(set_name, set_name)))
+            set_entries.append(
+                (set_name, SET_TITLES.get(set_name, set_name))
+            )
 
     pages["_meta.js"] = _meta_js(set_entries)
     return pages

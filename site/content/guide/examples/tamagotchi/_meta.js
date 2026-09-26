@@ -1,5 +1,6 @@
 export default {
   'index': 'Overview',
   'requirements': 'Requirements',
-  'design': 'Design'
+  'design': 'Design',
+  'definition-of-done': 'Definition of done'
 }
